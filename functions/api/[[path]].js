@@ -19,16 +19,22 @@ function inFullMode(env){
   &&env?.FULL_BACKEND_READY==='true'
   &&env?.API_ORIGIN===RENDER_ORIGIN;
 }
+function inAdminMode(env){
+ return env?.PUBLIC_LAUNCH_MODE==='admin'
+  &&env?.FULL_BACKEND_READY==='true'
+  &&env?.API_ORIGIN===RENDER_ORIGIN;
+}
 
 export async function onRequest(context){
  const request=context.request;
  const url=new URL(request.url);
  const pathname=url.pathname;
  if(!pathname.startsWith('/api/'))return json(404,{error:'المسار غير موجود'});
+ const fullMode=inFullMode(context.env),adminMode=inAdminMode(context.env);
 
  // Fail-closed default. All responses are local to Cloudflare and cost
  // no Render compute time, so the landing page is not blocked by cold starts.
- if(!inFullMode(context.env)){
+ if(!fullMode&&!adminMode){
   if(request.method==='GET'&&pathname==='/api/health')
    return json(200,{ok:true,mode:'preview',registrationAvailable:false,
     videoConfigured:false,videoCloudReady:false,videoMode:'preview-disabled'});
@@ -41,6 +47,30 @@ export async function onRequest(context){
   if(request.method==='GET'&&pathname==='/api/courses')
    return json(200,{courses:[]});
   return json(503,{error:'التسجيل والحجز والبث المباشر غير متاحين بعد في النسخة التعريفية'});
+ }
+
+ // Preparation phase: only the verified director can reach private school APIs.
+ // Visitors still get fast local responses; registration and payments fail closed.
+ if(adminMode){
+  if(request.method==='GET'&&pathname==='/api/health')
+   return json(200,{ok:true,mode:'admin',registrationAvailable:false,
+    videoConfigured:false,videoCloudReady:false,videoMode:'admin-setup'});
+  if(request.method==='GET'&&pathname==='/api/auth/registration-status')
+   return json(200,{registrationAvailable:false,emailMode:'disabled'});
+  const hasSession=(request.headers.get('cookie')||'').split(';').some(c=>c.trim().startsWith('session='));
+  if(request.method==='GET'&&pathname==='/api/auth/me'&&!hasSession)
+   return json(401,{error:'لم يتم تسجيل الدخول'});
+  if(request.method==='GET'&&pathname==='/api/courses'&&!hasSession)
+   return json(200,{courses:[]});
+  const googleAuth=(request.method==='GET'&&pathname==='/api/auth/google/config')
+   ||(request.method==='POST'&&pathname==='/api/auth/google/login');
+  const allowedAuth=googleAuth
+   ||(request.method==='GET'&&pathname==='/api/auth/me')
+   ||(request.method==='POST'&&pathname==='/api/auth/logout');
+  if(pathname.startsWith('/api/auth/')&&!allowedAuth)
+   return json(503,{error:'دخول المديرة عبر Google فقط. حسابات الطلاب غير متاحة بعد'});
+  if(!hasSession&&!googleAuth)
+   return json(401,{error:'يجب تسجيل دخول المديرة أولاً'});
  }
 
  // The upstream address is constant (no user-supplied host or open proxy).

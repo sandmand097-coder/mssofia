@@ -16,20 +16,20 @@ function PasswordInput({label,value,onChange,autoComplete='new-password'}){
  const [visible,setVisible]=useState(false);
  return <label>{label}<div className="sofia-password-field"><input required minLength={autoComplete==='current-password'?1:10} maxLength={128} value={value} onChange={e=>onChange(e.target.value)} type={visible?'text':'password'} autoComplete={autoComplete} placeholder="••••••••••"/><button type="button" aria-label={visible?'إخفاء كلمة المرور':'إظهار كلمة المرور'} onClick={()=>setVisible(v=>!v)}>{visible?<EyeOff size={19}/>:<Eye size={19}/>}</button></div></label>;
 }
-export function SignInPage({api,user,setUser}){
+export function SignInPage({api,user,setUser,adminOnly=false}){
  const navigate=useNavigate(),[email,setEmail]=useState(''),[password,setPassword]=useState(''),[error,setError]=useState(''),[busy,setBusy]=useState(false);
  useEffect(()=>{if(user)navigate(dashboardPath(user),{replace:true})},[user,navigate]);
  const submit=async e=>{e.preventDefault();setBusy(true);setError('');try{const r=await api('/auth/login',{method:'POST',body:JSON.stringify({email,password})});setUser(r.user);navigate(dashboardPath(r.user),{replace:true})}catch(err){setError(err.message)}finally{setBusy(false)}};
- return <AuthLayout tag="WELCOME TO MRS SOFIA" title="أهلاً بيك في مدرسة العلوم" description="سجّل دخولك سواء كنت طالبًا أو مديرة المدرسة للوصول لمساحتك الخاصة.">
+ return <AuthLayout tag={adminOnly?'SCHOOL ADMINISTRATOR':'WELCOME TO MRS SOFIA'} title={adminOnly?'دخول مديرة مدرسة Mrs Sofia':'أهلاً بيك في مدرسة العلوم'} description={adminOnly?'تسجيل الدخول متاح لمديرة المدرسة بحساب Google المعتمد فقط. تسجيل الطلاب ما زال مغلقًا.':'سجّل دخولك سواء كنت طالبًا أو مديرة المدرسة للوصول لمساحتك الخاصة.'}>
   <ErrorMessage message={error}/>
-  <form className="sofia-auth-form" onSubmit={submit}>
+  {!adminOnly&&<form className="sofia-auth-form" onSubmit={submit}>
    <label>البريد الإلكتروني<input type="email" autoComplete="email" required value={email} onChange={e=>setEmail(e.target.value)} placeholder="example@gmail.com"/></label>
    <PasswordInput label="كلمة المرور" value={password} onChange={setPassword} autoComplete="current-password"/>
    <Link className="sofia-auth-forgot" to="/forgot-password">نسيت كلمة المرور؟</Link>
    <button type="submit" className="sofia-cta sofia-auth-submit" disabled={busy}>{busy?'جارٍ الدخول...':'تسجيل الدخول'}<ArrowLeft size={18}/></button>
-  </form>
+  </form>}
   <GoogleAdminButton api={api} setUser={setUser}/>
-  <div className="sofia-auth-switch">طالب جديد؟ <Link to="/register">اعمل حساب بالبريد الإلكتروني</Link></div>
+  {!adminOnly&&<div className="sofia-auth-switch">طالب جديد؟ <Link to="/register">اعمل حساب بالبريد الإلكتروني</Link></div>}
  </AuthLayout>;
 }
 export function RegisterPage({api,user}){

@@ -85,14 +85,17 @@ function PageTitle(){
 export default function App(){
  const [user,setUser]=useState(undefined),[toast,setToast]=useState(''),[launchMode,setLaunchMode]=useState('checking');
  const navigate=useNavigate();
- useEffect(()=>{let active=true;Promise.allSettled([api('/auth/me'),api('/health')]).then(([session,health])=>{if(!active)return;setUser(session.status==='fulfilled'?session.value.user:null);setLaunchMode(health.status==='fulfilled'?(health.value.mode==='preview'?'preview':'full'):'offline')});return()=>{active=false}},[]);
+ useEffect(()=>{let active=true;Promise.allSettled([api('/auth/me'),api('/health')]).then(([session,health])=>{if(!active)return;setUser(session.status==='fulfilled'?session.value.user:null);setLaunchMode(health.status==='fulfilled'?(health.value.mode==='preview'?'preview':health.value.mode==='admin'?'admin':'full'):'offline')});return()=>{active=false}},[]);
  useEffect(()=>{if(!toast)return;const timeout=setTimeout(()=>setToast(''),4600);return()=>clearTimeout(timeout)},[toast]);
  const show=useCallback(message=>setToast(message),[]);
  const logout=async()=>{try{await api('/auth/logout',{method:'POST'});setUser(null);navigate('/')}catch(e){show(e.message)}};
+ const publicOnly=launchMode==='preview'||launchMode==='offline';
+ const adminOnly=launchMode==='admin';
  return <Context.Provider value={{user,setUser,show,logout}}>
   <PageTitle/>
-  <BrandHeader user={user} logout={logout} previewMode={launchMode==='preview'||launchMode==='offline'}/>
-  {(launchMode==='preview'||launchMode==='offline')&&<div className="sofia-public-preview-notice" role="status">موقع Mrs Sofia متاح للتعرّف على المدرسة والعروض. تسجيل الطلاب والبث المباشر هيفتحوا بعد اكتمال التجهيز الآمن.</div>}
+  <BrandHeader user={user} logout={logout} previewMode={publicOnly} adminOnly={adminOnly}/>
+  {(publicOnly)&&<div className="sofia-public-preview-notice" role="status">موقع Mrs Sofia متاح للتعرّف على المدرسة والعروض. تسجيل الطلاب والبث المباشر هيفتحوا بعد اكتمال التجهيز الآمن.</div>}
+  {adminOnly&&<div className="sofia-public-preview-notice" role="status">حسابات الطلاب والمدفوعات لم تُفتح بعد. دخول مديرة المدرسة متاح بحساب Google المعتمد فقط.</div>}
   {user===undefined?<div className="loading">جارٍ تجهيز مدرسة العلوم...</div>:
    <Suspense fallback={<div className="loading">جارٍ تحميل الصفحة...</div>}>
     <Routes>
@@ -100,21 +103,21 @@ export default function App(){
      <Route path="/courses" element={<MrsCourses api={api}/>}/>
      <Route path="/privacy" element={<PrivacyPolicy/>}/>
      <Route path="/terms" element={<SchoolTerms/>}/>
-     <Route path="/courses/:id" element={launchMode==='preview'||launchMode==='offline'?<PublicUnavailable/>:<MrsCourseDetails api={api} user={user} show={show}/>}/>
-     <Route path="/login" element={launchMode==='preview'||launchMode==='offline'?<PublicUnavailable/>:<SignInPage api={api} user={user} setUser={setUser} show={show}/>}/>
-     <Route path="/register" element={launchMode==='preview'||launchMode==='offline'?<PublicUnavailable/>:<RegisterPage api={api} user={user}/>}/>
-     <Route path="/verify-email" element={launchMode==='preview'||launchMode==='offline'?<PublicUnavailable/>:<VerifyEmailPage api={api}/>}/>
-     <Route path="/forgot-password" element={launchMode==='preview'||launchMode==='offline'?<PublicUnavailable/>:<ForgotPasswordPage api={api}/>}/>
-     <Route path="/reset-password" element={launchMode==='preview'||launchMode==='offline'?<PublicUnavailable/>:<ResetPasswordPage api={api}/>}/>
-     <Route path="/dashboard" element={launchMode==='preview'||launchMode==='offline'?<PublicUnavailable/>:<RoutePortal/>}/>
-     <Route path="/admin" element={launchMode==='preview'||launchMode==='offline'?<PublicUnavailable/>:<RoutePortal/>}/>
-     <Route path="/student" element={launchMode==='preview'||launchMode==='offline'?<PublicUnavailable/>:<RoutePortal/>}/>
-     <Route path="/teacher" element={launchMode==='preview'||launchMode==='offline'?<PublicUnavailable/>:<RoutePortal/>}/>
-     <Route path="/lesson/:id" element={launchMode==='preview'||launchMode==='offline'?<PublicUnavailable/>:<LessonRoom/>}/>
+     <Route path="/courses/:id" element={publicOnly||adminOnly?<PublicUnavailable/>:<MrsCourseDetails api={api} user={user} show={show}/>}/>
+     <Route path="/login" element={publicOnly?<PublicUnavailable/>:<SignInPage api={api} user={user} setUser={setUser} show={show} adminOnly={adminOnly}/>}/>
+     <Route path="/register" element={publicOnly||adminOnly?<PublicUnavailable/>:<RegisterPage api={api} user={user}/>}/>
+     <Route path="/verify-email" element={publicOnly||adminOnly?<PublicUnavailable/>:<VerifyEmailPage api={api}/>}/>
+     <Route path="/forgot-password" element={publicOnly||adminOnly?<PublicUnavailable/>:<ForgotPasswordPage api={api}/>}/>
+     <Route path="/reset-password" element={publicOnly||adminOnly?<PublicUnavailable/>:<ResetPasswordPage api={api}/>}/>
+     <Route path="/dashboard" element={publicOnly?<PublicUnavailable/>:<RoutePortal/>}/>
+     <Route path="/admin" element={publicOnly?<PublicUnavailable/>:<RoutePortal/>}/>
+     <Route path="/student" element={publicOnly||adminOnly?<PublicUnavailable/>:<RoutePortal/>}/>
+     <Route path="/teacher" element={publicOnly||adminOnly?<PublicUnavailable/>:<RoutePortal/>}/>
+     <Route path="/lesson/:id" element={publicOnly?<PublicUnavailable/>:<LessonRoom/>}/>
      <Route path="*" element={<NotFound/>}/>
     </Routes>
    </Suspense>}
-  <BrandFooter previewMode={launchMode==='preview'||launchMode==='offline'}/>
+  <BrandFooter previewMode={publicOnly||adminOnly}/>
   {toast&&<div className="toast" role="status" aria-live="polite"><ShieldCheck size={18}/>{toast}</div>}
  </Context.Provider>;
 }

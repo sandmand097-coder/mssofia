@@ -17,6 +17,7 @@ body{color:var(--sf-ink)}
 .sofia-nav-links{display:flex;align-items:center;gap:34px;margin-right:auto}
 .sofia-nav-links a{font-size:12px;color:#5f747c;font-weight:800;transition:color .2s}
 .sofia-nav-links a:hover,.sofia-nav-links a.active{color:#007f72}
+.sofia-admin-mobile-link{display:none}
 .sofia-nav-actions{display:flex;align-items:center;gap:16px}
 .sofia-login,.sofia-nav-account{font-size:12px;font-weight:800;color:#29444b;white-space:nowrap}
 .sofia-nav-account{display:flex;align-items:center;gap:7px;color:#087d70}
@@ -314,6 +315,7 @@ body{color:var(--sf-ink)}
  .sofia-nav-links{display:none;position:absolute;top:85px;right:0;left:0;flex-direction:column;align-items:stretch;gap:0;padding:12px 24px 20px;background:#fff;box-shadow:0 17px 30px #16452b18}
  .sofia-nav-links.is-open{display:flex}
  .sofia-nav-links a{padding:13px 15px}
+ .sofia-nav-links .sofia-admin-mobile-link{display:flex;align-items:center;min-height:46px;color:#087b69;background:#edf8f3;border-radius:10px;margin-top:8px;font-weight:900}
  .sofia-menu-toggle{display:grid;place-items:center}
  .sofia-hero-grid{grid-template-columns:1fr;gap:5px;padding:55px 0}
  .sofia-hero-copy{max-width:700px}

@@ -10,12 +10,14 @@ import { AccessToken, WebhookReceiver } from 'livekit-server-sdk';
 import { getRoomService, participantPermission, videoGrant, MAX_ACTIVE_SPEAKERS } from './classroom.js';
 import { randomBytes, createHash } from 'node:crypto';
 import { sendAccountEmail, canRegister, mailMode } from './email.js';
-import {attachGoogleAdminAuth} from './google-admin-auth.js';
+import {attachGoogleAdminAuth,googleAdminConfig} from './google-admin-auth.js';
+import {attachAdminOnlyGuard} from './admin-only.js';
 import {attachPaymentRoutes} from './payment-routes.js';
 import { get, all, run, uid, now, publicUser, checkConnection } from './db-adapter.js';
 const app = express(),
   PORT = Number(process.env.PORT || 4010);
 const secret = process.env.JWT_SECRET;
+const adminOnly = process.env.PUBLIC_LAUNCH_MODE==='admin';
 if (!secret || secret.length < 48) throw Error('Set strong JWT_SECRET in .env');
 const localVideo = String(process.env.LIVEKIT_URL || '').match(/^ws:\/\/(127\.0\.0\.1|localhost)(:\d+)?\/?$/i) !== null;
 if (process.env.NODE_ENV === 'production') {
@@ -23,6 +25,7 @@ if (process.env.NODE_ENV === 'production') {
   if (localVideo || process.env.LIVEKIT_API_KEY === 'devkey' || process.env.LIVEKIT_API_SECRET === 'secret') throw Error('Refusing to start publicly with local-development LiveKit settings.');
   if (process.env.LIVEKIT_URL && !process.env.LIVEKIT_URL.startsWith('wss://')) throw Error('Production LiveKit URL must use wss://');
   if (!process.env.APP_ORIGIN?.startsWith('https://')) throw Error('Production requires secure APP_ORIGIN.');
+  if (adminOnly && (!googleAdminConfig().enabled || process.env.REGISTRATION_ENABLED==='true')) throw Error('Admin-only production requires configured Google login and disabled public registration.');
 }
 app.disable('x-powered-by');
 app.use(helmet({
@@ -104,6 +107,7 @@ const auth = async (req, res, next) => {
 const role = (...roles) => (req, res, next) => roles.includes(req.user.role) ? next() : send(res, 403, {
   error: 'ليس لديك صلاحية'
 });
+attachAdminOnlyGuard(app,{auth,role,enabled:adminOnly});
 attachPaymentRoutes(app,{auth,role,get,all,run,uid,now});
 const valid = (v, max = 120) => typeof v === 'string' && v.trim().length > 0 && v.trim().length <= max;
 const owns = (course, user) => user.role === 'admin' || user.role === 'teacher' && course.teacher_id === user.id;
@@ -132,6 +136,8 @@ const parseLesson = input => {
 const courseQuery = `SELECT c.*,u.name AS teacher_name,u.specialty AS teacher_specialty,(SELECT COUNT(*) FROM bookings b WHERE b.course_id=c.id AND b.status='approved') AS enrolled,(SELECT MIN(starts_at) FROM lessons l WHERE l.course_id=c.id AND datetime(l.starts_at)>=datetime('now')) AS next_date FROM courses c JOIN users u ON u.id=c.teacher_id`;
 app.get('/api/health', (req, res) => res.json({
   ok: true,
+  mode:adminOnly?'admin':'full',
+  registrationAvailable:adminOnly?false:canRegister(),
   videoConfigured: !!(process.env.LIVEKIT_URL && process.env.LIVEKIT_API_KEY && process.env.LIVEKIT_API_SECRET),
   videoMode: localVideo ? 'local-development' : process.env.LIVEKIT_URL ? 'remote' : 'disabled'
 }));

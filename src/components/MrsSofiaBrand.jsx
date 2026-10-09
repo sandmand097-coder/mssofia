@@ -16,7 +16,7 @@ export function BrandLogo({light=false}){
  </Link>;
 }
 
-export function BrandHeader({user,logout,previewMode=false}){
+export function BrandHeader({user,logout,previewMode=false,adminOnly=false}){
  const [open,setOpen]=useState(false),location=useLocation();
  useEffect(()=>setOpen(false),[location.pathname,location.hash]);
  const links=[{to:'/',label:'الرئيسية',end:true},{to:'/courses',label:'الكورسات'},{to:'/#method',label:'طريقة التعلم',anchor:true},{to:'/#about',label:'عن Mrs Sofia',anchor:true}];
@@ -24,9 +24,10 @@ export function BrandHeader({user,logout,previewMode=false}){
   <BrandLogo/>
   <nav className={'sofia-nav-links '+(open?'is-open':'')} aria-label="القائمة الرئيسية">
    {links.map(item=>item.anchor?<a key={item.to} href={item.to} onClick={()=>setOpen(false)}>{item.label}</a>:<NavLink key={item.to} to={item.to} end={item.end} onClick={()=>setOpen(false)}>{item.label}</NavLink>)}
+   {adminOnly&&<Link to="/login" className="sofia-admin-mobile-link" onClick={()=>setOpen(false)}>دخول مديرة المدرسة</Link>}
   </nav>
   <div className="sofia-nav-actions">
-   {user?<><Link to={dashboardPath(user)} className="sofia-nav-account"><UserCircle2 size={17}/> لوحتي</Link><button className="sofia-logout" title="تسجيل الخروج" aria-label="تسجيل الخروج" onClick={logout}><LogOut size={18}/></button></>:<>{previewMode?<><a href="/#offer" className="sofia-login">عرض أول شهر</a><a href="/#offer" className="sofia-cta sofia-cta-sm">شوف العرض <ArrowLeft size={17}/></a></>:<><Link to="/login" className="sofia-login">تسجيل الدخول</Link><Link to="/register" className="sofia-cta sofia-cta-sm">ابدأ رحلتك <ArrowLeft size={17}/></Link></>}</>}
+   {user?<><Link to={dashboardPath(user)} className="sofia-nav-account"><UserCircle2 size={17}/> لوحتي</Link><button className="sofia-logout" title="تسجيل الخروج" aria-label="تسجيل الخروج" onClick={logout}><LogOut size={18}/></button></>:<>{previewMode?<><a href="/#offer" className="sofia-login">عرض أول شهر</a><a href="/#offer" className="sofia-cta sofia-cta-sm">شوف العرض <ArrowLeft size={17}/></a></>:adminOnly?<><Link to="/login" className="sofia-login">دخول المديرة</Link><a href="/#offer" className="sofia-cta sofia-cta-sm">عرض أول شهر <ArrowLeft size={17}/></a></>:<><Link to="/login" className="sofia-login">تسجيل الدخول</Link><Link to="/register" className="sofia-cta sofia-cta-sm">ابدأ رحلتك <ArrowLeft size={17}/></Link></>}</>}
    <button type="button" className="sofia-menu-toggle" aria-label={open?'إغلاق القائمة':'فتح القائمة'} aria-expanded={open} onClick={()=>setOpen(!open)}>{open?<X size={25}/>:<Menu size={25}/>}</button>
   </div>
  </div></header>;
