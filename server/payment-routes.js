@@ -1,5 +1,6 @@
 // Private manual Vodafone Cash workflow. A screenshot alone NEVER confirms that money arrived.
 import {randomBytes} from 'node:crypto';
+import {attachEmailReview} from './payment-email-review.js';
 import {mkdir,writeFile,readFile,unlink} from 'node:fs/promises';
 import path from 'node:path';
 import multer from 'multer';
@@ -10,7 +11,8 @@ export const FIRST_MONTH_EGP=100;
 export const REGULAR_MONTH_EGP=170;
 const BUCKET='mrsofia-payment-proofs';
 const imageMax=2*1024*1024;
-const receiptUpload=multer({storage:multer.memoryStorage(),limits:{fileSize:imageMax,files:1,fields:4,parts:5},fileFilter:(req,file,cb)=>{
+const uploadMax=8*1024*1024;
+const receiptUpload=multer({storage:multer.memoryStorage(),limits:{fileSize:uploadMax,files:1,fields:3,parts:4},fileFilter:(req,file,cb)=>{
  cb(null,['image/jpeg','image/png','image/webp'].includes(file.mimetype));
 }});
 const json=(res,status,data)=>res.status(status).json(data);
@@ -18,7 +20,8 @@ const isScience=s=>/(علوم|فيزياء|أحياء|كيمياء|science|physi
 const requiredAmount=c=>Number(c.price)<=0?0:isScience(c.subject)?FIRST_MONTH_EGP:Number(c.price);
 const prodStorage=()=>Boolean(process.env.SUPABASE_URL&&process.env.SUPABASE_SERVICE_ROLE_KEY);
 const devStorage=()=>process.env.NODE_ENV!=='production'&&!!process.env.TEST_PAYMENT_UPLOAD_DIR;
-const enabled=()=>Boolean(/^01\d{9}$/.test(process.env.VODAFONE_CASH_NUMBER||'')&&(prodStorage()||devStorage()));
+const enabled=()=>Boolean(/^01[0125]\d{8}$/.test(process.env.VODAFONE_CASH_NUMBER||'')&&(prodStorage()||devStorage()));
+const isEgyptianPhone=s=>/^01[0125]\d{8}$/.test(s||'');
 const storageBase=()=>process.env.SUPABASE_URL.replace(/\/$/,'');
 async function saveProof(key,bytes){
  if(devStorage()){const dest=path.join(process.env.TEST_PAYMENT_UPLOAD_DIR,key+'.webp');await mkdir(path.dirname(dest),{recursive:true});await writeFile(dest,bytes,{flag:'wx',mode:0o600});return}
@@ -41,6 +44,7 @@ async function removeProof(key){
 }
 export function attachPaymentRoutes(app,{auth,role,get,all,run,uid,now}){
  const onlyStudent=role('student'),onlyAdmin=role('admin');
+ const notifyPaymentReviewer=attachEmailReview(app,{get,run,uid,now,loadProof,withTransaction,isCloudDatabase});
  app.get('/api/payments/config',auth,(req,res)=>res.json({
    enabled:enabled(),method:'vodafone_cash',
    number:enabled()?process.env.VODAFONE_CASH_NUMBER:null,
@@ -50,7 +54,7 @@ export function attachPaymentRoutes(app,{auth,role,get,all,run,uid,now}){
  app.post('/api/bookings/:id/payment',auth,onlyStudent,(req,res,next)=>{
   if(!enabled())return json(res,503,{error:'فودافون كاش غير مفعل بعد. لا ترسل أي تحويل قبل إعلان رقم المدرسة.'});
   receiptUpload.single('receipt')(req,res,err=>{
-   if(err)return json(res,400,{error:'ارفع صورة واحدة PNG أو JPEG أو WebP لا تتجاوز 2 ميجابايت'});
+   if(err)return json(res,400,{error:'ارفع صورة واحدة PNG أو JPEG أو WebP لا تتجاوز 8 ميجابايت'});
    next();
   });
  },async(req,res,next)=>{
@@ -61,33 +65,33 @@ export function attachPaymentRoutes(app,{auth,role,get,all,run,uid,now}){
    if(booking.status!=='pending')return json(res,409,{error:'يمكن إرسال إيصال للحجز المعلق فقط'});
    const due=requiredAmount(booking);
    if(due<=0)return json(res,409,{error:'الكورس مجاني ولا يحتاج تحويلًا'});
-   const reference=String(req.body?.reference||'').trim().toUpperCase();
-   const last4=String(req.body?.sender_last4||'').trim();
-   if(!/^[A-Z0-9-_]{5,80}$/.test(reference))return json(res,400,{error:'اكتب رقم عملية تحويل صالحًا من الرسالة'});
-   if(last4&&!/^\d{4}$/.test(last4))return json(res,400,{error:'آخر أربعة أرقام من هاتف المُرسِل غير صحيحة'});
+   const senderPhone=String(req.body?.sender_phone||'').trim();
+   if(!isEgyptianPhone(senderPhone))return json(res,400,{error:'اكتب رقم موبايل مصري صحيح يبدأ بـ 010 أو 011 أو 012 أو 015'});
+   const reference='PHOTO-'+randomBytes(12).toString('hex').toUpperCase();
    if(!req.file?.buffer)return json(res,400,{error:'صورة إيصال التحويل مطلوبة'});
    const current=await get('SELECT id,status,proof_key FROM payment_submissions WHERE booking_id=?',booking.id);
    if(current&&current.status!=='rejected')return json(res,409,{error:'تم رفع إيصال بالفعل وهو قيد المراجعة أو مقبول'});
-   const duplicate=await get('SELECT id FROM payment_submissions WHERE upper(transfer_reference)=? AND booking_id<>?',reference,booking.id);
-   if(duplicate)return json(res,409,{error:'تم استخدام رقم العملية في طلب آخر'});
    let normalized;
    try{normalized=await sharp(req.file.buffer,{limitInputPixels:8e6}).rotate().resize({width:1600,height:1600,fit:'inside',withoutEnlargement:true}).webp({quality:79,effort:4}).toBuffer();}
    catch{return json(res,400,{error:'صورة غير صالحة. جرّب لقطة شاشة أخرى'});}
    if(normalized.length>imageMax)return json(res,400,{error:'حجم الصورة بعد المعالجة كبير جدًا'});
    newKey=booking.id+'/'+uid();await saveProof(newKey,normalized);
    if(current){
-    await run("UPDATE payment_submissions SET amount_egp=?,transfer_reference=?,sender_last4=?,proof_key=?,status='pending',submitted_at=?,reviewed_at=NULL,reviewed_by=NULL,review_note=NULL,confirmed_on_phone=FALSE WHERE id=?",
-     due,reference,last4||null,newKey,now(),current.id);
+    await run('UPDATE payment_review_links SET used_at=? WHERE payment_id=? AND used_at IS NULL',now(),current.id);
+    await run("UPDATE payment_submissions SET amount_egp=?,transfer_reference=?,sender_phone=?,sender_last4=NULL,proof_key=?,status='pending',submitted_at=?,reviewed_at=NULL,reviewed_by=NULL,review_note=NULL,confirmed_on_phone=? WHERE id=?",
+     due,reference,senderPhone,newKey,now(),isCloudDatabase?false:0,current.id);
     await removeProof(current.proof_key);
    }else{
-    await run('INSERT INTO payment_submissions(id,booking_id,student_id,course_id,amount_egp,transfer_reference,sender_last4,proof_key,status,submitted_at,confirmed_on_phone) VALUES(?,?,?,?,?,?,?,?,?,?,?)',
-     uid(),booking.id,req.user.id,booking.course_id,due,reference,last4||null,newKey,'pending',now(),isCloudDatabase?false:0);
+    await run('INSERT INTO payment_submissions(id,booking_id,student_id,course_id,amount_egp,transfer_reference,sender_phone,proof_key,status,submitted_at,confirmed_on_phone) VALUES(?,?,?,?,?,?,?,?,?,?,?)',
+     uid(),booking.id,req.user.id,booking.course_id,due,reference,senderPhone,newKey,'pending',now(),isCloudDatabase?false:0);
    }
-   return res.status(201).json({ok:true,status:'pending',message:'استلمنا صورة التحويل؛ طلبك ينتظر مراجعة المديرة على موبايلها. رفع الصورة ليس تأكيدًا للدفع.'});
+   // Email failure never activates a booking or loses a successfully stored receipt.
+   await notifyPaymentReviewer({bookingId:booking.id}).catch(e=>console.error('Payment email notification unavailable:',e.message));
+   return res.status(201).json({ok:true,status:'pending',message:'تم استلام صورة التحويل ورقم الموبايل. الطلب في انتظار قبول أو رفض الإدارة، ولا يتفعّل تلقائيًا.'});
   }catch(e){if(newKey)await removeProof(newKey);next(e)}
  });
  app.get('/api/admin/payments',auth,onlyAdmin,async(req,res,next)=>{
-  try{const payments=await all("SELECT p.id,p.booking_id,p.student_id,p.amount_egp,p.transfer_reference,p.sender_last4,p.status,p.submitted_at,p.reviewed_at,p.review_note,p.confirmed_on_phone,u.name AS student_name,u.email AS student_email,c.title AS course_title FROM payment_submissions p JOIN users u ON u.id=p.student_id JOIN courses c ON c.id=p.course_id ORDER BY p.submitted_at DESC LIMIT 200");res.json({payments});}
+  try{const payments=await all("SELECT p.id,p.booking_id,p.student_id,p.amount_egp,p.transfer_reference,p.sender_phone,p.sender_last4,p.status,p.submitted_at,p.reviewed_at,p.review_note,p.confirmed_on_phone,u.name AS student_name,u.email AS student_email,c.title AS course_title FROM payment_submissions p JOIN users u ON u.id=p.student_id JOIN courses c ON c.id=p.course_id ORDER BY p.submitted_at DESC LIMIT 200");res.json({payments});}
   catch(e){next(e)}
  });
  app.get('/api/admin/payments/:id/proof',auth,onlyAdmin,async(req,res,next)=>{

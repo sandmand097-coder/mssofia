@@ -40,6 +40,10 @@ services:
       - key: SCHOOL_CONTACT_EMAIL
         sync: false
       - key: VODAFONE_CASH_NUMBER
+        value: "01027661546"
+      - key: SCHOOL_SUPPORT_PHONE
+        value: "01027661546"
+      - key: SCHOOL_ADMIN_EMAIL
         sync: false
       - key: SUPABASE_URL
         sync: false

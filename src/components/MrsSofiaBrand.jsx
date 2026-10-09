@@ -38,7 +38,7 @@ export function BrandFooter({previewMode=false}){
    <div className="sofia-footer-about"><BrandLogo light/><p>العلوم أسهل لما نفهمها. مكان واحد للتعلّم، التجربة، وتنظيم رحلتك مع مدرسة العلوم Mrs Sofia.</p></div>
    <div><h4>استكشف</h4><Link to="/">الرئيسية</Link><Link to="/courses">الكورسات المتاحة</Link><a href="/#method">طريقة التعلم</a><Link to="/privacy">الخصوصية وحماية الطلاب</Link><Link to="/terms">شروط الاشتراك</Link></div>
    <div><h4>{previewMode?'الإطلاق التعريفي':'حسابك'}</h4>{previewMode?<><a href="/#offer">عرض الشهر الأول</a><Link to="/courses">المواد والدورات</Link><small>فتح حسابات الطلاب قريبًا</small></>:<><Link to="/login">تسجيل الدخول</Link><Link to="/register">إنشاء حساب</Link><Link to="/dashboard">لوحة التحكم</Link></>}</div>
-   <div className="sofia-footer-note"><span className="sofia-footer-mini"><Atom size={20}/></span><b>Learn. Explore. Discover.</b><small>من سؤال صغير لاكتشاف كبير.</small></div>
+   <div className="sofia-footer-note"><span className="sofia-footer-mini"><Atom size={20}/></span><b>خدمة العملاء وفودافون كاش</b><a href="tel:01027661546" dir="ltr" style={{fontWeight:900,fontSize:20,color:'#d9f7ed',display:'inline-block',margin:'8px 0'}}>01027661546</a><small>رقم الاستفسارات وتحويل الاشتراك. بعد التحويل ارفع الصورة ورقم الموبايل داخل حسابك، والتفعيل بقرار الإدارة فقط.</small></div>
   </div>
   <div className="sofia-footer-bottom"><span>© {new Date().getFullYear()} Mrs Sofia — مدرسة العلوم. جميع الحقوق محفوظة.</span><span>Made for curious minds <span aria-hidden="true">✦</span></span></div>
  </div></footer>;

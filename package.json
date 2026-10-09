@@ -15,7 +15,7 @@
     "seed:demo": "node --env-file=.env server/seed.js",
     "admin:local": "node --env-file-if-exists=.env server/create-school-admin.js",
     "admin:invite": "node --env-file-if-exists=.env server/create-admin-cloud.js",
-    "check": "node --check server/start.js && node --check server/public-preview.js && node --check server/payment-routes.js && node --check server/index.js && node --check server/db.js && node --check server/db-adapter.js && node --check server/email.js && node --check server/seed.js && node --check server/classroom.js && node --check server/create-admin-cloud.js",
+    "check": "node --check server/start.js && node --check server/public-preview.js && node --check server/payment-routes.js && node --check server/payment-email-review.js && node --check server/index.js && node --check server/db.js && node --check server/db-adapter.js && node --check server/email.js && node --check server/seed.js && node --check server/classroom.js && node --check server/create-admin-cloud.js",
     "test": "node tests/integration.mjs && node tests/classroom-moderation.mjs && node tests/payment-workflow.mjs"
   },
   "dependencies": {

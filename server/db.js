@@ -23,12 +23,16 @@ CREATE TABLE IF NOT EXISTS auth_tokens(id TEXT PRIMARY KEY,user_id TEXT NOT NULL
 CREATE INDEX IF NOT EXISTS idx_auth_tokens_user_purpose ON auth_tokens(user_id,purpose);
 CREATE TABLE IF NOT EXISTS payment_submissions(id TEXT PRIMARY KEY,booking_id TEXT NOT NULL UNIQUE REFERENCES bookings(id) ON DELETE CASCADE,student_id TEXT NOT NULL REFERENCES users(id),course_id TEXT NOT NULL REFERENCES courses(id),amount_egp INTEGER NOT NULL CHECK(amount_egp>=0),transfer_reference TEXT NOT NULL COLLATE NOCASE UNIQUE,sender_last4 TEXT,proof_key TEXT NOT NULL UNIQUE,status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','approved','rejected')),submitted_at TEXT NOT NULL,reviewed_at TEXT,reviewed_by TEXT REFERENCES users(id),review_note TEXT,confirmed_on_phone INTEGER NOT NULL DEFAULT 0);
 CREATE INDEX IF NOT EXISTS idx_payment_review_queue ON payment_submissions(status,submitted_at);
+CREATE TABLE IF NOT EXISTS payment_review_links(id TEXT PRIMARY KEY,payment_id TEXT NOT NULL REFERENCES payment_submissions(id) ON DELETE CASCADE,token_hash TEXT NOT NULL UNIQUE,recipient_email TEXT NOT NULL,expires_at TEXT NOT NULL,used_at TEXT,created_at TEXT NOT NULL);
+CREATE INDEX IF NOT EXISTS idx_review_links_payment ON payment_review_links(payment_id,created_at);
 `);
 const columns=new Set(db.prepare('PRAGMA table_info(users)').all().map(x=>x.name));
 if(!columns.has('email_verified_at'))db.exec('ALTER TABLE users ADD COLUMN email_verified_at TEXT');
 if(!columns.has('guardian_email'))db.exec('ALTER TABLE users ADD COLUMN guardian_email TEXT');
 if(!columns.has('guardian_consent_at'))db.exec('ALTER TABLE users ADD COLUMN guardian_consent_at TEXT');
 if(!columns.has('session_version'))db.exec('ALTER TABLE users ADD COLUMN session_version INTEGER NOT NULL DEFAULT 0');
+const paymentCols=new Set(db.prepare('PRAGMA table_info(payment_submissions)').all().map(x=>x.name));
+if(!paymentCols.has('sender_phone'))db.exec('ALTER TABLE payment_submissions ADD COLUMN sender_phone TEXT');
 const lessonCols=new Set(db.prepare('PRAGMA table_info(lessons)').all().map(x=>x.name));
 if(!lessonCols.has('meet_url'))db.exec('ALTER TABLE lessons ADD COLUMN meet_url TEXT');
 export const get=(sql,...p)=>db.prepare(sql).get(...p);
