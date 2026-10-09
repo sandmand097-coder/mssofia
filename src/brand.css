@@ -477,3 +477,6 @@ body{color:var(--sf-ink)}
 .sofia-policy-body section p{font-size:13px;line-height:2.15;color:#496861;margin:0}
 .sofia-policy-body section strong{color:#087d70}
 @media(max-width:600px){.sofia-policy-body section{padding:17px}.sofia-policy-body section h2{font-size:15px}}
+
+/* Keep the school payment/support number visible on phones and tablets. */
+@media(max-width:1100px){.sofia-footer-note{display:flex;flex-direction:column;grid-column:1 / -1;max-width:100%;box-sizing:border-box}}
