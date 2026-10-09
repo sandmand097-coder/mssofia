@@ -1,0 +1,45 @@
+{
+  "name": "mrsofia",
+  "version": "1.0.0",
+  "private": true,
+  "engines": {
+    "node": ">=24 <25"
+  },
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently -k \"npm:server:dev\" \"npm:client:dev\"",
+    "server:dev": "node --watch --env-file=.env server/index.js",
+    "client:dev": "vite --host 127.0.0.1",
+    "build": "vite build",
+    "start": "node --env-file-if-exists=.env server/index.js",
+    "seed:demo": "node --env-file=.env server/seed.js",
+    "admin:local": "node --env-file-if-exists=.env server/create-school-admin.js",
+    "admin:invite": "node --env-file-if-exists=.env server/create-admin-cloud.js",
+    "check": "node --check server/index.js && node --check server/db.js && node --check server/db-adapter.js && node --check server/email.js && node --check server/seed.js && node --check server/classroom.js && node --check server/create-admin-cloud.js",
+    "test": "node tests/integration.mjs && node tests/classroom-moderation.mjs"
+  },
+  "dependencies": {
+    "@livekit/components-react": "^2.9.0",
+    "@livekit/components-styles": "^1.2.0",
+    "bcryptjs": "^3.0.2",
+    "cookie-parser": "^1.4.7",
+    "express": "^5.1.0",
+    "express-rate-limit": "^8.1.0",
+    "helmet": "^8.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "livekit-client": "^2.17.0",
+    "livekit-server-sdk": "^2.15.0",
+    "lucide-react": "^0.468.0",
+    "nodemailer": "^10.0.16",
+    "pg": "^8.23.1",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "react-router-dom": "^7.9.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^5.1.0",
+    "concurrently": "^9.2.1",
+    "playwright-core": "^1.64.0",
+    "vite": "^7.2.0"
+  }
+}

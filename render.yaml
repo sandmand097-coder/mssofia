@@ -1,0 +1,33 @@
+services:
+  - type: web
+    name: mssofia
+    runtime: node
+    region: frankfurt
+    plan: free
+    branch: main
+    buildCommand: npm ci && npm run check && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: APP_ORIGIN
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: PG_POOL_MAX
+        value: "5"
+      - key: LIVEKIT_URL
+        sync: false
+      - key: LIVEKIT_API_KEY
+        sync: false
+      - key: LIVEKIT_API_SECRET
+        sync: false
+      - key: MAIL_FROM
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: REGISTRATION_ENABLED
+        value: "false"
