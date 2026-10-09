@@ -45,6 +45,12 @@ services:
         value: "01027661546"
       - key: SCHOOL_ADMIN_EMAIL
         sync: false
+      - key: GOOGLE_ADMIN_LOGIN_ENABLED
+        value: "false"
+      - key: GOOGLE_OAUTH_CLIENT_ID
+        sync: false
+      - key: GOOGLE_ADMIN_EMAIL
+        sync: false
       - key: SUPABASE_URL
         sync: false
       - key: SUPABASE_SERVICE_ROLE_KEY

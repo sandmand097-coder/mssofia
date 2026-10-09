@@ -2,6 +2,7 @@ import React,{useEffect,useState} from 'react';
 import {Link,useNavigate,useSearchParams} from 'react-router-dom';
 import {FlaskConical,ArrowLeft,Eye,EyeOff,ShieldCheck,MailCheck,Mail,LockKeyhole,Send} from 'lucide-react';
 import {dashboardPath} from '../components/MrsSofiaBrand.jsx';
+import GoogleAdminButton from '../components/GoogleAdminButton.jsx';
 
 function AuthLayout({tag,title,description,children}){
  return <main className="sofia-site sofia-auth-bg"><div className="sofia-container sofia-auth-layout"><section className="sofia-auth-card">
@@ -27,6 +28,7 @@ export function SignInPage({api,user,setUser}){
    <Link className="sofia-auth-forgot" to="/forgot-password">نسيت كلمة المرور؟</Link>
    <button type="submit" className="sofia-cta sofia-auth-submit" disabled={busy}>{busy?'جارٍ الدخول...':'تسجيل الدخول'}<ArrowLeft size={18}/></button>
   </form>
+  <GoogleAdminButton api={api} setUser={setUser}/>
   <div className="sofia-auth-switch">طالب جديد؟ <Link to="/register">اعمل حساب بالبريد الإلكتروني</Link></div>
  </AuthLayout>;
 }

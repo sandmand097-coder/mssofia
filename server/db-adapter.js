@@ -41,7 +41,7 @@ export const all=async(sql,...params)=>isCloudDatabase?(await query(sql,params))
 export const run=async(sql,...params)=>isCloudDatabase?{changes:(await query(sql,params)).rowCount}:sqlite.run(sql,...params);
 export const uid=()=>randomUUID();
 export const now=()=>new Date().toISOString();
-export const publicUser=user=>user?Object.fromEntries(Object.entries(user).filter(([k])=>!['password_hash','session_version'].includes(k))):null;
+export const publicUser=user=>user?Object.fromEntries(Object.entries(user).filter(([k])=>!['password_hash','session_version','google_sub'].includes(k))):null;
 export const checkConnection=async()=>{
  if(!isCloudDatabase)return true;
  const r=await pool.query('SELECT 1 AS ready');

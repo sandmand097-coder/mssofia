@@ -10,6 +10,7 @@ import { AccessToken, WebhookReceiver } from 'livekit-server-sdk';
 import { getRoomService, participantPermission, videoGrant, MAX_ACTIVE_SPEAKERS } from './classroom.js';
 import { randomBytes, createHash } from 'node:crypto';
 import { sendAccountEmail, canRegister, mailMode } from './email.js';
+import {attachGoogleAdminAuth} from './google-admin-auth.js';
 import {attachPaymentRoutes} from './payment-routes.js';
 import { get, all, run, uid, now, publicUser, checkConnection } from './db-adapter.js';
 const app = express(),
@@ -79,6 +80,7 @@ const authLimiter = rateLimit({
 });
 app.use('/api/auth/login', authLimiter);
 app.use('/api/auth/register', authLimiter);
+attachGoogleAdminAuth(app,{get,run,now,publicUser,secret,limiter:authLimiter});
 const send = (res, status, data) => res.status(status).json(data);
 const asyncRoute = f => (req, res, next) => Promise.resolve(f(req, res, next)).catch(next);
 const auth = async (req, res, next) => {

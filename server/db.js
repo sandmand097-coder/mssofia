@@ -31,6 +31,8 @@ if(!columns.has('email_verified_at'))db.exec('ALTER TABLE users ADD COLUMN email
 if(!columns.has('guardian_email'))db.exec('ALTER TABLE users ADD COLUMN guardian_email TEXT');
 if(!columns.has('guardian_consent_at'))db.exec('ALTER TABLE users ADD COLUMN guardian_consent_at TEXT');
 if(!columns.has('session_version'))db.exec('ALTER TABLE users ADD COLUMN session_version INTEGER NOT NULL DEFAULT 0');
+if(!columns.has('google_sub'))db.exec('ALTER TABLE users ADD COLUMN google_sub TEXT');
+db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_users_google_sub ON users(google_sub) WHERE google_sub IS NOT NULL');
 const paymentCols=new Set(db.prepare('PRAGMA table_info(payment_submissions)').all().map(x=>x.name));
 if(!paymentCols.has('sender_phone'))db.exec('ALTER TABLE payment_submissions ADD COLUMN sender_phone TEXT');
 const lessonCols=new Set(db.prepare('PRAGMA table_info(lessons)').all().map(x=>x.name));
@@ -40,4 +42,4 @@ export const all=(sql,...p)=>db.prepare(sql).all(...p);
 export const run=(sql,...p)=>db.prepare(sql).run(...p);
 export const uid=()=>randomUUID();
 export const now=()=>new Date().toISOString();
-export const publicUser=u=>u?Object.fromEntries(Object.entries(u).filter(([k])=>k!=='password_hash')):null;
+export const publicUser=u=>u?Object.fromEntries(Object.entries(u).filter(([k])=>!['password_hash','session_version','google_sub'].includes(k))):null;

@@ -480,3 +480,11 @@ body{color:var(--sf-ink)}
 
 /* Keep the school payment/support number visible on phones and tablets. */
 @media(max-width:1100px){.sofia-footer-note{display:flex;flex-direction:column;grid-column:1 / -1;max-width:100%;box-sizing:border-box}}
+
+/* Sign in with Google: director only; never creates administrator accounts. */
+.sofia-google-admin-entry{margin:20px 0 5px;padding:18px 10px 6px;border-top:1px solid #e2ebe7;text-align:center}
+.sofia-google-divider{display:block;color:#486e66;font-size:12px;font-weight:750;margin:0 0 16px}
+.sofia-google-signin-mount{display:flex;justify-content:center;align-items:center;min-height:44px;overflow:hidden}
+.sofia-google-signin-mount[aria-busy="true"]{opacity:.6;pointer-events:none}
+.sofia-google-admin-entry>small{display:flex;align-items:center;justify-content:center;gap:6px;font-size:10px;color:#648178;margin-top:12px;line-height:1.7}
+.sofia-google-admin-entry .sofia-alert{text-align:right;margin-top:12px}
