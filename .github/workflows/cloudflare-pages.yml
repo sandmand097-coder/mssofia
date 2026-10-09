@@ -1,0 +1,63 @@
+name: Deploy Mrs Sofia to Cloudflare Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  deployments: write
+
+concurrency:
+  group: mssofia-cloudflare-production
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Validate and publish static school frontend
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check whether Cloudflare deployment token is available
+        id: credentials
+        env:
+          CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        shell: bash
+        run: |
+          if [ -n "$CF_TOKEN" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "Cloudflare Pages deployment skipped. Add the repository secret CLOUDFLARE_API_TOKEN (Account / Cloudflare Pages / Edit) to enable automatic publishing." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Set up Node.js
+        if: steps.credentials.outputs.enabled == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Install locked dependencies
+        if: steps.credentials.outputs.enabled == 'true'
+        run: npm ci --no-audit --no-fund
+
+      - name: Validate API permissions, payments, and build
+        if: steps.credentials.outputs.enabled == 'true'
+        run: |
+          npm run check
+          npm test
+          npm run build
+
+      - name: Publish to Cloudflare Pages
+        if: steps.credentials.outputs.enabled == 'true'
+        uses: cloudflare/wrangler-action@v4
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: dcf6eec87a6a6b454acc0d9f7deff984
+          wranglerVersion: '4.149.0'
+          command: pages deploy dist --project-name=mssofia --branch=main
+          gitHubToken: ${{ secrets.GITHUB_TOKEN }}

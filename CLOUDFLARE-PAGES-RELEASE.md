@@ -4,7 +4,7 @@
 
 The Render Free instance can sleep when unused. The Cloudflare Pages static React/Vite frontend is served from CDN without waking Render. The existing Render application remains the backend for authenticated lessons, administrative actions and payment receipt reviews. LiveKit Cloud stays the WebRTC/SFU media provider.
 
-Public school website (after deployment): `https://<assigned-project>.pages.dev`.
+Public school website (live): `https://mssofia.pages.dev`.
 Existing backend: `https://mssofia.onrender.com`.
 
 **The Render URL is no longer the preferred public link** after Cloudflare deployment: visitors to the old onrender.com link can still see Render's wake-up screen. Changing the domain attached to the new Cloudflare Pages frontend prevents that on the NEW public address, not on the old Render hostname.
@@ -27,17 +27,27 @@ Any missing/wrong value leaves the edge in safe preview. Do **not** set these un
 
 Also set Render's `APP_ORIGIN` to the actual Cloudflare frontend domain before enabling any enrollment or Google sign-in. Add that frontend domain to Google Cloud OAuth's **Authorized JavaScript origins**, and keep Render's own domain only for administrative fallback.
 
-### Cloudflare Pages Git integration — preferred for ongoing professional maintenance
+### Cloudflare Pages deployment — LIVE (Direct Upload)
 
-1. Open https://dash.cloudflare.com > Workers & Pages > Create > Pages > Connect to Git.
-2. Choose GitHub account `sandmand097-coder`, authorizing access **only to** `sandmand097-coder/mssofia`.
-3. Project name `mssofia` (use `mrs-sofia-school` only if the first name is unavailable).
-4. Production branch `main`, root `/`, build command `npm ci && npm run build`, output directory `dist`.
-5. Set Cloudflare Pages build environment `NODE_VERSION=24` and keep `PUBLIC_LAUNCH_MODE=preview`. No database password, LiveKit secret, or other backend keys are needed in Pages for preview.
-6. Deploy and verify `https://<assigned-name>.pages.dev`, `/privacy`, `/terms`, `/courses`, `/api/health`, `/api/auth/me` and mobile view.
-7. After successful launch, share the **Cloudflare Pages URL** rather than Render's URL. Future GitHub pushes deploy automatically after the Cloudflare build passes.
+The free public school website has been **deployed successfully** to https://mssofia.pages.dev using Wrangler 4.149.0. The Cloudflare project is `mssofia` under the authorised school's Cloudflare account; the backend remains on Render.
 
-Git-connected Pages projects support manual Wrangler deployments too; direct-upload projects cannot later be converted to Git integration. Therefore do not create a Direct Upload project before choosing the long-term Git-based workflow.
+First release was published from the verified GitHub `main` tree with:
+
+```powershell
+npm run check
+npm test
+npm run build
+npx --yes wrangler@4.149.0 pages deploy dist --project-name mssofia --branch main
+```
+
+Cloudflare's Direct Upload projects cannot later be converted to a Cloudflare-managed Git integration. **Instead, this repo now includes a dedicated GitHub Actions CI/CD workflow** at `.github/workflows/cloudflare-pages.yml`, which can automatically build, test and deploy subsequent pushes to `main` using a *restricted Cloudflare Pages API token*.
+
+To activate automatic deployments, do this once (without pasting any token into a chat):
+1. In Cloudflare > My Profile > API Tokens, create a custom token with **Account / Cloudflare Pages / Edit** access, restricted to the Cloudflare account hosting `mssofia`. No global API key and no billing permissions are needed.
+2. In GitHub `sandmand097-coder/mssofia` > Settings > Secrets and variables > Actions > New repository secret, add **`CLOUDFLARE_API_TOKEN`** with that token's value.
+3. The Cloudflare account ID (public identifier, not a secret) is already scoped into the workflow. The next push to `main` will run Node 24, check, test, build and deploy automatically. Until the secret is present, the workflow **skips publishing safely**; the live site remains unaffected. You can trigger the workflow manually from GitHub Actions after installing the secret.
+
+Cloudflare Pages preview Functions answer public read requests without waking Render. Do **not** enable student registration, payment or full API forwarding until the actual production database, official email domain and children's privacy review pass. When turning on the real backend, change `APP_ORIGIN` to the Pages domain and add it to Google's authorised JavaScript origins first.
 
 ### Testing
 
