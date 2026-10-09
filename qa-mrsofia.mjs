@@ -1,0 +1,76 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import {chromium} from 'playwright-core';
+const root='http://127.0.0.1:5173';
+const raw=fs.readFileSync(new URL('./.env',import.meta.url),'utf8');
+const env=Object.fromEntries(raw.split(/\r?\n/).filter(Boolean).map(s=>{const i=s.indexOf('=');return [s.slice(0,i),s.slice(i+1)]}));
+const browser=await chromium.launch({headless:true,executablePath:'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe',args:['--no-first-run']});
+const errors=[];
+const session=(options={})=>browser.newPage({viewport:{width:1440,height:960},locale:'ar-EG',...options});
+const attach=(page,tag)=>page.on('pageerror',e=>errors.push(tag+': '+e.message));
+try{
+ const desktop=await session();attach(desktop,'desktop');
+ await desktop.goto(root,{waitUntil:'networkidle'});
+ await desktop.getByRole('heading',{level:1,name:/العلوم مش حفظ/}).waitFor();
+ assert.match(await desktop.title(),/mrsofia/);
+ assert.ok(await desktop.getByText('مدرسة العلوم').count()>0);
+ await desktop.screenshot({path:'mrsofia-home-desktop.png',fullPage:true});
+ await desktop.screenshot({path:'mrsofia-hero-desktop.png'});
+ console.log('PASS desktop landing, brand and title');
+ await desktop.locator('.sofia-course-card').first().waitFor({timeout:12000});
+ const cardCount=await desktop.locator('.sofia-course-card').count();
+ assert.ok(cardCount>0,'homepage should show live science courses');
+ console.log('PASS featured science courses '+cardCount);
+ await desktop.getByRole('link',{name:/اكتشف كورسات العلوم/}).click();
+ await desktop.waitForURL('**/courses');
+ await desktop.getByRole('heading',{level:1,name:/كل تجربة علمية/}).waitFor();
+ const tabs=desktop.locator('.sofia-catalog-filters');
+ await tabs.getByRole('button',{name:'أحياء'}).click();
+ assert.match(new URL(desktop.url()).searchParams.get('subject'),/أحياء/);
+ assert.ok(await desktop.locator('.sofia-course-card').count()>0);
+ await desktop.screenshot({path:'mrsofia-courses.png',fullPage:true});
+ console.log('PASS courses filter and catalog');
+ await desktop.locator('.sofia-course-card').first().click();
+ await desktop.waitForURL(/\/courses\//);
+ await desktop.getByText('رحلتك خطوة بخطوة').waitFor();
+ await desktop.screenshot({path:'mrsofia-course-details.png',fullPage:true});
+ console.log('PASS science course details and schedule');
+ await desktop.goto(root+'/register');
+ await desktop.getByRole('heading',{level:1,name:/جاهز تبدأ/}).waitFor();
+ await desktop.locator('input[type=email]').waitFor();
+ await desktop.screenshot({path:'mrsofia-register.png',fullPage:true});
+ console.log('PASS register page');
+ await desktop.goto(root+'/login');
+ await desktop.locator('input[type=email]').fill(env.DEMO_STUDENT_EMAIL);
+ await desktop.locator('input[type=password]').fill(env.DEMO_STUDENT_PASSWORD);
+ await desktop.locator('button[type=submit]').click();
+ await desktop.waitForURL('**/student');
+ await desktop.locator('.portal-page-footer').getByText(/Mrs Sofia/).waitFor();
+ console.log('PASS student login and new brand dashboard');
+ const admin=await session();attach(admin,'admin');
+ await admin.goto(root+'/login',{waitUntil:'networkidle'});
+ await admin.locator('input[type=email]').fill(env.ADMIN_EMAIL);
+ await admin.locator('input[type=password]').fill(env.ADMIN_PASSWORD);
+ await admin.locator('button[type=submit]').click();
+ await admin.waitForURL('**/admin');
+ await admin.getByText('نظرة شاملة على المنصة').waitFor();
+ console.log('PASS administrator login');
+ for(const width of [768,390,320]){
+  const mobile=await session({viewport:{width,height:844},deviceScaleFactor:1});
+  attach(mobile,'mobile '+width);
+  await mobile.goto(root,{waitUntil:'networkidle'});
+  await mobile.getByRole('heading',{level:1,name:/العلوم مش حفظ/}).waitFor();
+  const result=await mobile.evaluate(()=>({page:document.documentElement.scrollWidth,view:window.innerWidth,hero:Math.round(document.querySelector('.sofia-hero').getBoundingClientRect().width)}));
+  console.log('VIEWPORT '+width+' '+JSON.stringify(result));
+  assert.ok(result.page<=result.view+2,'horizontal overflow on '+width);
+  if(width===390){
+   await mobile.screenshot({path:'mrsofia-home-mobile.png',fullPage:true});
+   await mobile.getByRole('button',{name:'فتح القائمة'}).click();
+   assert.equal(await mobile.locator('.sofia-nav-links').getByRole('link',{name:'الكورسات',exact:true}).isVisible(),true);
+   console.log('PASS mobile navigation');
+  }
+  await mobile.close();
+ }
+ if(errors.length)throw Error(errors.join('\n'));
+ console.log('PASS all visual flows, responsive widths and no runtime JavaScript errors');
+} finally { await browser.close(); }

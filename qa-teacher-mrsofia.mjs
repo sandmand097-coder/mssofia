@@ -1,0 +1,56 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import {chromium} from 'playwright-core';
+const lines=fs.readFileSync(new URL('./.env',import.meta.url),'utf8').split(/\r?\n/);
+const env=Object.fromEntries(lines.filter(x=>x.includes('=')).map(x=>{const i=x.indexOf('=');return [x.slice(0,i),x.slice(i+1)]}));
+const browser=await chromium.launch({headless:true,executablePath:'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe',args:['--no-first-run']});
+const errors=[];
+async function login(width){
+ const page=await browser.newPage({viewport:{width,height:900},locale:'ar-EG'});
+ page.on('pageerror',e=>errors.push(e.message));
+ await page.goto('http://127.0.0.1:5173/login',{waitUntil:'networkidle'});
+ await page.locator('input[type=email]').fill(env.DEMO_TEACHER_EMAIL);
+ await page.locator('input[type=password]').fill(env.DEMO_TEACHER_PASSWORD);
+ await page.locator('button[type=submit]').click();
+ await page.waitForTimeout(1600);
+ console.log('TEACHER_LOGIN_PATH',new URL(page.url()).pathname,'ALERT',(await page.locator('[role=alert]').allTextContents()).join(' ').slice(0,150),'ERRORS',errors.slice(0,2));
+ await page.waitForURL('**/teacher',{timeout:12000});
+ await page.locator('.portal-teacher').waitFor();
+ return page;
+}
+try{
+ const desktop=await login(1440);
+ await desktop.getByRole('heading',{name:'مرحباً بك في لوحة المعلم'}).waitFor();
+ await desktop.screenshot({path:'mrsofia-teacher-desktop.png',fullPage:true});
+ console.log('PASS teacher branded dashboard');
+ const menu=desktop.getByRole('navigation',{name:'قائمة المعلم'});
+ await menu.getByRole('button',{name:'دوراتي'}).click();
+ await desktop.getByRole('button',{name:'كورس جديد'}).waitFor();
+ await desktop.getByRole('button',{name:'كورس جديد'}).click();
+ await desktop.getByRole('heading',{name:'إنشاء كورس جديد'}).waitFor();
+ assert.equal(await desktop.locator('.portal-modal input').count()>2,true);
+ await desktop.locator('.portal-close').click();
+ console.log('PASS teacher create course form (non-destructive)');
+ await menu.getByRole('button',{name:'طلابي'}).click();
+ await desktop.getByText('الطلاب المقبولون').waitFor();
+ console.log('PASS teacher roster page');
+ await menu.getByRole('button',{name:'طلبات الحجز'}).click();
+ await desktop.getByRole('heading',{name:'طلبات الحجز'}).waitFor();
+ console.log('PASS teacher bookings page');
+ await menu.getByRole('button',{name:'جدول الحصص'}).click();
+ await desktop.getByRole('heading',{name:'جدول حصصك'}).waitFor();
+ console.log('PASS teacher schedule page');
+ await menu.getByRole('button',{name:'سجل الحضور'}).click();
+ await desktop.getByText('تقرير حضور الطلاب').waitFor();
+ console.log('PASS teacher attendance');
+ await menu.getByRole('button',{name:'ملفي الشخصي'}).click();
+ await desktop.getByText('بيانات المعلم').waitFor();
+ console.log('PASS teacher profile');
+ const mobile=await login(390);
+ await mobile.screenshot({path:'mrsofia-teacher-mobile.png',fullPage:true});
+ const dimensions=await mobile.evaluate(()=>({actual:document.documentElement.scrollWidth,viewport:innerWidth}));
+ console.log('MOBILE_TEACHER',dimensions);
+ assert.ok(dimensions.actual<=dimensions.viewport+2,'teacher overflow on phone');
+ if(errors.length)throw Error(errors.join('; '));
+ console.log('PASS no errors in teacher portal');
+}finally{await browser.close();}

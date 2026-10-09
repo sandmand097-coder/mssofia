@@ -1,0 +1,443 @@
+/* Mrs Sofia — brand system. Marketing and learning experience. */
+:root{--sf-ink:#14313a;--sf-mid:#38565c;--sf-muted:#72858a;--sf-primary:#087d70;--sf-primary-deep:#086255;--sf-light:#e8f6ee;--sf-line:#e5eeea;--sf-warm:#fffaf3;--sf-orange:#f8b774;--sf-card:#fff}
+html{scroll-behavior:smooth}
+body{color:var(--sf-ink)}
+.sofia-site{font-family:Cairo,Tahoma,sans-serif;direction:rtl;color:var(--sf-ink)}
+.sofia-site *{box-sizing:border-box}
+.sofia-container{max-width:1216px;width:calc(100% - 64px);margin-inline:auto}
+.sofia-header{position:sticky;top:0;z-index:70;background:#fffffff2;backdrop-filter:blur(20px);border-bottom:1px solid #eff1f0;font-family:Cairo,Tahoma,sans-serif}
+.sofia-nav{display:flex;align-items:center;justify-content:space-between;gap:26px;height:86px}
+.sofia-logo{display:inline-flex;align-items:center;gap:11px;white-space:nowrap;flex-shrink:0}
+.sofia-logo-symbol{position:relative;width:47px;height:47px;display:grid;place-items:center;background:#087d70;color:#fff;border-radius:14px;transform:rotate(-5deg);box-shadow:0 6px 0 #d2ebe1}
+.sofia-logo-symbol svg{transform:rotate(5deg)}
+.sofia-logo-symbol i{position:absolute;width:5px;height:5px;right:10px;bottom:13px;background:#f7ca87;border-radius:50%}
+.sofia-logo-copy b{font:800 25px/1 "Trebuchet MS",Arial,sans-serif;letter-spacing:-1.5px;color:#18383e;display:block}
+.sofia-logo-copy b span{color:#0a907c}.sofia-logo-copy b em{color:#f6a76b;font-style:normal}
+.sofia-logo-copy small{display:block;font-size:10px;font-weight:900;color:#7a9793;margin-top:3px;letter-spacing:.3px}
+.sofia-nav-links{display:flex;align-items:center;gap:34px;margin-right:auto}
+.sofia-nav-links a{font-size:12px;color:#5f747c;font-weight:800;transition:color .2s}
+.sofia-nav-links a:hover,.sofia-nav-links a.active{color:#007f72}
+.sofia-nav-actions{display:flex;align-items:center;gap:16px}
+.sofia-login,.sofia-nav-account{font-size:12px;font-weight:800;color:#29444b;white-space:nowrap}
+.sofia-nav-account{display:flex;align-items:center;gap:7px;color:#087d70}
+.sofia-logout{background:#eff8f4;border:0;color:#248e7c;border-radius:10px;padding:10px;display:grid;place-items:center}
+.sofia-cta{display:inline-flex;align-items:center;justify-content:center;gap:12px;border:1px solid var(--sf-primary);background:var(--sf-primary);color:white;border-radius:12px;padding:14px 25px;font-size:13px;font-weight:900;box-shadow:0 12px 28px #087d701c;transition:transform .2s,background .2s,box-shadow .2s;text-align:center;cursor:pointer}
+.sofia-cta:hover{transform:translateY(-2px);background:var(--sf-primary-deep);color:white;box-shadow:0 16px 35px #087d7030}
+.sofia-cta-sm{padding:10px 17px;border-radius:10px;font-size:11px}
+.sofia-menu-toggle{display:none;background:#eef7f3;border:0;border-radius:10px;color:var(--sf-primary);padding:8px}
+.sofia-hero{background:radial-gradient(circle at 12% 22%,#ffffff 0,#ffffff00 35%),linear-gradient(115deg,#effaf4 0%,#f6faf4 60%,#fff9f0 100%);position:relative;isolation:isolate;overflow:hidden}
+.sofia-hero:before{content:"";position:absolute;top:-220px;right:-210px;width:650px;height:650px;border:1px solid #b4dbcb70;border-radius:50%;pointer-events:none}
+.sofia-hero:after{content:"";position:absolute;bottom:-350px;left:-280px;width:700px;height:700px;border:1px solid #b4dbcb70;border-radius:50%;pointer-events:none}
+.sofia-hero-grid{min-height:660px;display:grid;grid-template-columns:minmax(0,1.03fr) minmax(0,.97fr);align-items:center;gap:45px;padding-block:65px 75px}
+.sofia-hero-copy{position:relative;z-index:3;min-width:0}
+.sofia-hero-eyebrow{display:inline-flex;align-items:center;gap:9px;border:1px solid #cde9dc;background:#fff9;color:#0f7a69;padding:9px 14px;border-radius:100px;font-size:11px;font-weight:900;letter-spacing:.5px}
+.sofia-hero-eyebrow span{color:#f4a15e;font-size:17px}
+.sofia-hero h1{font-size:clamp(43px,4.4vw,66px);font-weight:900;line-height:1.47;letter-spacing:-2.7px;margin:21px 0 16px;color:#16343b}
+.sofia-hero h1 span{color:#068a78;position:relative}
+.sofia-hero h1 span:after{content:"";height:9px;position:absolute;left:0;right:0;bottom:6px;border-radius:100%;background:#f9c28b80;z-index:-1;transform:rotate(-1deg)}
+.sofia-hero-copy>p{color:#61777a;max-width:570px;font-size:15px;font-weight:600;line-height:2.2}
+.sofia-hero-actions{display:flex;flex-wrap:wrap;align-items:center;gap:16px;margin:31px 0}
+.sofia-ghost{display:inline-flex;align-items:center;gap:9px;font-size:13px;font-weight:900;color:#246a65}
+.sofia-ghost svg{color:#0c8378}
+.sofia-hero-proof{display:flex;align-items:center;gap:18px;flex-wrap:wrap;color:#4d7070;font-size:10px;font-weight:800;margin-top:44px}
+.sofia-hero-proof div{display:flex;align-items:center;gap:6px}
+.sofia-hero-proof span{display:grid;place-items:center;color:#0c9884}
+.sofia-hero-decoration{position:absolute;left:6%;bottom:18px;direction:ltr;color:#75b6a32e;font:900 34px Arial;letter-spacing:8px;pointer-events:none}
+.sofia-scene{height:540px;min-width:0;width:100%;position:relative;display:grid;place-items:center;isolation:isolate}
+.sofia-scene-ambient{position:absolute;width:480px;height:480px;border-radius:50%;background:radial-gradient(circle at 50% 50%,#a5dec49c,#b8e7d540 60%,transparent 65%);filter:blur(2px)}
+.sofia-illustration{position:relative;width:min(100%,470px);border:9px solid #fff;background:#163e43;border-radius:30px;box-shadow:0 30px 70px #07564a22,0 4px 18px #315f4422;transform:rotate(-3deg);z-index:1;overflow:hidden}
+.sofia-illustration-toolbar{height:51px;padding:0 17px;display:flex;align-items:center;gap:13px;border-bottom:1px solid #ffffff1c;background:#173d42;color:#d2ede7}
+.sofia-toolbar-dots{display:flex;gap:5px}
+.sofia-toolbar-dots i{width:7px;height:7px;border-radius:50%;background:#f7b48e}
+.sofia-toolbar-dots i:nth-child(2){background:#edcf75}.sofia-toolbar-dots i:nth-child(3){background:#80ceaf}
+.sofia-illustration-toolbar>span:nth-child(2){font:800 10px Arial;letter-spacing:1.8px;opacity:.7}
+.sofia-live-mark{margin-right:auto;display:flex;align-items:center;gap:6px;font:800 9px Arial;letter-spacing:.5px;color:#b4e5cf}
+.sofia-live-mark i{width:6px;height:6px;border-radius:50%;background:#93e3bc}
+.sofia-illustration-svg{display:block;width:100%;height:auto}
+.sofia-lab-bottom{height:40px;background:#21474b;color:#d4eee4;display:flex;align-items:center;justify-content:space-between;padding:0 21px;font-size:10px;font-weight:800}
+.sofia-lab-bottom>span:first-child{display:flex;align-items:center;gap:7px}
+.sofia-lab-wave{display:flex;gap:3px;height:19px;align-items:center}
+.sofia-lab-wave i{height:7px;width:3px;background:#77ccb5;border-radius:4px}
+.sofia-lab-wave i:nth-child(2),.sofia-lab-wave i:nth-child(6){height:14px}.sofia-lab-wave i:nth-child(3),.sofia-lab-wave i:nth-child(5){height:11px}.sofia-lab-wave i:nth-child(4){height:18px}
+.sofia-scene-tag{position:absolute;z-index:4;display:flex;align-items:center;gap:10px;background:#fff;border:1px solid #f6f4ed;border-radius:16px;padding:12px 16px;box-shadow:0 18px 50px #385c4a22;min-width:192px}
+.sofia-scene-tag>span{width:37px;height:37px;display:grid;place-items:center;background:#fff2dd;color:#d88c40;border-radius:10px;flex-shrink:0}
+.sofia-scene-tag b{font-size:11px;display:block}.sofia-scene-tag small{font-size:9px;color:#8c9b9b;display:block}
+.sofia-tag-top{top:48px;right:-21px;transform:rotate(5deg)}
+.sofia-tag-bottom{bottom:55px;left:-22px;transform:rotate(-4deg)}
+.sofia-tag-bottom>span{background:#e5f5ef;color:#15977d}
+.sofia-scene-spark{position:absolute;color:#f3b777;font-size:35px;z-index:2}
+.sofia-spark-one{top:12px;left:54px}.sofia-spark-two{bottom:33px;right:29px;color:#67b69e}
+.sofia-trust-strip{background:#fff;border-bottom:1px solid #e9f0ec}
+.sofia-trust-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:28px;padding:27px 0}
+.sofia-trust-grid>div{display:grid;grid-template-columns:49px 1fr;align-items:center;gap:0 10px}
+.sofia-trust-grid>div>span{grid-row:span 2;width:47px;height:47px;border-radius:13px;display:grid;place-items:center;color:#0f8f79;background:#eff8f3}
+.sofia-trust-grid b{font-size:12px}.sofia-trust-grid small{font-size:10px;color:#8b9d9a}
+.sofia-section{padding:90px 0}.sofia-section-heading{display:flex;align-items:end;justify-content:space-between;gap:20px;margin-bottom:35px}
+.sofia-section-heading.center{display:block;text-align:center}.sofia-section-heading.center>div{margin:auto}
+.sofia-kicker{display:inline-flex;align-items:center;gap:9px;color:#0d917c;font-size:11px;font-weight:900;letter-spacing:.5px}
+.sofia-kicker i{width:8px;height:8px;border-radius:50%;background:#f2b577;display:inline-block}
+.sofia-section-heading h2{font-size:clamp(27px,3.2vw,41px);margin:8px 0 10px;line-height:1.55;letter-spacing:-1px}
+.sofia-section-heading h2 em,.sofia-about-copy h2 em,.sofia-page-heading h1 em{font-style:normal;color:#098c79}
+.sofia-section-heading p{color:#80908f;font-size:13px;line-height:2;max-width:610px}
+.sofia-section-heading.center p{margin:0 auto}
+.sofia-text-link{color:#087d70;font-weight:900;font-size:13px;display:flex;align-items:center;gap:7px;white-space:nowrap}
+.sofia-subjects-section{background:white}
+.sofia-subject-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:18px}
+.sofia-subject-card{border:1px solid #e8eee9;background:#f6faf8;padding:24px;min-height:251px;border-radius:20px;position:relative;overflow:hidden;transition:transform .2s,box-shadow .2s}
+.sofia-subject-card:after{content:"";position:absolute;width:170px;height:170px;left:-73px;top:22px;border:1px solid currentColor;opacity:.1;border-radius:50%}
+.sofia-subject-card:hover{transform:translateY(-5px);box-shadow:0 18px 38px #1e534512}
+.sofia-subject-card.tone-mint{background:#ecf7f0;color:#12826e}.sofia-subject-card.tone-blue{background:#eaf3fa;color:#397ba1}.sofia-subject-card.tone-rose{background:#fff0ed;color:#ce7e74}.sofia-subject-card.tone-sun{background:#fff5e7;color:#bc8550}
+.sofia-subject-top{display:flex;justify-content:space-between;align-items:center;font:800 10px Arial;letter-spacing:1px;opacity:.75}
+.sofia-subject-icon{margin-top:25px;display:grid;place-items:center;width:85px;height:85px;border-radius:25px;background:#ffffff80}
+.sofia-subject-card h3{font-size:21px;margin:12px 0 3px;color:#293943}.sofia-subject-card p{font-size:11px;color:#7a9090;margin:0}
+
+.sofia-courses-section{background:#f8fbf9}
+.sofia-card-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:23px}
+.sofia-course-card{border:1px solid #e6ece8;border-radius:20px;overflow:hidden;background:#fff;min-width:0;display:block;box-shadow:0 6px 24px #133c2610;transition:transform .22s,box-shadow .22s}
+.sofia-course-card:hover{transform:translateY(-5px);box-shadow:0 20px 44px #0b4b3720}
+.sofia-course-cover{height:196px;position:relative;overflow:hidden;display:flex;justify-content:center;align-items:center;color:#e9fff5}
+.sofia-course-cover.tone-mint{background:linear-gradient(135deg,#2aa490,#096c69)}
+.sofia-course-cover.tone-blue{background:linear-gradient(135deg,#68a2c7,#295c8d)}
+.sofia-course-cover.tone-rose{background:linear-gradient(135deg,#e99e98,#c36a79)}
+.sofia-course-cover.tone-sun{background:linear-gradient(135deg,#dca76e,#b98247)}
+.sofia-course-grid-art{position:absolute;inset:0;opacity:.14;background-image:linear-gradient(#fff 1px,transparent 1px),linear-gradient(90deg,#fff 1px,transparent 1px);background-size:33px 33px;mask-image:linear-gradient(130deg,transparent,#000)}
+.sofia-course-cover>svg{filter:drop-shadow(0 10px 14px #0002);transition:transform .3s}
+.sofia-course-card:hover .sofia-course-cover>svg{transform:scale(1.1) rotate(-7deg)}
+.sofia-course-english{position:absolute;top:17px;left:20px;font:900 10px Arial;letter-spacing:2px;color:#ffffffa8}
+.sofia-course-live{position:absolute;right:16px;bottom:16px;color:white;font-size:10px;font-weight:900;background:#ffffff35;padding:6px 10px;display:flex;align-items:center;gap:7px;border-radius:40px}
+.sofia-course-live>span{width:6px;height:6px;background:#8cf5c3;border-radius:50%}
+.sofia-course-content{padding:23px}
+.sofia-course-tags{display:flex;gap:8px}
+.sofia-course-tags span{background:#edf8f2;color:#148a75;border-radius:7px;padding:5px 10px;font-size:10px;font-weight:800}
+.sofia-course-tags span+span{background:#f3f6f7;color:#84959a}
+.sofia-course-content h3{font-size:18px;margin:15px 0 8px;line-height:1.55;color:#18343a}
+.sofia-course-content>p{font-size:12px;line-height:1.95;min-height:47px;color:#829392;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.sofia-course-meta{display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;border-bottom:1px solid #eff2f0;padding:17px 0;color:#8d9d9b}
+.sofia-course-meta span{display:flex;align-items:center;gap:6px;font-size:10px;font-weight:700}
+.sofia-course-price{display:flex;align-items:center;justify-content:space-between;gap:10px;padding-top:18px}
+.sofia-course-price strong{color:#087d70;font-size:19px}.sofia-course-price span{font-size:11px;font-weight:900;color:#147b70;display:flex;align-items:center;gap:7px}
+.sofia-course-empty{text-align:center;border:1px dashed #c7ddd2;border-radius:20px;background:#fff;padding:45px}
+.sofia-course-empty>span{width:60px;height:60px;border-radius:18px;background:#e8f6ee;color:#087d70;display:grid;place-items:center;margin:auto}
+.sofia-course-empty h3{font-size:18px;margin:14px 0 3px}
+.sofia-course-empty p{color:#8a9e98;font-size:12px}
+.sofia-course-empty a{display:inline-flex;align-items:center;gap:8px;color:#087d70;font-size:12px;font-weight:900}
+.sofia-method-section{padding:91px 0;background:#fff}
+.sofia-method-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:23px}
+.sofia-method-card{border:1px solid #e4eee8;background:#fff;padding:27px;border-radius:20px;position:relative;box-shadow:0 10px 25px #153e2b08}
+.sofia-method-num{font:900 40px Arial;color:#e6f0ea;position:absolute;top:18px;left:21px}
+.sofia-method-icon{width:67px;height:67px;display:grid;place-items:center;background:#e9f6ef;color:#078b75;border-radius:20px}
+.sofia-method-card:nth-child(2) .sofia-method-icon{background:#edf2ff;color:#507bba}
+.sofia-method-card:nth-child(3) .sofia-method-icon{background:#fff4e5;color:#cc8b41}
+.sofia-method-card h3{font-size:18px;margin:21px 0 6px}
+.sofia-method-card p{font-size:12px;color:#879895;line-height:2;margin:0}
+.sofia-about-section{background:linear-gradient(115deg,#eef7f0,#f8faf6);padding:99px 0}
+.sofia-about-grid{display:grid;grid-template-columns:1fr 1fr;gap:90px;align-items:center}
+.sofia-about-art{height:425px;position:relative;display:grid;place-items:center}
+.sofia-about-orbit{width:400px;height:400px;border:1px dashed #a6d5c0;border-radius:50%;position:absolute;max-width:95%}
+.sofia-about-orbit:before,.sofia-about-orbit:after{content:"";width:18px;height:18px;background:#f6b57a;border-radius:50%;position:absolute;left:44px;top:42px}
+.sofia-about-orbit:after{left:auto;right:20px;top:auto;bottom:83px;background:#72c4a3}
+.sofia-about-card{height:350px;width:330px;max-width:82%;border-radius:34px;background:linear-gradient(145deg,#155c58,#103b46);box-shadow:25px 25px 0 #cbe8d7,0 30px 55px #21513b29;transform:rotate(-6deg);display:flex;flex-direction:column;justify-content:center;align-items:center;color:#fff;position:relative;overflow:hidden}
+.sofia-about-card:before{content:"";border:1px solid #ffffff22;position:absolute;width:310px;height:310px;border-radius:50%;top:-175px;left:-120px}
+.sofia-about-symbol{display:grid;place-items:center;width:135px;height:135px;border:1px solid #80d7bf7d;border-radius:50%;color:#a4e6d0;margin-bottom:15px}
+.sofia-about-ms{font:900 34px "Trebuchet MS",Arial;letter-spacing:-1px}
+.sofia-about-ar{font-size:13px;color:#b6e7d6;font-weight:800}
+.sofia-about-dots{font-size:13px;color:#f4bb83;letter-spacing:15px;margin-top:15px}
+.sofia-about-sticker{position:absolute;bottom:17px;right:-10px;border-radius:13px;background:#fff;padding:11px 16px;box-shadow:0 10px 30px #144d3524;font-size:11px;font-weight:900;color:#197b69;display:flex;align-items:center;gap:8px}
+.sofia-about-sticker svg{color:#f1a47b}
+.sofia-about-copy h2{font-size:clamp(30px,3.5vw,45px);line-height:1.55;margin:15px 0 17px;letter-spacing:-1px}
+.sofia-about-copy>p{color:#667d7b;font-size:13px;line-height:2.3;margin-bottom:20px}
+.sofia-about-bullets{display:grid;gap:14px;margin-bottom:28px}
+.sofia-about-bullets span{display:flex;align-items:center;gap:10px;font-size:12px;font-weight:800;color:#516e69}
+.sofia-about-bullets svg{color:#078f79}
+.sofia-faq{background:white}
+.sofia-faq-grid{display:grid;grid-template-columns:.76fr 1.24fr;gap:100px}
+.sofia-faq-list{display:grid;gap:11px}
+.sofia-faq-item{background:#f9fbf9;border:1px solid #e4eee8;border-radius:14px;padding:0 22px}
+.sofia-faq-item[open]{background:#f2f9f4;border-color:#c8e6d5}
+.sofia-faq-item summary{cursor:pointer;display:flex;justify-content:space-between;gap:20px;align-items:center;font-size:13px;font-weight:900;list-style:none;padding:19px 0}
+.sofia-faq-item summary::-webkit-details-marker{display:none}
+.sofia-faq-plus{font:800 22px Arial;color:#087d70;transform-origin:center}
+.sofia-faq-item[open] .sofia-faq-plus{transform:rotate(45deg)}
+.sofia-faq-item p{font-size:12px;color:#7c908c;line-height:2;margin:0;padding:0 0 20px}
+.sofia-bottom-cta{background:linear-gradient(120deg,#075f5a,#0d8675);color:#fff;display:flex;align-items:center;justify-content:space-between;gap:25px;padding:45px 52px;border-radius:26px;position:relative;overflow:hidden;margin-bottom:95px}
+.sofia-bottom-cta>div:not(.sofia-bottom-molecule){position:relative;z-index:1}
+.sofia-bottom-cta>div>span{font-size:11px;color:#d3f2df;font-weight:900}
+.sofia-bottom-cta h2{font-size:29px;margin:8px 0 6px}.sofia-bottom-cta p{font-size:12px;color:#c8e9da;margin:0}
+.sofia-bottom-molecule{position:absolute;left:30%;top:-24px;opacity:.13;pointer-events:none}
+.sofia-cta-white{background:#fff;color:#087d70;border-color:white;box-shadow:none;flex-shrink:0;position:relative;z-index:2}
+.sofia-cta-white:hover{background:#edfff7;color:#087d70}
+.sofia-footer{background:#123239;color:#d8e7e3;font-family:Cairo,Tahoma,sans-serif;padding:58px 0 0}
+.sofia-footer-main{display:grid;grid-template-columns:1.6fr .7fr .7fr 1fr;gap:45px;padding-bottom:50px}
+.sofia-logo-light .sofia-logo-symbol{background:#e9f8ed;color:#087d70;box-shadow:none}
+.sofia-logo-light .sofia-logo-copy b{color:#fff}
+.sofia-logo-light .sofia-logo-copy b span{color:#83d9bf}
+.sofia-footer-about p{max-width:350px;font-size:11px;line-height:2.2;color:#a9c2bf;margin-top:21px}
+.sofia-footer-main h4{font-size:13px;margin:4px 0 20px;color:white}
+.sofia-footer-main>div:not(:first-child) a{display:block;color:#b2c8c3;font-size:11px;margin-bottom:13px}
+.sofia-footer-main>div:not(:first-child) a:hover{color:white}
+.sofia-footer-note{border:1px solid #ffffff1c;background:#ffffff0c;padding:21px;border-radius:17px;align-self:start}
+.sofia-footer-mini{display:grid;place-items:center;border-radius:10px;width:39px;height:39px;background:#ffffff12;margin-bottom:12px;color:#9ee1c7}
+.sofia-footer-note b{font:800 13px Arial;display:block}
+.sofia-footer-note small{font-size:11px;color:#b2c8c3}
+.sofia-footer-bottom{border-top:1px solid #ffffff1c;padding:21px 0;display:flex;justify-content:space-between;gap:10px;align-items:center;font-size:10px;color:#8eaca9}
+.sofia-footer-bottom>span:last-child{font:800 10px Arial;letter-spacing:.4px}
+.sofia-footer-bottom>span:last-child span{color:#f6b474}
+
+/* Course catalog and course detail */
+.sofia-page-bg{background:#f8fbf9;min-height:74vh;padding-bottom:95px}
+.sofia-page-heading{padding:75px 0 70px;text-align:center;background:linear-gradient(115deg,#eaf7ee,#f8fbf7)}
+.sofia-page-heading h1{font-size:clamp(29px,4vw,49px);line-height:1.5;margin:10px 0;color:#15383f;letter-spacing:-1.2px}
+.sofia-page-heading h1 em{font-style:normal}
+.sofia-page-heading p{font-size:13px;color:#718983;line-height:2;max-width:610px;margin:0 auto}
+.sofia-catalog{padding-top:40px}
+.sofia-catalog-toolbar{display:flex;justify-content:space-between;align-items:center;gap:15px}
+.sofia-catalog-search{background:#fff;border:1px solid #e3ebe7;box-shadow:0 4px 15px #19462905;border-radius:13px;display:flex;align-items:center;gap:11px;color:#88a19a;padding:0 16px;flex:1;max-width:610px;min-height:55px}
+.sofia-catalog-search:focus-within{border-color:#82c8ac;box-shadow:0 0 0 3px #0c917819}
+.sofia-catalog-search input{border:0;outline:0;flex:1;min-width:0;font:700 12px Cairo,Tahoma;background:transparent;color:#16383e}
+.sofia-result-count{display:flex;align-items:center;gap:8px;color:#68847d;font-size:12px;font-weight:900}
+.sofia-catalog-filters{display:flex;gap:10px;overflow-x:auto;margin:24px 0 33px;padding-bottom:3px}
+.sofia-catalog-filters button{background:#fff;border:1px solid #e4ece7;color:#5c7773;padding:10px 22px;border-radius:25px;font-size:12px;font-weight:800;white-space:nowrap}
+.sofia-catalog-filters button.active,.sofia-catalog-filters button:hover{color:white;background:#087d70;border-color:#087d70}
+.sofia-no-results{background:#fff;border:1px dashed #c9ddd3;border-radius:19px;padding:62px 25px;text-align:center;margin:30px auto;color:#3e9180}
+.sofia-no-results h3,.sofia-no-results h2{color:#18373c;font-size:20px;margin:14px 0 7px}
+.sofia-no-results p{font-size:12px;color:#889b94}
+.sofia-no-results button,.sofia-no-results a{background:#edf8f1;color:#067969;border:0;border-radius:9px;padding:9px 15px;font-weight:800;font-size:12px}
+.sofia-page-loading{padding:110px 20px;text-align:center;color:#087d70;min-height:47vh;font-weight:800}
+.sofia-alert{background:#fff1e9;border:1px solid #f9d9c5;color:#a25031;padding:13px;border-radius:11px;font-size:12px;margin:15px 0}
+.sofia-detail-wrap{padding-top:26px}
+.sofia-breadcrumb{display:flex;align-items:center;gap:9px;font-size:11px;color:#78958c;padding-bottom:22px}
+.sofia-breadcrumb a:hover{color:#087d70}
+.sofia-detail-layout{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(300px,.95fr);align-items:start;gap:31px}
+.sofia-detail-art{height:365px;background:radial-gradient(circle at 60% 50%,#378c7a,#104d52 75%);display:grid;place-items:center;border-radius:25px;position:relative;overflow:hidden;color:#c2fae7}
+.sofia-detail-art>span{width:180px;height:180px;border:1px solid #cdf6e433;border-radius:50%;display:grid;place-items:center;position:relative;z-index:2;box-shadow:0 0 0 34px #d0ffe90a,0 0 0 72px #d0ffe907}
+.sofia-detail-art-grid{position:absolute;inset:0;opacity:.11;background-image:linear-gradient(#cffff3 1px,transparent 1px),linear-gradient(90deg,#cffff3 1px,transparent 1px);background-size:44px 44px}
+.sofia-detail-art-caption{position:absolute;bottom:24px;right:24px;display:flex;align-items:center;gap:8px;color:#dff6eb;font-size:11px;font-weight:800}
+.sofia-detail-section{padding:29px;background:#fff;border:1px solid #e4eee8;border-radius:20px;margin-top:23px}
+.sofia-detail-section h2{font-size:24px;margin:13px 0}
+.sofia-detail-section>p{font-size:13px;line-height:2.2;color:#778b87}
+.sofia-detail-lessons{display:grid;gap:11px}
+.sofia-detail-lesson{border:1px solid #ecf0ee;background:#fdfefd;border-radius:12px;padding:15px;display:flex;align-items:center;gap:14px}
+.sofia-detail-lesson>span{width:46px;height:46px;border-radius:10px;background:#e8f6ee;color:#087d70;font:800 17px Arial;display:grid;place-items:center;flex-shrink:0}
+.sofia-detail-lesson>div{flex:1;min-width:0}.sofia-detail-lesson strong{display:block;font-size:13px}.sofia-detail-lesson small{display:flex;gap:6px;align-items:center;font-size:10px;color:#81978f;margin-top:5px}
+.sofia-detail-lesson em{font-style:normal;color:#18846f;font-size:10px;white-space:nowrap}
+.sofia-detail-sidebar{position:sticky;top:111px;background:#fff;border:1px solid #e6eeea;border-radius:21px;padding:29px;box-shadow:0 10px 35px #135f3410}
+.sofia-detail-label{display:inline-flex;align-items:center;gap:6px;color:#087d70;font-size:11px;font-weight:900}
+.sofia-detail-sidebar h1{font-size:27px;line-height:1.55;margin:12px 0}
+.sofia-detail-chips{display:flex;gap:8px}
+.sofia-detail-chips>span{background:#e8f7f0;color:#168a73;border-radius:8px;padding:6px 11px;font-size:10px;font-weight:800}
+.sofia-detail-chips>span+span{background:#f0f3f5;color:#7f9297}
+.sofia-detail-instructor{display:flex;gap:12px;align-items:center;padding:22px 0;border-bottom:1px solid #e9f0eb}
+.sofia-detail-instructor>span{display:grid;place-items:center;width:47px;height:47px;border-radius:14px;color:#087d70;background:#e9f7f0}
+.sofia-detail-instructor small{display:block;color:#8ea099;font-size:10px}.sofia-detail-instructor strong{font-size:12px}
+.sofia-detail-facts{display:grid;gap:0}
+.sofia-detail-facts>div{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:16px 0;border-bottom:1px solid #edf1ef}
+.sofia-detail-facts>div>span{display:flex;gap:9px;align-items:center;font-size:11px;color:#849793}
+.sofia-detail-facts>div>strong{font-size:11px}
+.sofia-detail-price{padding:24px 0 13px}
+.sofia-detail-price small{display:block;color:#819791;font-size:10px;font-weight:800}
+.sofia-detail-price strong{display:block;font-size:31px;color:#087d70}
+.sofia-detail-book{width:100%}
+.sofia-detail-book:disabled{opacity:.55;cursor:not-allowed;transform:none}
+.sofia-detail-fine{display:flex;align-items:flex-start;gap:7px;font-size:10px;line-height:1.8;color:#8b9e96}
+.sofia-detail-fine svg{flex-shrink:0;color:#087d70}
+.sofia-dashboard-link{margin-top:11px;display:flex;gap:8px;justify-content:center;align-items:center;color:#087d70;font-weight:900;font-size:11px}
+
+/* Registration and sign-in */
+.sofia-auth-bg{background:linear-gradient(110deg,#f4fbf5,#fffbf4);min-height:80vh;padding:52px 0 80px}
+.sofia-auth-layout{max-width:1070px;display:grid;grid-template-columns:1fr 1fr;background:white;border:1px solid #e5eee8;box-shadow:0 28px 60px #143d2a0e;border-radius:26px;overflow:hidden;min-height:620px}
+.sofia-auth-card{padding:44px clamp(26px,5vw,60px)}
+.sofia-auth-icon{display:grid;place-items:center;border-radius:15px;color:#087d70;background:#e9f7ee;width:56px;height:56px;margin-bottom:15px}
+.sofia-auth-card h1{font-size:clamp(24px,2.5vw,32px);line-height:1.5;margin:11px 0 8px}
+.sofia-auth-card>p{font-size:12px;color:#82978f;line-height:1.9}
+.sofia-auth-form{display:grid;gap:14px;margin:24px 0 19px}
+.sofia-auth-form label{font-size:11px;font-weight:900;color:#425f5b;display:grid;gap:8px}
+.sofia-auth-form input,.sofia-auth-form select{width:100%;height:48px;border:1px solid #dce8e1;border-radius:10px;padding:0 13px;font:700 12px Cairo,Tahoma;color:#233f42;background:#fff;outline:0}
+.sofia-auth-form input:focus,.sofia-auth-form select:focus{border-color:#0c9d88;box-shadow:0 0 0 3px #0c9d8814}
+.sofia-auth-form input::placeholder{color:#abbab4}
+.sofia-password-field{position:relative}
+.sofia-password-field input{padding-left:47px}
+.sofia-password-field>button{position:absolute;left:12px;top:50%;transform:translateY(-50%);border:0;background:transparent;color:#8fa4a0;display:grid;place-items:center}
+.sofia-auth-submit{width:100%;margin-top:9px}
+.sofia-auth-switch{text-align:center;color:#899b94;font-size:11px}
+.sofia-auth-switch a{font-weight:900;color:#087d70;margin-right:4px}
+.sofia-auth-visual{position:relative;overflow:hidden;background:linear-gradient(155deg,#075b57,#134a51);color:white;padding:55px;display:flex;flex-direction:column;justify-content:flex-end}
+.sofia-auth-visual:before{content:"";position:absolute;width:470px;height:470px;border:1px solid #7fd9be66;border-radius:50%;top:-200px;left:-160px}
+.sofia-auth-visual:after{content:"";position:absolute;width:300px;height:300px;background:#8be2be1d;border-radius:50%;right:-100px;bottom:-100px}
+.sofia-auth-visual-shape{position:absolute;left:50%;top:41%;transform:translate(-50%,-50%);border:1px solid #91d6c174;border-radius:50%;width:220px;height:220px;display:grid;place-items:center;color:#a4f1d6}
+.sofia-auth-visual-shape:before{content:"";width:295px;height:155px;border:1px solid #91d6c154;border-radius:50%;position:absolute;transform:rotate(-34deg)}
+.sofia-auth-visual-shape>div{border-radius:50%;width:147px;height:147px;background:#ffffff0d;display:grid;place-items:center}
+.sofia-auth-visual-shape>span:nth-child(2){position:absolute;right:-37px;top:13px;color:#f5b976;font-size:32px}
+.sofia-auth-visual-shape>span:nth-child(3){position:absolute;left:-32px;bottom:20px;color:#f5b976}
+.sofia-auth-subtitle{position:relative;z-index:1;font:800 11px Arial;letter-spacing:.6px;color:#9edbc7}
+.sofia-auth-visual h2{font-size:31px;line-height:1.65;margin:10px 0;color:white;position:relative;z-index:1}
+.sofia-auth-visual p{color:#b7e3d4;font-size:13px;position:relative;z-index:1}
+.sofia-auth-bottom{display:flex;gap:10px;align-items:center;border-top:1px solid #ffffff3b;padding-top:20px;margin-top:25px;position:relative;z-index:1;font-size:11px;color:#d5efe3}
+
+/* Dashboard brand continuity */
+.portal-page{background:#f7faf8;color:#163941}
+.portal-rail-logo{background:#087d70;color:#fff}
+.portal-admin .portal-rail-logo{background:#123e4b}
+.portal-rail-head div>span{font-size:10px;letter-spacing:1.1px;color:#2f9382}
+.portal-menu-item.is-active,.portal-menu-item:hover{background:#e6f5ed;color:#087d70}
+.portal-admin .portal-menu-item.is-active{background:#eaf3f0;color:#116e64}
+.portal-kicker{color:#088d7b}
+.portal-admin .portal-kicker{color:#1f837a}
+.portal-primary-btn{background:#087d70;border-color:#087d70}
+.portal-admin .portal-primary-btn{background:#135965;border-color:#135965}
+.portal-soft-btn{background:#e9f6ee;border-color:#d4ebdf;color:#087d70}
+.portal-metric-icon{background:#e8f6ed;color:#0b876f}
+.portal-list-icon{background:#e8f6ed;color:#0b876f}
+.portal-admin .portal-list-icon{background:#e7f4f2;color:#0b7e72}
+.portal-welcome{background:linear-gradient(120deg,#087669,#0f9d82)}
+.portal-admin-banner{background:linear-gradient(120deg,#123b4b,#187a75)}
+.portal-welcome button,.portal-text-button{color:#087d70}
+.portal-person>span{background:#dff3e8;color:#087d70}
+.portal-back-link{color:#087d70}
+.portal-course-art{background:linear-gradient(125deg,#16897a,#185667)}
+.portal-progress span{background:#0c9078}
+.portal-course-footer a{color:#087d70}
+.portal-empty-icon{background:#e8f6ef;color:#0c8b72}
+.portal-status.status-pending{background:#fff1d8;color:#ad7826}
+
+/* Small screens and accessibility */
+@media(max-width:1150px){
+ .sofia-nav-links{gap:18px}
+ .sofia-container{width:calc(100% - 48px)}
+ .sofia-hero-grid{gap:20px}
+ .sofia-hero h1{font-size:clamp(40px,4.5vw,60px)}
+ .sofia-card-grid{gap:17px}
+ .sofia-trust-grid{gap:12px}
+ .sofia-about-grid{gap:40px}
+ .sofia-faq-grid{gap:40px}
+}
+@media(max-width:960px){
+ .sofia-nav-links{display:none;position:absolute;top:85px;right:0;left:0;flex-direction:column;align-items:stretch;gap:0;padding:12px 24px 20px;background:#fff;box-shadow:0 17px 30px #16452b18}
+ .sofia-nav-links.is-open{display:flex}
+ .sofia-nav-links a{padding:13px 15px}
+ .sofia-menu-toggle{display:grid;place-items:center}
+ .sofia-hero-grid{grid-template-columns:1fr;gap:5px;padding:55px 0}
+ .sofia-hero-copy{max-width:700px}
+ .sofia-hero-copy>p{max-width:650px}
+ .sofia-scene{height:495px;max-width:600px;margin:auto}
+ .sofia-hero-decoration{display:none}
+ .sofia-subject-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .sofia-trust-grid{grid-template-columns:repeat(2,1fr)}
+ .sofia-card-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .sofia-footer-main{grid-template-columns:1.6fr 1fr 1fr}
+ .sofia-footer-note{display:none}
+ .sofia-about-grid{grid-template-columns:1fr 1fr;gap:30px}
+ .sofia-about-art{height:390px}
+ .sofia-about-orbit{height:340px;width:340px}
+ .sofia-detail-layout{grid-template-columns:1fr;gap:20px}
+ .sofia-detail-sidebar{position:static;grid-row:1}
+}
+@media(max-width:680px){
+ .sofia-container{width:calc(100% - 34px)}
+ .sofia-nav{height:73px}
+ .sofia-logo-symbol{width:41px;height:41px;border-radius:12px}
+ .sofia-logo-copy b{font-size:23px}
+ .sofia-logo-copy small{font-size:9px}
+ .sofia-nav-links{top:73px}
+ .sofia-nav-actions{gap:8px}
+ .sofia-login,.sofia-nav-actions>.sofia-cta-sm{display:none}
+ .sofia-nav-account{font-size:11px}
+ .sofia-hero-grid{padding:47px 0 37px}
+ .sofia-hero h1{font-size:clamp(35px,8vw,53px);letter-spacing:-1.3px;line-height:1.52}
+ .sofia-hero-copy>p{font-size:13px}
+ .sofia-hero-proof{gap:10px 16px;margin-top:30px}
+ .sofia-hero-actions{margin:25px 0}
+ .sofia-scene{height:390px}
+ .sofia-illustration{max-width:82%;border-width:6px;border-radius:20px}
+ .sofia-illustration-toolbar{height:37px;padding:0 10px}
+ .sofia-lab-bottom{height:33px}
+ .sofia-scene-ambient{width:370px;height:370px;max-width:100%}
+ .sofia-scene-tag{min-width:0;padding:9px;gap:6px;border-radius:11px}
+ .sofia-scene-tag>span{width:28px;height:28px}
+ .sofia-scene-tag b{font-size:9px}.sofia-scene-tag small{font-size:8px}
+ .sofia-tag-top{top:10px;right:0}
+ .sofia-tag-bottom{bottom:15px;left:0}
+ .sofia-spark-one{top:25px;left:10px}
+ .sofia-trust-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:20px 8px;padding:25px 0}
+ .sofia-trust-grid>div{grid-template-columns:35px 1fr;gap:0 7px}
+ .sofia-trust-grid>div>span{width:34px;height:34px;border-radius:10px}
+ .sofia-trust-grid>div>span svg{width:19px;height:19px}
+ .sofia-trust-grid b{font-size:10px}.sofia-trust-grid small{font-size:9px}
+ .sofia-section,.sofia-method-section{padding:65px 0}
+ .sofia-section-heading{display:block}
+ .sofia-section-heading h2{font-size:29px}
+ .sofia-text-link{margin-top:11px}
+ .sofia-subject-grid{gap:12px}
+ .sofia-subject-card{padding:18px;min-height:220px}
+ .sofia-subject-icon{margin-top:20px;width:65px;height:65px}
+ .sofia-subject-icon svg{width:37px}
+ .sofia-subject-card h3{font-size:18px}
+ .sofia-subject-card p{font-size:10px}
+ .sofia-card-grid{grid-template-columns:1fr}
+ .sofia-course-cover{height:180px}
+ .sofia-method-grid{grid-template-columns:1fr;gap:12px}
+ .sofia-method-card{padding:23px}
+ .sofia-about-section{padding:65px 0}
+ .sofia-about-grid{grid-template-columns:1fr}
+ .sofia-about-art{height:365px;grid-row:2}
+ .sofia-about-card{width:255px;height:285px}
+ .sofia-about-orbit{width:330px;height:330px}
+ .sofia-about-copy h2{font-size:30px}
+ .sofia-about-sticker{right:5px}
+ .sofia-faq-grid{grid-template-columns:1fr;gap:12px}
+ .sofia-bottom-cta{display:block;padding:29px;margin-bottom:65px}
+ .sofia-bottom-cta h2{font-size:24px}
+ .sofia-bottom-cta>.sofia-cta{margin-top:24px;width:100%}
+ .sofia-footer{padding-top:45px}
+ .sofia-footer-main{grid-template-columns:1fr 1fr;gap:28px}
+ .sofia-footer-about{grid-column:span 2}
+ .sofia-footer-bottom{display:block;text-align:center;line-height:2.2}
+ .sofia-footer-bottom>span{display:block}
+ .sofia-page-heading{padding:54px 0 48px}
+ .sofia-catalog-toolbar{align-items:stretch;flex-direction:column}
+ .sofia-catalog-search{max-width:none}
+ .sofia-detail-art{height:250px}
+ .sofia-detail-section{padding:20px}
+ .sofia-detail-sidebar{padding:22px}
+ .sofia-auth-bg{padding:20px 0 55px}
+ .sofia-auth-layout{grid-template-columns:1fr}
+ .sofia-auth-card{padding:27px 24px}
+ .sofia-auth-visual{display:none}
+}
+@media(max-width:390px){
+ .sofia-hero h1{font-size:35px}
+ .sofia-hero-actions>.sofia-cta{width:100%}
+ .sofia-hero-proof{font-size:9px}
+ .sofia-scene{height:340px}
+ .sofia-tag-top{right:0;top:7px}.sofia-tag-bottom{left:0;bottom:5px}
+ .sofia-scene-tag small{display:none}
+ .sofia-about-orbit{max-width:92%}
+ .sofia-detail-lesson{flex-wrap:wrap}
+}
+.sofia-site :focus-visible,.sofia-header :focus-visible,.sofia-footer :focus-visible{outline:3px solid #f4ab6d;outline-offset:3px}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.sofia-site *, .sofia-header *{transition:none!important;animation:none!important}}
+
+/* Unified teacher portal */
+.portal-teacher .portal-rail-logo{background:#087d70}
+.portal-teacher .portal-menu-item.is-active{background:#e6f5ed;color:#087d70}
+.portal-teacher-banner{border-radius:21px;display:flex;align-items:center;justify-content:space-between;gap:24px;padding:27px 32px;background:linear-gradient(115deg,#075d60,#0d9680);color:white;overflow:hidden}
+.portal-teacher-banner>div{position:relative;z-index:1}
+.portal-teacher-banner>div>span{font:800 10px Arial;letter-spacing:1.5px;color:#bfeeda}
+.portal-teacher-banner h2{font-size:25px;margin:8px 0 5px;color:white}
+.portal-teacher-banner p{font-size:12px;color:#d4eee4}
+.portal-teacher-banner button{display:flex;align-items:center;gap:8px;border:0;border-radius:9px;background:white;color:#087d70;padding:10px 15px;font:900 11px Cairo,Tahoma;cursor:pointer;margin-top:17px}
+.portal-teacher-banner>svg{color:#b3f0d6;opacity:.64;flex-shrink:0}
+.teacher-row-actions{display:flex;gap:7px;align-items:center;flex-wrap:wrap}
+.teacher-student-search{display:flex;align-items:center;gap:9px;border:1px solid #dceae2;border-radius:11px;padding:0 13px;color:#0a927b;max-width:430px;margin-bottom:18px}
+.teacher-student-search input{outline:0;border:0;background:transparent;width:100%;min-width:0;padding:12px 0;color:#24474a;font:700 12px Cairo,Tahoma}
+@media(max-width:600px){.portal-teacher-banner{padding:22px}.portal-teacher-banner h2{font-size:20px}.portal-teacher-banner>svg{display:none}}
+
+/* Verified registration, parent consent and mailbox recovery */
+.sofia-auth-notice{display:flex;align-items:flex-start;gap:13px;border:1px solid #a5d9c5;background:#e9f8ef;color:#1c6c5a;border-radius:13px;padding:17px;margin:18px 0;font-size:12px;line-height:2;font-weight:700}
+.sofia-auth-notice svg{flex-shrink:0;margin-top:4px;color:#087d70}
+.sofia-auth-notice strong{overflow-wrap:anywhere}
+.sofia-auth-forgot{display:inline-block;text-align:left;color:#0a8371;font-size:11px;font-weight:900;margin-top:-5px}
+.sofia-auth-linkbtn{display:inline-flex;align-items:center;justify-content:center;border:1px solid #aedccd;background:#eefaf3;color:#087d70;padding:10px 16px;border-radius:10px;font-weight:900;font-size:11px;cursor:pointer}
+.sofia-auth-linkbtn:disabled{opacity:.55}
+.sofia-auth-hint{border:1px dashed #e6bd90;border-radius:10px;color:#94633b;padding:11px;background:#fff7e8;font-size:11px;line-height:1.9}
+.sofia-auth-form .sofia-consent{display:flex;align-items:flex-start;gap:10px;font-size:11px;line-height:1.85;color:#536f68;cursor:pointer}
+.sofia-auth-form .sofia-consent input{width:17px;height:17px;flex-shrink:0;margin-top:4px;accent-color:#087d70}

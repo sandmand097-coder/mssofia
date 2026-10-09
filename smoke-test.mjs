@@ -1,0 +1,17 @@
+import assert from 'node:assert/strict';
+const base='http://127.0.0.1:4010/api';
+const probe=async(path)=>{const r=await fetch(base+path);return {status:r.status,body:await r.json()}};
+const health=await probe('/health');
+assert.equal(health.status,200);
+assert.equal(health.body.ok,true);
+const courses=await probe('/courses');
+assert.equal(courses.status,200);
+assert.ok(courses.body.courses.length>=6);
+const course=await probe('/courses/'+courses.body.courses[0].id);
+assert.equal(course.status,200);
+assert.ok(course.body.lessons.length>0);
+const unauthorized=await probe('/my/overview');
+assert.equal(unauthorized.status,401);
+const restricted=await probe('/lessons/'+course.body.lessons[0].id);
+assert.equal(restricted.status,401);
+console.log('PASS: health, courses, course details, auth gate, private classroom gate');

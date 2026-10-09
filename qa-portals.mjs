@@ -1,0 +1,43 @@
+import {chromium} from 'playwright-core';
+import fs from 'node:fs';
+const raw=fs.readFileSync(new URL('./.env',import.meta.url),'utf8');
+const env=Object.fromEntries(raw.split(/\r?\n/).filter(Boolean).map(s=>{const i=s.indexOf('=');return [s.slice(0,i),s.slice(i+1)]}));
+const browser=await chromium.launch({headless:true,executablePath:'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe',args:['--no-first-run']});
+let errors=[];
+const login=async(role,width=1440)=>{
+ const page=await browser.newPage({viewport:{width,height:900},locale:'ar-EG'});
+ page.on('pageerror',e=>errors.push(role+': '+e.message));
+ await page.goto('http://127.0.0.1:5173/login',{waitUntil:'networkidle'});
+ await page.locator('input[type=email]').fill(env[role==='ADMIN'?'ADMIN_EMAIL':'DEMO_'+role+'_EMAIL']);
+ await page.locator('input[type=password]').fill(env[role==='ADMIN'?'ADMIN_PASSWORD':'DEMO_'+role+'_PASSWORD']);
+ await page.locator('button[type=submit]').click();
+ await page.waitForURL(role==='ADMIN'?'**/admin':'**/student',{timeout:12000});
+ await page.locator('.portal-rail').waitFor({timeout:12000});
+ console.log('PASS '+role+' portal route '+new URL(page.url()).pathname);
+ return page;
+};
+try{
+ const admin=await login('ADMIN');
+ await admin.screenshot({path:'qa-admin-portal.png',fullPage:true});
+ await admin.getByRole('button',{name:'المستخدمون'}).click();
+ await admin.getByText('سجل المستخدمين').waitFor();
+ console.log('PASS admin users page');
+ await admin.getByRole('button',{name:'الدورات',exact:true}).click();
+ await admin.getByRole('button',{name:'دورة جديدة'}).waitFor();
+ console.log('PASS admin courses page');
+ const student=await login('STUDENT');
+ await student.screenshot({path:'qa-student-portal.png',fullPage:true});
+ await student.getByRole('button',{name:'دوراتي'}).click();
+ await student.getByText('الدورات المسجلة').waitFor();
+ console.log('PASS student courses page');
+ await student.getByRole('button',{name:'الملف الشخصي'}).click();
+ await student.getByText('بيانات الحساب').waitFor();
+ console.log('PASS student profile page');
+ const mobile=await login('STUDENT',390);
+ const overflow=await mobile.evaluate(()=>document.documentElement.scrollWidth>innerWidth+2);
+ console.log('MOBILE_OVERFLOW='+overflow);
+ await mobile.screenshot({path:'qa-student-portal-mobile.png',fullPage:true});
+ if(overflow)throw Error('Student portal mobile overflow');
+ if(errors.length)throw Error(errors.join('; '));
+ console.log('PASS no runtime page errors');
+}finally{await browser.close()}
