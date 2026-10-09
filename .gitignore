@@ -20,3 +20,8 @@ private-*.txt
 *.pem
 *.key
 mssofia-public-preview-*.png
+
+# Cloudflare local development cache and secrets
+.wrangler/
+.dev.vars
+.dev.vars.*
