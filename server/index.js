@@ -173,7 +173,8 @@ app.post('/api/auth/register', asyncRoute(async (req, res) => {
     email,
     password,
     role: requested,
-    guardian_email
+    guardian_email,
+    guardian_consent
   } = req.body || {};
   if (requested && requested !== 'student') return send(res, 403, {
     error: 'إنشاء حسابات المدرسين والإدارة متاح للإدارة فقط'
@@ -185,11 +186,12 @@ app.post('/api/auth/register', asyncRoute(async (req, res) => {
     error: 'بريد ولي الأمر غير صحيح'
   });
   const address = email.trim().toLowerCase();
+  if(process.env.NODE_ENV==='production'&&(guardian_consent!==true||String(guardian_email||'').trim().toLowerCase()!==address))return send(res,400,{error:'يجب أن يكون الحساب مُدارًا ببريد ولي الأمر نفسه، مع موافقته على التسجيل وسياسة الخصوصية'});
   if (await get('SELECT id FROM users WHERE email=?', address)) return send(res, 409, {
     error: 'البريد الإلكتروني مسجل بالفعل. سجل دخولك أو استخدم إعادة الإرسال'
   });
   const id = uid();
-  await run('INSERT INTO users(id,name,email,password_hash,role,status,specialty,created_at,guardian_email) VALUES(?,?,?,?,?,?,?,?,?)', id, name.trim(), address, await bcrypt.hash(password, 12), 'student', 'pending', '', now(), guardian_email?.toLowerCase().trim() || null);
+  await run('INSERT INTO users(id,name,email,password_hash,role,status,specialty,created_at,guardian_email,guardian_consent_at) VALUES(?,?,?,?,?,?,?,?,?,?)', id, name.trim(), address, await bcrypt.hash(password, 12), 'student', 'pending', '', now(), guardian_email?.toLowerCase().trim() || null,guardian_consent===true?now():null);
   const token = await issueAccountToken(id, 'verify_email', 30);
   try {
     await deliverAccountLink({

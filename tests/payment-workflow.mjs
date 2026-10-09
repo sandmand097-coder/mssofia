@@ -65,6 +65,14 @@ try{
  ok((await call('/admin/payments/'+otherP.id+'/review','POST',{decision:'rejected',reason:'المبلغ لم يصل على الهاتف'},a)).status===200,'admin can reject unverified proof with reason');
  const retry=await sendReceipt(otherBooking,o,'NEWREF987655',png);
  ok(retry.status===201,'rejected student can resubmit fresh proof');
+ const [concurrentApprove,concurrentReject]=await Promise.all([
+  call('/admin/payments/'+otherP.id+'/review','POST',{decision:'approved',confirmedOnPhone:true},a),
+  call('/admin/payments/'+otherP.id+'/review','POST',{decision:'rejected',reason:'فحص إضافي: المبلغ لم يصل'},a)
+ ]);
+ ok([concurrentApprove.status,concurrentReject.status].sort().join(',')==='200,409','concurrent admin decisions allow exactly one final result');
+ const snapshot=await call('/my/overview','GET',undefined,o);
+ const status=snapshot.data.bookings.find(x=>x.id===otherBooking);
+ ok(status.payment_status==='approved'?status.status==='approved':status.payment_status==='rejected'&&status.status==='pending','booking never activates without approved payment, including concurrent reviews');
  console.log('RESULT '+checks+' payment workflow checks passed');
 }finally{
  app.kill();await Promise.race([new Promise(r=>app.once('exit',r)),wait(3000)]);

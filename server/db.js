@@ -27,6 +27,7 @@ CREATE INDEX IF NOT EXISTS idx_payment_review_queue ON payment_submissions(statu
 const columns=new Set(db.prepare('PRAGMA table_info(users)').all().map(x=>x.name));
 if(!columns.has('email_verified_at'))db.exec('ALTER TABLE users ADD COLUMN email_verified_at TEXT');
 if(!columns.has('guardian_email'))db.exec('ALTER TABLE users ADD COLUMN guardian_email TEXT');
+if(!columns.has('guardian_consent_at'))db.exec('ALTER TABLE users ADD COLUMN guardian_consent_at TEXT');
 if(!columns.has('session_version'))db.exec('ALTER TABLE users ADD COLUMN session_version INTEGER NOT NULL DEFAULT 0');
 const lessonCols=new Set(db.prepare('PRAGMA table_info(lessons)').all().map(x=>x.name));
 if(!lessonCols.has('meet_url'))db.exec('ALTER TABLE lessons ADD COLUMN meet_url TEXT');

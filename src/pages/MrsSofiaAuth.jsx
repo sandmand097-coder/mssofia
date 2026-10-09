@@ -31,12 +31,12 @@ export function SignInPage({api,user,setUser}){
  </AuthLayout>;
 }
 export function RegisterPage({api,user}){
- const navigate=useNavigate(),[form,setForm]=useState({name:'',email:'',password:'',guardian_email:''}),[consent,setConsent]=useState(false),[error,setError]=useState(''),[done,setDone]=useState(false),[busy,setBusy]=useState(false),[mailMode,setMailMode]=useState('');
+ const navigate=useNavigate(),[form,setForm]=useState({name:'',email:'',password:''}),[consent,setConsent]=useState(false),[error,setError]=useState(''),[done,setDone]=useState(false),[busy,setBusy]=useState(false),[mailMode,setMailMode]=useState('');
  useEffect(()=>{api('/auth/registration-status').then(s=>setMailMode(s.emailMode)).catch(()=>{})},[api]);
  useEffect(()=>{if(user)navigate(dashboardPath(user),{replace:true})},[user,navigate]);
  const update=(key,value)=>setForm(f=>({...f,[key]:value}));
  const submit=async e=>{e.preventDefault();setError('');if(!consent){setError('لازم تأكد إنك صاحب الحساب أو ولي الأمر موافق على التسجيل');return}
-  setBusy(true);try{await api('/auth/register',{method:'POST',body:JSON.stringify({name:form.name,email:form.email,password:form.password,role:'student',guardian_email:form.guardian_email})});setDone(true)}catch(err){setError(err.message)}finally{setBusy(false)}};
+  setBusy(true);try{await api('/auth/register',{method:'POST',body:JSON.stringify({name:form.name,email:form.email,password:form.password,role:'student',guardian_email:form.email,guardian_consent:true})});setDone(true)}catch(err){setError(err.message)}finally{setBusy(false)}};
  const resend=async()=>{setBusy(true);setError('');try{await api('/auth/resend-verification',{method:'POST',body:JSON.stringify({email:form.email})});setDone(true)}catch(err){setError(err.message)}finally{setBusy(false)}};
  return <AuthLayout tag="STUDENT REGISTRATION" title="ابدأ رحلتك مع Mrs Sofia" description="سجّل بريدك الإلكتروني، وافتح رسالة التأكيد لتفعيل حسابك قبل حجز الكورسات.">
   <ErrorMessage message={error}/>
@@ -47,10 +47,9 @@ export function RegisterPage({api,user}){
   <form className="sofia-auth-form" onSubmit={submit}>
    {mailMode==='disabled'&&<ErrorMessage message="تسجيل الطلاب متوقف مؤقتًا حتى تفعيل خدمة إرسال البريد الإلكتروني."/>}
    <label>اسم الطالب بالكامل<input required autoComplete="name" maxLength={80} value={form.name} onChange={e=>update('name',e.target.value)} placeholder="الاسم كما يظهر للمعلمة"/></label>
-   <label>البريد الإلكتروني للطالب أو ولي الأمر<input required type="email" autoComplete="email" value={form.email} onChange={e=>update('email',e.target.value)} placeholder="example@gmail.com"/></label>
-   <label>بريد ولي الأمر (اختياري)<input type="email" value={form.guardian_email} onChange={e=>update('guardian_email',e.target.value)} placeholder="parent@example.com"/></label>
+   <label>بريد ولي الأمر المسؤول عن الطالب<input required type="email" autoComplete="email" value={form.email} onChange={e=>update('email',e.target.value)} placeholder="example@gmail.com"/></label>
    <PasswordInput label="كلمة مرور قوية (10 أحرف على الأقل)" value={form.password} onChange={v=>update('password',v)}/>
-   <label className="sofia-consent"><input type="checkbox" checked={consent} onChange={e=>setConsent(e.target.checked)}/> <span>أؤكد أنني صاحب الحساب أو لدي موافقة ولي الأمر على تسجيل الطالب واستخدام بياناته لأغراض الدراسة.</span></label>
+   <label className="sofia-consent"><input type="checkbox" checked={consent} onChange={e=>setConsent(e.target.checked)}/> <span>أُقرّ أنني ولي أمر الطالب وصاحب هذا البريد الإلكتروني، وأوافق على إنشاء حساب تعليمي للطالب وفق <Link to="/privacy">سياسة الخصوصية</Link> و<Link to="/terms">شروط الاشتراك</Link>.</span></label>
    <button type="submit" className="sofia-cta sofia-auth-submit" disabled={busy||mailMode==='disabled'}>{busy?'جارٍ التسجيل...':'إنشاء حساب الطالب'}<ArrowLeft size={17}/></button>
   </form>}
   <div className="sofia-auth-switch">عندك حساب؟ <Link to="/login">سجّل دخولك</Link></div>

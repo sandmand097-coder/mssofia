@@ -4,6 +4,7 @@ import {mkdir,writeFile,readFile,unlink} from 'node:fs/promises';
 import path from 'node:path';
 import multer from 'multer';
 import sharp from 'sharp';
+import {withTransaction,isCloudDatabase} from './db-adapter.js';
 
 export const FIRST_MONTH_EGP=100;
 export const REGULAR_MONTH_EGP=170;
@@ -80,7 +81,7 @@ export function attachPaymentRoutes(app,{auth,role,get,all,run,uid,now}){
     await removeProof(current.proof_key);
    }else{
     await run('INSERT INTO payment_submissions(id,booking_id,student_id,course_id,amount_egp,transfer_reference,sender_last4,proof_key,status,submitted_at,confirmed_on_phone) VALUES(?,?,?,?,?,?,?,?,?,?,?)',
-     uid(),booking.id,req.user.id,booking.course_id,due,reference,last4||null,newKey,'pending',now(),0);
+     uid(),booking.id,req.user.id,booking.course_id,due,reference,last4||null,newKey,'pending',now(),isCloudDatabase?false:0);
    }
    return res.status(201).json({ok:true,status:'pending',message:'استلمنا صورة التحويل؛ طلبك ينتظر مراجعة المديرة على موبايلها. رفع الصورة ليس تأكيدًا للدفع.'});
   }catch(e){if(newKey)await removeProof(newKey);next(e)}
@@ -97,25 +98,30 @@ export function attachPaymentRoutes(app,{auth,role,get,all,run,uid,now}){
  });
  app.post('/api/admin/payments/:id/review',auth,onlyAdmin,async(req,res,next)=>{
   try{
-   const row=await get('SELECT p.*,b.status AS booking_status,c.capacity FROM payment_submissions p JOIN bookings b ON b.id=p.booking_id JOIN courses c ON c.id=p.course_id WHERE p.id=?',req.params.id);
-   if(!row)return json(res,404,{error:'التحويل غير موجود'});
-   if(row.status!=='pending'||row.booking_status!=='pending')return json(res,409,{error:'لا يمكن مراجعة الطلب بعد اتخاذ قرار سابق'});
-   const decision=req.body?.decision;
-   if(!['approved','rejected'].includes(decision))return json(res,400,{error:'حدد الموافقة أو الرفض'});
-   if(decision==='approved'){
-    if(req.body?.confirmedOnPhone!==true)return json(res,400,{error:'يجب التأكيد بأن المبلغ وصل فعليًا إلى تطبيق فودافون كاش على هاتف المدرسة'});
-    const used=(await get("SELECT COUNT(*) AS n FROM bookings WHERE course_id=? AND status='approved'",row.course_id)).n;
-    if(used>=row.capacity)return json(res,409,{error:'المقاعد اكتملت؛ لا توافق على هذا التحويل قبل التواصل مع ولي الأمر'});
-    const changed=await run("UPDATE bookings SET status='approved',reviewed_at=? WHERE id=? AND status='pending'",now(),row.booking_id);
-    if(!changed.changes)return json(res,409,{error:'الحجز تغير بالفعل'});
-    try{await run("UPDATE payment_submissions SET status='approved',confirmed_on_phone=TRUE,reviewed_by=?,reviewed_at=?,review_note=? WHERE id=? AND status='pending'",req.user.id,now(),'تم التأكد من ورود المبلغ على هاتف المدرسة',row.id);}
-    catch(err){await run("UPDATE bookings SET status='pending',reviewed_at=NULL WHERE id=?",row.booking_id);throw err}
-   }else{
-    const note=String(req.body?.reason||'').trim().slice(0,500);
-    if(note.length<5)return json(res,400,{error:'اكتب سبب الرفض للطالب (5 أحرف على الأقل)'});
-    await run("UPDATE payment_submissions SET status='rejected',reviewed_by=?,reviewed_at=?,review_note=?,confirmed_on_phone=FALSE WHERE id=? AND status='pending'",req.user.id,now(),note,row.id);
-   }
-   res.json({ok:true,status:decision});
+   const answer=await withTransaction(async tx=>{
+    const lock=isCloudDatabase?' FOR UPDATE OF p,b,c':'';
+    const row=await tx.get('SELECT p.*,b.status AS booking_status,c.capacity FROM payment_submissions p JOIN bookings b ON b.id=p.booking_id JOIN courses c ON c.id=p.course_id WHERE p.id=?'+lock,req.params.id);
+    if(!row)return{http:404,error:'التحويل غير موجود'};
+    if(row.status!=='pending'||row.booking_status!=='pending')return{http:409,error:'لا يمكن مراجعة الطلب بعد اتخاذ قرار سابق'};
+    const decision=req.body?.decision;
+    if(!['approved','rejected'].includes(decision))return{http:400,error:'حدد الموافقة أو الرفض'};
+    if(decision==='approved'){
+     if(req.body?.confirmedOnPhone!==true)return{http:400,error:'يجب التأكيد بأن المبلغ وصل فعليًا إلى تطبيق فودافون كاش على هاتف المدرسة'};
+     const used=(await tx.get("SELECT COUNT(*) AS n FROM bookings WHERE course_id=? AND status='approved'",row.course_id)).n;
+     if(Number(used)>=Number(row.capacity))return{http:409,error:'المقاعد اكتملت؛ تواصل مع ولي الأمر قبل الموافقة'};
+     const evidence=await tx.run("UPDATE payment_submissions SET status='approved',confirmed_on_phone=TRUE,reviewed_by=?,reviewed_at=?,review_note=? WHERE id=? AND status='pending'",req.user.id,now(),'تم التأكد من وصول المبلغ إلى هاتف المدرسة',row.id);
+     if(!evidence.changes)throw Error('Concurrent payment review conflict');
+     const booking=await tx.run("UPDATE bookings SET status='approved',reviewed_at=? WHERE id=? AND status='pending'",now(),row.booking_id);
+     if(!booking.changes)throw Error('Concurrent booking review conflict');
+    }else{
+     const note=String(req.body?.reason||'').trim().slice(0,500);
+     if(note.length<5)return{http:400,error:'اكتب سبب الرفض للطالب (5 أحرف على الأقل)'};
+     const changed=await tx.run("UPDATE payment_submissions SET status='rejected',reviewed_by=?,reviewed_at=?,review_note=?,confirmed_on_phone=FALSE WHERE id=? AND status='pending'",req.user.id,now(),note,row.id);
+     if(!changed.changes)throw Error('Concurrent payment rejection conflict');
+    }
+    return{http:200,ok:true,status:decision};
+   });
+   return json(res,answer.http,answer.error?{error:answer.error}:{ok:true,status:answer.status});
   }catch(e){next(e)}
  });
 }

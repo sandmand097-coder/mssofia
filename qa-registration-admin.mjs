@@ -44,7 +44,6 @@ try{
  await student.getByRole('heading',{name:'ابدأ رحلتك مع Mrs Sofia'}).waitFor();
  await student.locator('input[autocomplete=name]').fill('طالبة تجريبية');
  await student.locator('input[autocomplete=email]').fill(address);
- await student.locator('input[placeholder="parent@example.com"]').fill('guardian@example.com');
  await student.locator('input[autocomplete="new-password"]').fill(studentPass);
  await student.locator('input[type=checkbox]').check();
  await student.getByRole('button',{name:/إنشاء حساب الطالب/}).click();

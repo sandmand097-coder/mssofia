@@ -11,6 +11,8 @@ const RegisterPage=lazy(()=>import('./pages/MrsSofiaAuth.jsx').then(m=>({default
 const VerifyEmailPage=lazy(()=>import('./pages/MrsSofiaAuth.jsx').then(m=>({default:m.VerifyEmailPage})));
 const ForgotPasswordPage=lazy(()=>import('./pages/MrsSofiaAuth.jsx').then(m=>({default:m.ForgotPasswordPage})));
 const ResetPasswordPage=lazy(()=>import('./pages/MrsSofiaAuth.jsx').then(m=>({default:m.ResetPasswordPage})));
+const PrivacyPolicy=lazy(()=>import('./pages/SchoolPolicies.jsx').then(m=>({default:m.PrivacyPolicy})));
+const SchoolTerms=lazy(()=>import('./pages/SchoolPolicies.jsx').then(m=>({default:m.SchoolTerms})));
 const StudentPortal=lazy(()=>import('./pages/StudentPortal.jsx'));
 const TeacherPortal=lazy(()=>import('./pages/TeacherPortal.jsx'));
 const AdminPortal=lazy(()=>import('./pages/AdminPortal.jsx'));
@@ -75,7 +77,7 @@ function NotFound(){
 function PageTitle(){
  const {pathname}=useLocation();
  useEffect(()=>{
-  const title=pathname==='/courses'?'الكورسات':pathname.startsWith('/courses/')?'تفاصيل الكورس':pathname==='/login'?'تسجيل الدخول':pathname==='/register'?'إنشاء حساب':pathname==='/student'?'لوحة الطالب':pathname==='/admin'?'لوحة الإدارة':pathname==='/teacher'?'لوحة المعلم':pathname.startsWith('/lesson/')?'الفصل المباشر':'مدرسة العلوم';
+  const title=pathname==='/privacy'?'الخصوصية':pathname==='/terms'?'شروط الاشتراك':pathname==='/courses'?'الكورسات':pathname.startsWith('/courses/')?'تفاصيل الكورس':pathname==='/login'?'تسجيل الدخول':pathname==='/register'?'إنشاء حساب':pathname==='/student'?'لوحة الطالب':pathname==='/admin'?'لوحة الإدارة':pathname==='/teacher'?'لوحة المعلم':pathname.startsWith('/lesson/')?'الفصل المباشر':'مدرسة العلوم';
   document.title=title+' | mrsofia — Mrs Sofia';
  },[pathname]);
  return null;
@@ -96,6 +98,8 @@ export default function App(){
     <Routes>
      <Route path="/" element={<MrsHome api={api}/>}/>
      <Route path="/courses" element={<MrsCourses api={api}/>}/>
+     <Route path="/privacy" element={<PrivacyPolicy/>}/>
+     <Route path="/terms" element={<SchoolTerms/>}/>
      <Route path="/courses/:id" element={launchMode==='preview'||launchMode==='offline'?<PublicUnavailable/>:<MrsCourseDetails api={api} user={user} show={show}/>}/>
      <Route path="/login" element={launchMode==='preview'||launchMode==='offline'?<PublicUnavailable/>:<SignInPage api={api} user={user} setUser={setUser} show={show}/>}/>
      <Route path="/register" element={launchMode==='preview'||launchMode==='offline'?<PublicUnavailable/>:<RegisterPage api={api} user={user}/>}/>

@@ -469,3 +469,11 @@ body{color:var(--sf-ink)}
 .sofia-launch-offer.is-compact .sofia-offer-price-values strong{font-size:43px}
 .sofia-public-preview-notice{background:#153f39;color:#f0fbf4;text-align:center;line-height:1.8;padding:12px 16px;font-size:12px;font-weight:750;direction:rtl}
 @media(max-width:760px){.sofia-launch-offer{padding:36px 0}.sofia-launch-offer-inner{grid-template-columns:1fr;gap:20px}.sofia-offer-terms{gap:10px}.sofia-offer-price-panel{padding:22px}.sofia-offer-price-values strong{font-size:54px}}
+
+/* Policy disclosure pages — intentionally marked as pre-launch drafts until approved */
+.sofia-policy-body{display:grid;gap:15px;margin:28px 0}
+.sofia-policy-body section{background:#fff;border:1px solid #dbe9e5;padding:22px 25px;border-radius:16px;box-shadow:0 6px 24px #18564c08}
+.sofia-policy-body section h2{display:flex;align-items:center;gap:9px;font-size:17px;color:#134f48;margin:0 0 10px}
+.sofia-policy-body section p{font-size:13px;line-height:2.15;color:#496861;margin:0}
+.sofia-policy-body section strong{color:#087d70}
+@media(max-width:600px){.sofia-policy-body section{padding:17px}.sofia-policy-body section h2{font-size:15px}}

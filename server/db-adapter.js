@@ -47,4 +47,44 @@ export const checkConnection=async()=>{
  const r=await pool.query('SELECT 1 AS ready');
  return r.rows[0]?.ready===1;
 };
+let sqliteTransactionQueue=Promise.resolve();
+// Atomic admin payment decisions on one connection. The transaction callback must
+// use only its scoped query helpers, never the top-level pool helpers.
+export async function withTransaction(callback){
+ if(!isCloudDatabase){
+  // Serialize concurrent local review requests; production uses PostgreSQL row locks.
+  let release;
+  const waiting=sqliteTransactionQueue;
+  sqliteTransactionQueue=new Promise(resolve=>{release=resolve});
+  await waiting;
+  try{sqlite.db.exec('BEGIN IMMEDIATE')}catch(error){release();throw error}
+  const tx={
+   get:async(sql,...args)=>sqlite.get(sql,...args),
+   all:async(sql,...args)=>sqlite.all(sql,...args),
+   run:async(sql,...args)=>sqlite.run(sql,...args)
+  };
+  try{const value=await callback(tx);sqlite.db.exec('COMMIT');return value;}
+  catch(error){sqlite.db.exec('ROLLBACK');throw error}
+  finally{release()}
+ }
+ const client=await pool.connect();
+ const queryOnClient=async(sql,args=[])=>{
+  const r=await client.query(compilePgSql(sql),args);
+  return{rows:r.rows.map(normalize),changes:r.rowCount};
+ };
+ try{
+  await client.query('BEGIN');
+  const tx={
+   get:async(sql,...args)=>(await queryOnClient(sql,args)).rows[0],
+   all:async(sql,...args)=>(await queryOnClient(sql,args)).rows,
+   run:async(sql,...args)=>({changes:(await queryOnClient(sql,args)).changes})
+  };
+  const value=await callback(tx);
+  await client.query('COMMIT');
+  return value;
+ }catch(error){
+  await client.query('ROLLBACK').catch(()=>{});
+  throw error;
+ }finally{client.release()}
+}
 export const closeConnection=async()=>{if(pool)await pool.end()};

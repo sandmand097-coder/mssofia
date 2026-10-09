@@ -11,6 +11,8 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
+      - key: PUBLIC_LAUNCH_MODE
+        value: preview
       - key: APP_ORIGIN
         sync: false
       - key: DATABASE_URL
@@ -18,7 +20,9 @@ services:
       - key: JWT_SECRET
         generateValue: true
       - key: PG_POOL_MAX
-        value: "5"
+        value: "3"
+      - key: PGSSL
+        value: required
       - key: LIVEKIT_URL
         sync: false
       - key: LIVEKIT_API_KEY
@@ -31,3 +35,13 @@ services:
         sync: false
       - key: REGISTRATION_ENABLED
         value: "false"
+      - key: SCHOOL_PRIVACY_APPROVED
+        value: "false"
+      - key: SCHOOL_CONTACT_EMAIL
+        sync: false
+      - key: VODAFONE_CASH_NUMBER
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
