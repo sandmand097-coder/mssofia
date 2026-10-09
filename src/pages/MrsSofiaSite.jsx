@@ -1,7 +1,8 @@
 import React,{useEffect,useMemo,useState} from 'react';
 import {Link,useNavigate,useParams,useSearchParams} from 'react-router-dom';
-import {ArrowLeft,ArrowUpLeft,Atom,BookOpen,CalendarDays,CheckCircle2,ChevronLeft,CircleHelp,ClipboardCheck,Clock3,Dna,FlaskConical,GraduationCap,Heart,Lightbulb,LockKeyhole,Microscope,PlayCircle,Search,ShieldCheck,Sparkles,Target,Users,Video,Beaker,XCircle,Eye,EyeOff,Send,Filter,School} from 'lucide-react';
+import {ArrowLeft,ArrowUpLeft,Atom,BookOpen,CalendarDays,CheckCircle2,ChevronLeft,CircleHelp,ClipboardCheck,Clock3,Dna,FlaskConical,GraduationCap,Heart,Lightbulb,LockKeyhole,Microscope,PlayCircle,Gift,Search,ShieldCheck,Sparkles,Target,Users,Video,Beaker,XCircle,Eye,EyeOff,Send,Filter,School} from 'lucide-react';
 import {ScienceScene,ScienceCourseCard,scienceSubject,scienceSubjects,currency,formatDateTime,dashboardPath} from '../components/MrsSofiaBrand.jsx';
+import {LaunchOffer} from '../components/LaunchOffer.jsx';
 
 const categories=[
  {name:'علوم',icon:FlaskConical,eng:'SCIENCE',desc:'اكتشف العلوم في حياتنا اليومية',tone:'mint'},
@@ -18,11 +19,12 @@ export function MrsHome({api}){
  return <div className="sofia-site">
   <section className="sofia-hero"><div className="sofia-container sofia-hero-grid">
    <div className="sofia-hero-copy"><span className="sofia-hero-eyebrow"><span>✦</span> MRS SOFIA | مدرسة العلوم</span><h1>العلوم مش حفظ...<br/><span>العلوم حكاية</span><br/>بتتفهم!</h1><p>مع Mrs Sofia، كل سؤال ليه إجابة، وكل درس وراه اكتشاف. شرح مبسّط، أمثلة من الحياة، وحصص منظمة تخليك تحب العلوم وتفهمها بجد.</p>
-    <div className="sofia-hero-actions"><Link className="sofia-cta" to="/courses">اكتشف كورسات العلوم <ArrowLeft size={19}/></Link><a href="#method" className="sofia-ghost"><PlayCircle size={21}/> إزاي بنتعلّم؟</a></div>
+    <div className="sofia-hero-actions"><Link className="sofia-cta" to="/courses">اكتشف كورسات العلوم <ArrowLeft size={19}/></Link><a href="#offer" className="sofia-ghost"><Gift size={21}/> عرض أول شهر 100 جنيه</a></div>
     <div className="sofia-hero-proof"><div><span><CheckCircle2 size={17}/></span> شرح خطوة بخطوة</div><div><span><CheckCircle2 size={17}/></span> حصص تفاعلية</div><div><span><CheckCircle2 size={17}/></span> متابعة المواعيد</div></div>
    </div>
    <ScienceScene/>
   </div><div className="sofia-hero-decoration" aria-hidden="true">SCIENCE IS EVERYWHERE</div></section>
+  <LaunchOffer/>
   <section className="sofia-trust-strip"><div className="sofia-container sofia-trust-grid"><div><span><Lightbulb size={23}/></span><b>افهم الفكرة الأول</b><small>الأساس قبل الحفظ</small></div><div><span><Microscope size={23}/></span><b>تعلّم بالاكتشاف</b><small>تجارب وأمثلة واقعية</small></div><div><span><CalendarDays size={23}/></span><b>نظّم وقتك</b><small>جدول حصص واضح</small></div><div><span><ShieldCheck size={23}/></span><b>حسابك ومساحتك</b><small>دوراتك وطلباتك في مكان واحد</small></div></div></section>
   <section className="sofia-section sofia-subjects-section"><div className="sofia-container"><Heading eyebrow="اختار اللي بتحب تكتشفه" title={<>العلم كبير.. <em>تعالى نستكشفه!</em></>} description="مجالات علمية متنوعة بشرح مبسّط يربط المعلومة بالعالم اللي حوالينا." center/>
    <div className="sofia-subject-grid">{categories.map(c=>{const Icon=c.icon;return <Link className={'sofia-subject-card tone-'+c.tone} to={'/courses?subject='+encodeURIComponent(c.name)} key={c.name}><div className="sofia-subject-top"><span>{c.eng}</span><ArrowUpLeft size={19}/></div><div className="sofia-subject-icon"><Icon size={45} strokeWidth={1.5}/></div><h3>{c.name}</h3><p>{c.desc}</p></Link>})}</div>
@@ -42,7 +44,9 @@ export function MrsHome({api}){
      ['إزاي أشترك في كورس؟','أنشئ حساب طالب، اختار الدورة المناسبة، واضغط طلب الحجز. طلبك هيظهر في حسابك لحد ما المدرّسة توافق عليه.'],
      ['أقدر أشوف مواعيد حصصي فين؟','من لوحة الطالب، افتح جدول الحصص. المواعيد بتظهر بعد الموافقة على حجزك في الدورة.'],
      ['هل فيه حصص أونلاين مباشرة؟','المنصة فيها فصل مباشر تفاعلي بالصوت والفيديو ومشاركة الشاشة، ويحتاج تفعيل خدمة البث قبل الاستخدام الفعلي.'],
-     ['هل فيه دفع إلكتروني؟','الدفع الإلكتروني مش متاح داخل الموقع في النسخة الحالية. لو الدورة مدفوعة، تفاصيل السداد بتتنسّق خارج المنصة.']
+     ['عرض الشهر الأول بكام؟','عرض الاشتراك الشهري الجديد لشرح العلوم: 100 جنيه في الشهر الأول بدل 170 جنيه، ومن الشهر الثاني 170 جنيه شهريًا. الدفع الإلكتروني غير مفعل حاليًا وتُؤكّد تفاصيل الاشتراك مع إدارة المدرسة.'],
+     ['عرض الشهر الأول بكام؟','عرض شرح العلوم للطالب الجديد: 100 جنيه في الشهر الأول بدل 170 جنيه، وبعده 170 جنيه شهريًا. تأكيد الاشتراك بعد مراجعة الإدارة للتحويل.'],
+     ['إزاي أدفع الاشتراك؟','بعد فتح تسجيل الطلاب هتقدر تحوّل على فودافون كاش وترفع صورة الإيصال في حسابك، والمديرة هتوافق بعد مراجعة وصول المبلغ على هاتفها.']
    ].map(([q,a],i)=><details className="sofia-faq-item" key={q} open={i===0}><summary><span>{q}</span><span className="sofia-faq-plus">+</span></summary><p>{a}</p></details>)}</div></div></section>
   <section className="sofia-container"><div className="sofia-bottom-cta"><div className="sofia-bottom-molecule"><Atom size={108} strokeWidth={1.2}/></div><div><span>خلّي الفضول يقودك ✦</span><h2>جاهز تشوف العلوم بشكل مختلف؟</h2><p>ابدأ خطوة جديدة في رحلة الفهم والاكتشاف مع Mrs Sofia.</p></div><Link to="/register" className="sofia-cta sofia-cta-white">أنشئ حسابك <ArrowLeft size={19}/></Link></div></section>
  </div>;
@@ -54,7 +58,7 @@ export function MrsCourses({api}){
  useEffect(()=>{let alive=true;setLoading(true);api('/courses').then(d=>{if(alive){setCourses(d.courses);setError('')}}).catch(e=>{if(alive)setError(e.message)}).finally(()=>{if(alive)setLoading(false)});return()=>{alive=false}},[api]);
  const visible=useMemo(()=>courses.filter(c=>scienceSubject(c.subject)&&(!subject||subject==='الكل'||c.subject===subject)&&(!q||[c.title,c.subject,c.level,c.teacher_name,c.description].some(s=>String(s||'').toLowerCase().includes(q.trim().toLowerCase())))),[courses,subject,q]);
  const update=(key,value)=>{const next=new URLSearchParams(params);if(!value||value==='الكل')next.delete(key);else next.set(key,value);setParams(next)};
- return <main className="sofia-site sofia-page-bg"><section className="sofia-page-heading"><div className="sofia-container"><span className="sofia-kicker"><i/> EXPLORE OUR COURSES</span><h1>كل تجربة علمية <em>بداية اكتشاف</em></h1><p>اختار المادة اللي عايز تفهمها أكتر، وابدأ مع كورسات مدرسة العلوم Mrs Sofia.</p></div></section><div className="sofia-container sofia-catalog">
+ return <main className="sofia-site sofia-page-bg"><section className="sofia-page-heading"><div className="sofia-container"><span className="sofia-kicker"><i/> EXPLORE OUR COURSES</span><h1>كل تجربة علمية <em>بداية اكتشاف</em></h1><p>اختار المادة اللي عايز تفهمها أكتر، وابدأ مع كورسات مدرسة العلوم Mrs Sofia.</p></div></section><LaunchOffer compact/><div className="sofia-container sofia-catalog">
   <div className="sofia-catalog-toolbar"><label className="sofia-catalog-search"><Search size={20}/><input aria-label="ابحث في الكورسات" placeholder="ابحث عن كورس أو مادة أو مرحلة..." value={q} onChange={e=>update('q',e.target.value)}/></label><span className="sofia-result-count"><Filter size={17}/> {visible.length.toLocaleString('ar-EG')} كورس</span></div>
   <div className="sofia-catalog-filters" aria-label="تصفية حسب المادة">{scienceSubjects.map(s=><button type="button" key={s} className={subject===s?'active':''} onClick={()=>update('subject',s)}>{s}</button>)}</div>
   {error&&<div role="alert" className="sofia-alert">{error}</div>}
@@ -76,7 +80,7 @@ export function MrsCourseDetails({api,user,show}){
     <div className="sofia-detail-section"><span className="sofia-kicker"><i/> جدول الحصص</span><h2>رحلتك خطوة بخطوة</h2>{data.lessons.length?<div className="sofia-detail-lessons">{data.lessons.map((lesson,i)=><div key={lesson.id} className="sofia-detail-lesson"><span>{String(i+1).padStart(2,'0')}</span><div><strong>{lesson.title}</strong><small><CalendarDays size={14}/> {formatDateTime(lesson.starts_at)}</small></div><em>{lesson.duration_minutes} دقيقة</em></div>)}</div>:<p>مواعيد الحصص هتظهر هنا عند إضافتها.</p>}</div>
   </div>
   <aside className="sofia-detail-sidebar"><span className="sofia-detail-label"><Sparkles size={16}/> كورس علوم تفاعلي</span><h1>{c.title}</h1><div className="sofia-detail-chips"><span>{c.subject}</span><span>{c.level}</span></div><div className="sofia-detail-instructor"><span><GraduationCap size={23}/></span><div><small>مع المدرّس</small><strong>{c.teacher_name}</strong></div></div><div className="sofia-detail-facts"><div><span><Clock3 size={18}/> مدة الحصة</span><strong>{c.duration_minutes} دقيقة</strong></div><div><span><Users size={18}/> المقاعد المتاحة</span><strong>{Math.max(0,c.capacity-c.enrolled)} من {c.capacity}</strong></div><div><span><BookOpen size={18}/> عدد الحصص</span><strong>{data.lessons.length} حصص</strong></div></div>
-   <div className="sofia-detail-price"><small>سعر الكورس</small><strong>{currency(c.price)}</strong></div>
+   <div className="sofia-detail-price">{scienceSubject(c.subject)&&Number(c.price)>0?<><small>عرض اشتراك شرح العلوم — الشهر الأول</small><strong>100 جنيه <del style={{fontSize:'.52em',opacity:.62}}>170 جنيه</del></strong><small>من الشهر الثاني 170 جنيه شهريًا — الدفع بعد مراجعة الإدارة</small></>:<><small>سعر الكورس</small><strong>{currency(c.price)}</strong></>}</div>
    {!user?<Link to="/login" className="sofia-cta sofia-detail-book">سجّل دخولك للحجز <ArrowLeft size={17}/></Link>:<button type="button" className="sofia-cta sofia-detail-book" disabled={!canBook||busy} onClick={book}>{busy?'جارٍ إرسال الطلب...':bookingStatus==='approved'?'تمت الموافقة على حجزك':bookingStatus==='pending'?'طلبك قيد المراجعة':bookingStatus==='rejected'?'تم رفض طلب الحجز':!isStudent?'الحجز متاح للطلاب فقط':'اطلب الحجز الآن'} <ArrowLeft size={17}/></button>}
    {bookingStatus==='approved'&&<Link className="sofia-dashboard-link" to="/student">تابع حصصك من لوحة الطالب <ArrowLeft size={16}/></Link>}
    <p className="sofia-detail-fine"><ShieldCheck size={17}/> سيتم مراجعة الطلب قبل السماح بدخول الحصص.</p>

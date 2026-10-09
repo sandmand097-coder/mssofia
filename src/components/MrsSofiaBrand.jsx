@@ -16,7 +16,7 @@ export function BrandLogo({light=false}){
  </Link>;
 }
 
-export function BrandHeader({user,logout}){
+export function BrandHeader({user,logout,previewMode=false}){
  const [open,setOpen]=useState(false),location=useLocation();
  useEffect(()=>setOpen(false),[location.pathname,location.hash]);
  const links=[{to:'/',label:'الرئيسية',end:true},{to:'/courses',label:'الكورسات'},{to:'/#method',label:'طريقة التعلم',anchor:true},{to:'/#about',label:'عن Mrs Sofia',anchor:true}];
@@ -26,18 +26,18 @@ export function BrandHeader({user,logout}){
    {links.map(item=>item.anchor?<a key={item.to} href={item.to} onClick={()=>setOpen(false)}>{item.label}</a>:<NavLink key={item.to} to={item.to} end={item.end} onClick={()=>setOpen(false)}>{item.label}</NavLink>)}
   </nav>
   <div className="sofia-nav-actions">
-   {user?<><Link to={dashboardPath(user)} className="sofia-nav-account"><UserCircle2 size={17}/> لوحتي</Link><button className="sofia-logout" title="تسجيل الخروج" aria-label="تسجيل الخروج" onClick={logout}><LogOut size={18}/></button></>:<><Link to="/login" className="sofia-login">تسجيل الدخول</Link><Link to="/register" className="sofia-cta sofia-cta-sm">ابدأ رحلتك <ArrowLeft size={17}/></Link></>}
+   {user?<><Link to={dashboardPath(user)} className="sofia-nav-account"><UserCircle2 size={17}/> لوحتي</Link><button className="sofia-logout" title="تسجيل الخروج" aria-label="تسجيل الخروج" onClick={logout}><LogOut size={18}/></button></>:<>{previewMode?<><a href="/#offer" className="sofia-login">عرض أول شهر</a><a href="/#offer" className="sofia-cta sofia-cta-sm">شوف العرض <ArrowLeft size={17}/></a></>:<><Link to="/login" className="sofia-login">تسجيل الدخول</Link><Link to="/register" className="sofia-cta sofia-cta-sm">ابدأ رحلتك <ArrowLeft size={17}/></Link></>}</>}
    <button type="button" className="sofia-menu-toggle" aria-label={open?'إغلاق القائمة':'فتح القائمة'} aria-expanded={open} onClick={()=>setOpen(!open)}>{open?<X size={25}/>:<Menu size={25}/>}</button>
   </div>
  </div></header>;
 }
 
-export function BrandFooter(){
+export function BrandFooter({previewMode=false}){
  return <footer className="sofia-footer"><div className="sofia-container">
   <div className="sofia-footer-main">
    <div className="sofia-footer-about"><BrandLogo light/><p>العلوم أسهل لما نفهمها. مكان واحد للتعلّم، التجربة، وتنظيم رحلتك مع مدرسة العلوم Mrs Sofia.</p></div>
    <div><h4>استكشف</h4><Link to="/">الرئيسية</Link><Link to="/courses">الكورسات المتاحة</Link><a href="/#method">طريقة التعلم</a></div>
-   <div><h4>حسابك</h4><Link to="/login">تسجيل الدخول</Link><Link to="/register">إنشاء حساب</Link><Link to="/dashboard">لوحة التحكم</Link></div>
+   <div><h4>{previewMode?'الإطلاق التعريفي':'حسابك'}</h4>{previewMode?<><a href="/#offer">عرض الشهر الأول</a><Link to="/courses">المواد والدورات</Link><small>فتح حسابات الطلاب قريبًا</small></>:<><Link to="/login">تسجيل الدخول</Link><Link to="/register">إنشاء حساب</Link><Link to="/dashboard">لوحة التحكم</Link></>}</div>
    <div className="sofia-footer-note"><span className="sofia-footer-mini"><Atom size={20}/></span><b>Learn. Explore. Discover.</b><small>من سؤال صغير لاكتشاف كبير.</small></div>
   </div>
   <div className="sofia-footer-bottom"><span>© {new Date().getFullYear()} Mrs Sofia — مدرسة العلوم. جميع الحقوق محفوظة.</span><span>Made for curious minds <span aria-hidden="true">✦</span></span></div>
@@ -79,6 +79,6 @@ export function ScienceCourseCard({course}){
  const subject=course.subject||'علوم';const setting=palettes[subject]||{icon:Microscope,tone:'mint',eyebrow:'DISCOVER'};const Icon=setting.icon;
  return <Link className="sofia-course-card" to={'/courses/'+course.id}>
   <div className={'sofia-course-cover tone-'+setting.tone}><span className="sofia-course-grid-art"/><span className="sofia-course-english">{setting.eyebrow}</span><Icon size={86} strokeWidth={1.2}/><span className="sofia-course-live"><span/> حصص تفاعلية</span></div>
-  <div className="sofia-course-content"><div className="sofia-course-tags"><span>{subject}</span><span>{course.level}</span></div><h3>{course.title}</h3><p>{course.description}</p><div className="sofia-course-meta"><span><GraduationCap size={15}/> {course.teacher_name}</span><span><Clock3 size={15}/> {course.duration_minutes} دقيقة</span></div><div className="sofia-course-price"><strong>{currency(course.price)}</strong><span>تفاصيل الدورة <ArrowLeft size={17}/></span></div></div>
+  <div className="sofia-course-content"><div className="sofia-course-tags"><span>{subject}</span><span>{course.level}</span></div><h3>{course.title}</h3><p>{course.description}</p><div className="sofia-course-meta"><span><GraduationCap size={15}/> {course.teacher_name}</span><span><Clock3 size={15}/> {course.duration_minutes} دقيقة</span></div><div className="sofia-course-price">{scienceSubject(course.subject)&&Number(course.price)>0?<strong>أول شهر 100 ج.م <del style={{fontSize:'.72em',opacity:.65}}>170 ج.م</del></strong>:<strong>{currency(course.price)}</strong>}<span>تفاصيل الدورة <ArrowLeft size={17}/></span></div></div>
  </Link>;
 }

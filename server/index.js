@@ -10,6 +10,7 @@ import { AccessToken, WebhookReceiver } from 'livekit-server-sdk';
 import { getRoomService, participantPermission, videoGrant, MAX_ACTIVE_SPEAKERS } from './classroom.js';
 import { randomBytes, createHash } from 'node:crypto';
 import { sendAccountEmail, canRegister, mailMode } from './email.js';
+import {attachPaymentRoutes} from './payment-routes.js';
 import { get, all, run, uid, now, publicUser, checkConnection } from './db-adapter.js';
 const app = express(),
   PORT = Number(process.env.PORT || 4010);
@@ -101,6 +102,7 @@ const auth = async (req, res, next) => {
 const role = (...roles) => (req, res, next) => roles.includes(req.user.role) ? next() : send(res, 403, {
   error: 'ليس لديك صلاحية'
 });
+attachPaymentRoutes(app,{auth,role,get,all,run,uid,now});
 const valid = (v, max = 120) => typeof v === 'string' && v.trim().length > 0 && v.trim().length <= max;
 const owns = (course, user) => user.role === 'admin' || user.role === 'teacher' && course.teacher_id === user.id;
 const intRange = (v, min, max) => (typeof v === 'number' || typeof v === 'string' && v.trim() !== '') && Number.isInteger(Number(v)) && Number(v) >= min && Number(v) <= max;
@@ -116,6 +118,7 @@ const parseCourse = input => {
     duration_minutes: Number(input.duration_minutes)
   };
 };
+const validMeetLink=url=>!url||/^https:\/\/meet\.google\.com\/[a-z]{3}-[a-z]{4}-[a-z]{3}\/?$/i.test(url);
 const parseLesson = input => {
   if (!input || !valid(input.title, 160) || typeof input.starts_at !== 'string' || !Number.isFinite(Date.parse(input.starts_at)) || Date.parse(input.starts_at) < Date.now() - 60000 || !intRange(input.duration_minutes, 15, 240)) return null;
   return {
@@ -383,7 +386,7 @@ app.get('/api/my/overview', auth, async (req, res) => {
   let courses,
     bookings = [];
   if (u.role === 'student') {
-    bookings = await all(`SELECT b.*,c.title AS course_title,c.subject,c.teacher_id,u.name AS teacher_name FROM bookings b JOIN courses c ON c.id=b.course_id JOIN users u ON u.id=c.teacher_id WHERE b.student_id=? ORDER BY b.created_at DESC`, u.id);
+    bookings = await all(`SELECT b.*,(SELECT p.status FROM payment_submissions p WHERE p.booking_id=b.id) AS payment_status,(SELECT p.amount_egp FROM payment_submissions p WHERE p.booking_id=b.id) AS payment_amount,(SELECT p.review_note FROM payment_submissions p WHERE p.booking_id=b.id) AS payment_note,c.price,c.title AS course_title,c.subject,c.teacher_id,u.name AS teacher_name FROM bookings b JOIN courses c ON c.id=b.course_id JOIN users u ON u.id=c.teacher_id WHERE b.student_id=? ORDER BY b.created_at DESC`, u.id);
     courses = await all(courseQuery + ` WHERE c.id IN (SELECT course_id FROM bookings WHERE student_id=? AND status='approved')`, u.id);
   } else if (u.role === 'teacher') {
     courses = await all(courseQuery + ' WHERE c.teacher_id=?', u.id);
@@ -392,7 +395,7 @@ app.get('/api/my/overview', auth, async (req, res) => {
     courses = await all(courseQuery);
     bookings = await all(`SELECT b.*,c.title AS course_title,u.name AS student_name FROM bookings b JOIN courses c ON c.id=b.course_id JOIN users u ON u.id=b.student_id ORDER BY b.created_at DESC`);
   }
-  const lessons = await all(`SELECT l.id,l.title,l.course_id,l.starts_at,l.duration_minutes,l.status,c.title AS course_title FROM lessons l JOIN courses c ON c.id=l.course_id WHERE ${u.role === 'student' ? "c.id IN (SELECT course_id FROM bookings WHERE student_id=? AND status='approved')" : u.role === 'teacher' ? 'c.teacher_id=?' : '1=1'} ORDER BY l.starts_at ASC LIMIT 120`, ...(u.role === 'admin' ? [] : [u.id]));
+  const lessons = await all(`SELECT l.id,l.title,l.course_id,l.starts_at,l.duration_minutes,l.status,l.meet_url,c.title AS course_title FROM lessons l JOIN courses c ON c.id=l.course_id WHERE ${u.role === 'student' ? "c.id IN (SELECT course_id FROM bookings WHERE student_id=? AND status='approved')" : u.role === 'teacher' ? 'c.teacher_id=?' : '1=1'} ORDER BY l.starts_at ASC LIMIT 120`, ...(u.role === 'admin' ? [] : [u.id]));
   res.json({
     courses,
     bookings,
@@ -418,7 +421,7 @@ app.post('/api/courses/:id/book', auth, role('student'), async (req, res) => {
   });
   await run('INSERT INTO bookings(id,course_id,student_id,status,created_at) VALUES(?,?,?,?,?)', uid(), c.id, req.user.id, 'pending', now());
   res.status(201).json({
-    message: 'تم إرسال طلب الحجز ويحتاج موافقة المدرس'
+    message: 'تم إرسال طلب الحجز. إذا كانت الدورة مدفوعة، ارفع إيصال فودافون كاش وانتظر مراجعة الإدارة للمبلغ الحقيقي'
   });
 });
 app.post('/api/courses', auth, role('teacher', 'admin'), async (req, res) => {
@@ -490,7 +493,9 @@ app.post('/api/courses/:id/lessons', auth, role('teacher', 'admin'), async (req,
     error: 'حدد عنوانًا وموعدًا قادمًا ومدة صحيحة'
   });
   const id = uid();
-  await run('INSERT INTO lessons(id,course_id,title,starts_at,duration_minutes,status,room_key,created_at) VALUES(?,?,?,?,?,?,?,?)', id, c.id, title, new Date(starts_at).toISOString(), +duration_minutes, 'scheduled', uid(), now());
+  const meetUrl=String(req.body?.meet_url||'').trim();
+  if(!validMeetLink(meetUrl))return send(res,400,{error:'رابط Google Meet غير صالح'});
+  await run('INSERT INTO lessons(id,course_id,title,starts_at,duration_minutes,status,room_key,created_at,meet_url) VALUES(?,?,?,?,?,?,?,?,?)', id, c.id, title, new Date(starts_at).toISOString(), +duration_minutes, 'scheduled', uid(), now(),meetUrl||null);
   res.status(201).json({
     id
   });
@@ -513,14 +518,16 @@ app.patch('/api/lessons/:id', auth, role('teacher', 'admin'), async (req, res) =
   if (!values) return send(res, 400, {
     error: 'حدد عنوانًا وموعدًا قادمًا ومدة صحيحة'
   });
-  await run('UPDATE lessons SET title=?,starts_at=?,duration_minutes=? WHERE id=?', values.title, values.starts_at, values.duration_minutes, lesson.id);
+  const meetUrl=req.body?.meet_url===undefined?lesson.meet_url:String(req.body.meet_url||'').trim();
+  if(!validMeetLink(meetUrl))return send(res,400,{error:'رابط Google Meet غير صالح'});
+  await run('UPDATE lessons SET title=?,starts_at=?,duration_minutes=?,meet_url=? WHERE id=?', values.title, values.starts_at, values.duration_minutes, meetUrl||null,lesson.id);
   res.json({
     ok: true,
     id: lesson.id
   });
 });
 app.patch('/api/bookings/:id', auth, role('teacher', 'admin'), async (req, res) => {
-  const b = await get('SELECT b.*,c.teacher_id,c.capacity FROM bookings b JOIN courses c ON c.id=b.course_id WHERE b.id=?', req.params.id);
+  const b = await get('SELECT b.*,c.teacher_id,c.capacity,c.price FROM bookings b JOIN courses c ON c.id=b.course_id WHERE b.id=?', req.params.id);
   if (!b) return send(res, 404, {
     error: 'الحجز غير موجود'
   });
@@ -532,6 +539,10 @@ app.patch('/api/bookings/:id', auth, role('teacher', 'admin'), async (req, res) 
     error: 'الحالة غير صحيحة'
   });
   if (status === 'approved' && b.status !== 'approved') {
+    if(Number(b.price)>0){
+      const payment=await get('SELECT status FROM payment_submissions WHERE booking_id=?',b.id);
+      if(payment?.status!=='approved')return send(res,409,{error:'لا يمكن قبول الحجز المدفوع قبل تأكيد فودافون كاش من لوحة المديرة'});
+    }
     const count = (await get("SELECT COUNT(*) AS n FROM bookings WHERE course_id=? AND status='approved'", b.course_id)).n;
     if (count >= b.capacity) return send(res, 409, {
       error: 'اكتمل عدد المقاعد'
@@ -775,13 +786,15 @@ app.post('/api/lessons/:id/moderate', auth, role('teacher', 'admin'), asyncRoute
   }
 }));
 app.get('/api/lessons/:id', auth, async (req, res) => {
-  const l = await get('SELECT l.id,l.title,l.course_id,l.starts_at,l.duration_minutes,l.status,c.title AS course_title,c.teacher_id FROM lessons l JOIN courses c ON c.id=l.course_id WHERE l.id=?', req.params.id);
+  const l = await get('SELECT l.id,l.title,l.course_id,l.starts_at,l.duration_minutes,l.status,l.meet_url,c.title AS course_title,c.teacher_id FROM lessons l JOIN courses c ON c.id=l.course_id WHERE l.id=?', req.params.id);
   if (!l) return send(res, 404, {
     error: 'الحصة غير موجودة'
   });
   if (!(await roomPermitted(l, req.user))) return send(res, 403, {
     error: 'الحصة للطلاب المقبولين فقط'
   });
+  const liveWindow=Date.now()>=Date.parse(l.starts_at)-15*60000&&Date.now()<=Date.parse(l.starts_at)+(l.duration_minutes+30)*60000;
+  if(req.user.role==='student'&&!liveWindow)l.meet_url=null;
   res.json({
     lesson: l,
     videoConfigured: !!(process.env.LIVEKIT_URL && process.env.LIVEKIT_API_KEY && process.env.LIVEKIT_API_SECRET),

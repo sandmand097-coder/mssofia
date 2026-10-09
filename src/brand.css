@@ -441,3 +441,31 @@ body{color:var(--sf-ink)}
 .sofia-auth-hint{border:1px dashed #e6bd90;border-radius:10px;color:#94633b;padding:11px;background:#fff7e8;font-size:11px;line-height:1.9}
 .sofia-auth-form .sofia-consent{display:flex;align-items:flex-start;gap:10px;font-size:11px;line-height:1.85;color:#536f68;cursor:pointer}
 .sofia-auth-form .sofia-consent input{width:17px;height:17px;flex-shrink:0;margin-top:4px;accent-color:#087d70}
+
+/* Launch offer — public marketing and catalogue */
+.sofia-launch-offer{background:linear-gradient(115deg,#e7f5ed 0%,#fff8ec 100%);padding:64px 0;border-top:1px solid #ddece4;border-bottom:1px solid #e0eae2;direction:rtl}
+.sofia-launch-offer-inner{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(290px,.75fr);gap:40px;align-items:center}
+.sofia-offer-intro h2{font-size:clamp(28px,3.1vw,46px);line-height:1.34;margin:16px 0;font-weight:900;color:#153f39}
+.sofia-offer-intro h2 em{font-style:normal;color:#08866e}
+.sofia-offer-intro>p{color:#55736a;line-height:2;font-size:15px;max-width:650px}
+.sofia-offer-eyebrow{display:inline-flex;align-items:center;gap:8px;background:#fff;padding:9px 15px;border-radius:100px;color:#116e5e;font-weight:800;font-size:13px;border:1px solid #d4e8da}
+.sofia-offer-terms{display:flex;gap:17px;flex-wrap:wrap;margin-top:20px}
+.sofia-offer-terms span{display:inline-flex;align-items:center;gap:6px;color:#355c53;font-size:13px;font-weight:750}
+.sofia-offer-price-panel{background:#fff;border-radius:24px;padding:28px;box-shadow:0 18px 45px rgba(24,92,76,.12);border:1px solid #e3ebe6}
+.sofia-offer-price-top{display:flex;gap:10px;justify-content:space-between;align-items:center;font-size:13px;font-weight:800;color:#386457}
+.sofia-offer-price-top>span{display:inline-flex;align-items:center;gap:4px}
+.sofia-offer-savings{background:#ffeedb;padding:6px 10px;border-radius:25px;color:#ae643c;font-size:12px}
+.sofia-offer-price-values{display:flex;align-items:baseline;gap:17px;margin:12px 0}
+.sofia-offer-price-values strong{font-size:clamp(48px,5vw,70px);font-weight:900;color:#086e5d;letter-spacing:-2px;white-space:nowrap}
+.sofia-offer-price-values strong small{font-size:22px;letter-spacing:0}
+.sofia-offer-price-values del{font-size:19px;color:#8f9690}
+.sofia-offer-price-panel>p{font-size:13px;color:#48675d;margin-bottom:17px}
+.sofia-offer-price-panel>p b{color:#274d43}
+.sofia-offer-cta{display:flex;align-items:center;justify-content:center;gap:9px;padding:14px;border-radius:13px;background:#087966;color:#fff!important;font-size:14px;font-weight:850;text-decoration:none}
+.sofia-offer-cta:hover{background:#075b4d}
+.sofia-offer-disclaimer{display:block;line-height:1.8;margin-top:13px;color:#647e73;font-size:11px}
+.sofia-launch-offer.is-compact{padding:25px 0}
+.sofia-launch-offer.is-compact .sofia-offer-intro h2{font-size:27px}
+.sofia-launch-offer.is-compact .sofia-offer-price-values strong{font-size:43px}
+.sofia-public-preview-notice{background:#153f39;color:#f0fbf4;text-align:center;line-height:1.8;padding:12px 16px;font-size:12px;font-weight:750;direction:rtl}
+@media(max-width:760px){.sofia-launch-offer{padding:36px 0}.sofia-launch-offer-inner{grid-template-columns:1fr;gap:20px}.sofia-offer-terms{gap:10px}.sofia-offer-price-panel{padding:22px}.sofia-offer-price-values strong{font-size:54px}}

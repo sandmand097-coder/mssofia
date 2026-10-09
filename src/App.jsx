@@ -61,10 +61,13 @@ function LessonRoom(){
  return <main className="room-page"><div className="container">
   <div className="room-head"><div><Link className="breadcrumb" to="/dashboard">لوحة التحكم <ChevronLeft size={15}/> الحصة المباشرة</Link><h1>{data.lesson.title}</h1><p>{data.lesson.course_title} • {fmt(data.lesson.starts_at)}</p></div><span className="room-secure"><ShieldCheck size={17}/> غرفة خاصة بالطلاب المقبولين</span></div>
   {connection?<Suspense fallback={<div className="loading">جارٍ تحميل الفصل المباشر...</div>}><Classroom connection={connection} onDisconnected={()=>setConnection(null)}/></Suspense>:
-  <div className="room-placeholder"><div className="video-illustration"><Video size={56}/><span className="video-ring"/></div><h2>غرفة الحصة المباشرة</h2><p>تابع شرح المعلمة بالصوت والفيديو ومشاركة الشاشة. الأطفال يبدأون في وضع الاستماع، والمعلمة وحدها تمنح إذن فتح الميكروفون والكاميرا بعد رفع اليد.</p>{!data.videoConfigured&&<div className="video-warning">البث المباشر يحتاج تفعيل LiveKit وإعداد المفاتيح على الخادم.</div>}{data.videoLocalOnly&&<div className="video-warning">تم تفعيل بث تجريبي محلي يعمل على هذا الكمبيوتر فقط. دخول الطلاب من خارج المنزل يحتاج ربط LiveKit Cloud ونشر الموقع بأمان.</div>}{error&&<div className="video-warning">{error}</div>}<button className="sofia-cta" onClick={join} disabled={joining||!data.videoConfigured}><Play size={17}/>{joining?'جارٍ الاتصال...':'الانضمام إلى الحصة'}</button><small>تفتح الغرفة قبل موعد الحصة بـ15 دقيقة</small></div>}
+  <div className="room-placeholder"><div className="video-illustration"><Video size={56}/><span className="video-ring"/></div><h2>غرفة الحصة المباشرة</h2>{data.lesson.meet_url&&<div className="sofia-meet-fallback"><p>Google Meet بديل مجاني عند عدم تشغيل البث داخل الموقع. يفتح في نافذة Google ويمكن للمعلمة قبول دخول الطلاب.</p><a className="sofia-cta" href={data.lesson.meet_url} target="_blank" rel="noopener noreferrer">الدخول إلى حصة Google Meet <ArrowLeft size={17}/></a></div>}<p>تابع شرح المعلمة بالصوت والفيديو ومشاركة الشاشة. الأطفال يبدأون في وضع الاستماع، والمعلمة وحدها تمنح إذن فتح الميكروفون والكاميرا بعد رفع اليد.</p>{!data.videoConfigured&&!data.lesson.meet_url&&<div className="video-warning">البث المباشر يحتاج تفعيل LiveKit وإعداد المفاتيح على الخادم.</div>}{data.videoLocalOnly&&<div className="video-warning">تم تفعيل بث تجريبي محلي يعمل على هذا الكمبيوتر فقط. دخول الطلاب من خارج المنزل يحتاج ربط LiveKit Cloud ونشر الموقع بأمان.</div>}{error&&<div className="video-warning">{error}</div>}<button className="sofia-cta" onClick={join} disabled={joining||!data.videoConfigured}><Play size={17}/>{joining?'جارٍ الاتصال...':'الانضمام إلى الحصة'}</button><small>تفتح الغرفة قبل موعد الحصة بـ15 دقيقة</small></div>}
   {!connection&&<div style={{textAlign:'center',marginTop:18}}><button type="button" className="portal-soft-btn" onClick={()=>setPreview(v=>!v)}>{preview?'إخفاء معاينة الفصل':'معاينة تصميم الفصل الجديد'}</button></div>}
   {!connection&&preview&&<Suspense fallback={<div className="loading">جارٍ عرض المعاينة...</div>}><ClassroomPreview isHost={user?.role==='teacher'||user?.role==='admin'}/></Suspense>}
  </div></main>;
+}
+function PublicUnavailable(){
+ return <main className="sofia-site sofia-page-bg"><div className="sofia-container sofia-no-results"><LockKeyhole size={43}/><h1>التسجيل هيفتح قريبًا</h1><p>الموقع متاح حاليًا للتعرّف على مدرسة العلوم وعرض أول شهر. بنجهز تأمين حسابات الطلاب والبث المباشر قبل فتح الاشتراك.</p><Link className="sofia-cta" to="/">شوف عرض أول شهر <ArrowLeft size={17}/></Link></div></main>;
 }
 function NotFound(){
  return <main className="sofia-site sofia-page-bg"><div className="sofia-container sofia-no-results"><h1>الصفحة دي مش موجودة</h1><p>يمكن الرابط اتغير، لكن تقدر ترجع تكتشف كورسات العلوم.</p><Link className="sofia-cta" to="/">الرجوع للرئيسية <ArrowLeft size={17}/></Link></div></main>;
@@ -78,35 +81,36 @@ function PageTitle(){
  return null;
 }
 export default function App(){
- const [user,setUser]=useState(undefined),[toast,setToast]=useState('');
+ const [user,setUser]=useState(undefined),[toast,setToast]=useState(''),[launchMode,setLaunchMode]=useState('checking');
  const navigate=useNavigate();
- useEffect(()=>{let active=true;api('/auth/me').then(d=>{if(active)setUser(d.user)}).catch(()=>{if(active)setUser(null)});return()=>{active=false}},[]);
+ useEffect(()=>{let active=true;Promise.allSettled([api('/auth/me'),api('/health')]).then(([session,health])=>{if(!active)return;setUser(session.status==='fulfilled'?session.value.user:null);setLaunchMode(health.status==='fulfilled'?(health.value.mode==='preview'?'preview':'full'):'offline')});return()=>{active=false}},[]);
  useEffect(()=>{if(!toast)return;const timeout=setTimeout(()=>setToast(''),4600);return()=>clearTimeout(timeout)},[toast]);
  const show=useCallback(message=>setToast(message),[]);
  const logout=async()=>{try{await api('/auth/logout',{method:'POST'});setUser(null);navigate('/')}catch(e){show(e.message)}};
  return <Context.Provider value={{user,setUser,show,logout}}>
   <PageTitle/>
-  <BrandHeader user={user} logout={logout}/>
+  <BrandHeader user={user} logout={logout} previewMode={launchMode==='preview'||launchMode==='offline'}/>
+  {(launchMode==='preview'||launchMode==='offline')&&<div className="sofia-public-preview-notice" role="status">موقع Mrs Sofia متاح للتعرّف على المدرسة والعروض. تسجيل الطلاب والبث المباشر هيفتحوا بعد اكتمال التجهيز الآمن.</div>}
   {user===undefined?<div className="loading">جارٍ تجهيز مدرسة العلوم...</div>:
    <Suspense fallback={<div className="loading">جارٍ تحميل الصفحة...</div>}>
     <Routes>
      <Route path="/" element={<MrsHome api={api}/>}/>
      <Route path="/courses" element={<MrsCourses api={api}/>}/>
-     <Route path="/courses/:id" element={<MrsCourseDetails api={api} user={user} show={show}/>}/>
-     <Route path="/login" element={<SignInPage api={api} user={user} setUser={setUser} show={show}/>}/>
-     <Route path="/register" element={<RegisterPage api={api} user={user}/>}/>
-     <Route path="/verify-email" element={<VerifyEmailPage api={api}/>}/>
-     <Route path="/forgot-password" element={<ForgotPasswordPage api={api}/>}/>
-     <Route path="/reset-password" element={<ResetPasswordPage api={api}/>}/>
-     <Route path="/dashboard" element={<RoutePortal/>}/>
-     <Route path="/admin" element={<RoutePortal/>}/>
-     <Route path="/student" element={<RoutePortal/>}/>
-     <Route path="/teacher" element={<RoutePortal/>}/>
-     <Route path="/lesson/:id" element={<LessonRoom/>}/>
+     <Route path="/courses/:id" element={launchMode==='preview'||launchMode==='offline'?<PublicUnavailable/>:<MrsCourseDetails api={api} user={user} show={show}/>}/>
+     <Route path="/login" element={launchMode==='preview'||launchMode==='offline'?<PublicUnavailable/>:<SignInPage api={api} user={user} setUser={setUser} show={show}/>}/>
+     <Route path="/register" element={launchMode==='preview'||launchMode==='offline'?<PublicUnavailable/>:<RegisterPage api={api} user={user}/>}/>
+     <Route path="/verify-email" element={launchMode==='preview'||launchMode==='offline'?<PublicUnavailable/>:<VerifyEmailPage api={api}/>}/>
+     <Route path="/forgot-password" element={launchMode==='preview'||launchMode==='offline'?<PublicUnavailable/>:<ForgotPasswordPage api={api}/>}/>
+     <Route path="/reset-password" element={launchMode==='preview'||launchMode==='offline'?<PublicUnavailable/>:<ResetPasswordPage api={api}/>}/>
+     <Route path="/dashboard" element={launchMode==='preview'||launchMode==='offline'?<PublicUnavailable/>:<RoutePortal/>}/>
+     <Route path="/admin" element={launchMode==='preview'||launchMode==='offline'?<PublicUnavailable/>:<RoutePortal/>}/>
+     <Route path="/student" element={launchMode==='preview'||launchMode==='offline'?<PublicUnavailable/>:<RoutePortal/>}/>
+     <Route path="/teacher" element={launchMode==='preview'||launchMode==='offline'?<PublicUnavailable/>:<RoutePortal/>}/>
+     <Route path="/lesson/:id" element={launchMode==='preview'||launchMode==='offline'?<PublicUnavailable/>:<LessonRoom/>}/>
      <Route path="*" element={<NotFound/>}/>
     </Routes>
    </Suspense>}
-  <BrandFooter/>
+  <BrandFooter previewMode={launchMode==='preview'||launchMode==='offline'}/>
   {toast&&<div className="toast" role="status" aria-live="polite"><ShieldCheck size={18}/>{toast}</div>}
  </Context.Provider>;
 }
