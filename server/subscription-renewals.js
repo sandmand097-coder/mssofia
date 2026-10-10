@@ -73,6 +73,10 @@ export function attachSubscriptionRenewalRoutes(app,{
     return json(res,403,{error:'لا يمكن تجديد اشتراك قبل اعتماد دفعته الأولى'});
    const due=amountForRenewal(booking);
    if(!Number.isInteger(due)||due<=0||due>100000)return json(res,409,{error:'الكورس غير مؤهل للتجديد المدفوع'});
+   const lastPaid=await get("SELECT MAX(period_end) AS latest FROM subscription_renewals WHERE booking_id=? AND status='approved' AND confirmed_on_phone=TRUE",booking.id);
+   const previous=Date.parse(lastPaid?.latest||'');
+   const end=Math.max(Date.parse(booking.payment_reviewed_at)+PAID_ACCESS_MS,Number.isFinite(previous)?previous:0);
+   if(end-Date.now()>5*86400000)return json(res,409,{error:'يمكن إرسال التجديد خلال آخر خمسة أيام من الاشتراك أو بعد انتهائه'});
    if((await get("SELECT id FROM subscription_renewals WHERE booking_id=? AND status='pending'",booking.id)))
     return json(res,409,{error:'هناك إيصال تجديد قيد المراجعة؛ لا تدفع مرة أخرى'});
    const senderPhone=String(req.body?.sender_phone||'').trim();
