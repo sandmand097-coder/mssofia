@@ -49,7 +49,7 @@ try{
    await page.getByText(/خادم الحصة مشغول مؤقتًا/).waitFor({timeout:5000});
    for(let i=0;i<90&&tokenCalls<2;i++)await wait(100);
   }else{
-   await page.getByText('انتهى الاشتراك').waitFor({timeout:6000});
+   await page.locator('.room-placeholder .video-warning').getByText('انتهى الاشتراك').waitFor({timeout:6000});
   }
   await wait(1300);
   assert.equal(tokenCalls,expectedAttempts,scenario+' should make exactly the expected number of token requests');
