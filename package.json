@@ -12,11 +12,13 @@
     "client:dev": "vite --host 127.0.0.1",
     "build": "vite build",
     "start": "node --env-file-if-exists=.env server/start.js",
+    "test:guardian:browser": "node qa-guardian-browser.mjs",
+    "test:operations:browser": "node qa-admin-operations-browser.mjs",
     "seed:demo": "node --env-file=.env server/seed.js",
     "admin:local": "node --env-file-if-exists=.env server/create-school-admin.js",
     "admin:invite": "node --env-file-if-exists=.env server/create-admin-cloud.js",
-    "check": "node --check functions/api/[[path]].js && node --check server/admin-only.js && node --check server/start.js && node --check server/admin-preflight.js && node --check server/public-preview.js && node --check server/payment-routes.js && node --check server/payment-email-review.js && node --check server/index.js && node --check server/db.js && node --check server/db-adapter.js && node --check server/email.js && node --check server/google-admin-auth.js && node --check server/seed.js && node --check server/classroom.js && node --check server/create-admin-cloud.js",
-    "test": "node tests/integration.mjs && node tests/classroom-moderation.mjs && node tests/payment-workflow.mjs && node tests/google-admin-auth.mjs && node tests/google-admin-http.mjs && node tests/pages-edge.mjs && node tests/admin-only-backend.mjs && node tests/admin-only-edge.mjs && node tests/admin-preflight.mjs && node tests/admin-preflight-fallback.mjs"
+    "check": "node --check functions/api/[[path]].js && node --check server/admin-only.js && node --check server/start.js && node --check server/admin-preflight.js && node --check server/public-preview.js && node --check server/payment-routes.js && node --check server/payment-email-review.js && node --check server/index.js && node --check server/db.js && node --check server/db-adapter.js && node --check server/email.js && node --check server/google-admin-auth.js && node --check server/release-readiness.js && node --check server/seed.js && node --check server/classroom.js && node --check server/create-admin-cloud.js",
+    "test": "node tests/integration.mjs && node tests/classroom-moderation.mjs && node tests/payment-workflow.mjs && node tests/google-admin-auth.mjs && node tests/google-admin-http.mjs && node tests/google-student-auth.mjs && node tests/release-readiness.mjs && node tests/pages-edge.mjs && node tests/admin-only-backend.mjs && node tests/admin-only-edge.mjs && node tests/admin-preflight.mjs && node tests/admin-preflight-fallback.mjs"
   },
   "dependencies": {
     "@livekit/components-react": "^2.9.0",

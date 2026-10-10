@@ -20,7 +20,7 @@ export function SignInPage({api,user,setUser,adminOnly=false}){
  const navigate=useNavigate(),[email,setEmail]=useState(''),[password,setPassword]=useState(''),[error,setError]=useState(''),[busy,setBusy]=useState(false);
  useEffect(()=>{if(user)navigate(dashboardPath(user),{replace:true})},[user,navigate]);
  const submit=async e=>{e.preventDefault();setBusy(true);setError('');try{const r=await api('/auth/login',{method:'POST',body:JSON.stringify({email,password})});setUser(r.user);navigate(dashboardPath(r.user),{replace:true})}catch(err){setError(err.message)}finally{setBusy(false)}};
- return <AuthLayout tag={adminOnly?'SCHOOL ADMINISTRATOR':'WELCOME TO MRS SOFIA'} title={adminOnly?'دخول مديرة مدرسة Mrs Sofia':'أهلاً بيك في مدرسة العلوم'} description={adminOnly?'تسجيل الدخول متاح لمديرة المدرسة بحساب Google المعتمد فقط. تسجيل الطلاب ما زال مغلقًا.':'سجّل دخولك سواء كنت طالبًا أو مديرة المدرسة للوصول لمساحتك الخاصة.'}>
+ return <AuthLayout tag={adminOnly?'SCHOOL ADMINISTRATOR':'WELCOME TO MRS SOFIA'} title={adminOnly?'دخول مديرة مدرسة Mrs Sofia':'أهلاً بيك في مدرسة العلوم'} description={adminOnly?'تسجيل الدخول متاح لمديرة المدرسة بحساب Google المعتمد فقط. تسجيل الطلاب ما زال مغلقًا.':'سجّل بحساب Google الخاص بولي الأمر أو بالبريد الإلكتروني للوصول إلى مساحة الطالب، أما المديرة فتدخل بحسابها المعتمد.'}>
   <ErrorMessage message={error}/>
   {!adminOnly&&<form className="sofia-auth-form" onSubmit={submit}>
    <label>البريد الإلكتروني<input type="email" autoComplete="email" required value={email} onChange={e=>setEmail(e.target.value)} placeholder="example@gmail.com"/></label>
@@ -28,32 +28,61 @@ export function SignInPage({api,user,setUser,adminOnly=false}){
    <Link className="sofia-auth-forgot" to="/forgot-password">نسيت كلمة المرور؟</Link>
    <button type="submit" className="sofia-cta sofia-auth-submit" disabled={busy}>{busy?'جارٍ الدخول...':'تسجيل الدخول'}<ArrowLeft size={18}/></button>
   </form>}
-  <GoogleAdminButton api={api} setUser={setUser}/>
+  <GoogleAdminButton api={api} setUser={setUser} purpose={adminOnly?'admin':'school'}/>
   {!adminOnly&&<div className="sofia-auth-switch">طالب جديد؟ <Link to="/register">اعمل حساب بالبريد الإلكتروني</Link></div>}
  </AuthLayout>;
 }
-export function RegisterPage({api,user}){
- const navigate=useNavigate(),[form,setForm]=useState({name:'',email:'',password:''}),[consent,setConsent]=useState(false),[error,setError]=useState(''),[done,setDone]=useState(false),[busy,setBusy]=useState(false),[mailMode,setMailMode]=useState('');
- useEffect(()=>{api('/auth/registration-status').then(s=>setMailMode(s.emailMode)).catch(()=>{})},[api]);
+export function RegisterPage({api,user,setUser}){
+ const navigate=useNavigate();
+ const [form,setForm]=useState({name:'',email:'',password:''}),[consent,setConsent]=useState(false);
+ const [error,setError]=useState(''),[done,setDone]=useState(false),[busy,setBusy]=useState(false);
+ const [mailMode,setMailMode]=useState('checking'),[emailRegistration,setEmailRegistration]=useState(false);
+ const [googleRegistration,setGoogleRegistration]=useState(false);
+ useEffect(()=>{let alive=true;api('/auth/registration-status').then(s=>{
+  if(alive){setMailMode(s.emailMode);setEmailRegistration(s.emailRegistrationAvailable===true);setGoogleRegistration(s.googleRegistrationAvailable===true)}
+ }).catch(()=>{if(alive)setMailMode('disabled')});return()=>{alive=false}},[api]);
  useEffect(()=>{if(user)navigate(dashboardPath(user),{replace:true})},[user,navigate]);
  const update=(key,value)=>setForm(f=>({...f,[key]:value}));
- const submit=async e=>{e.preventDefault();setError('');if(!consent){setError('لازم تأكد إنك صاحب الحساب أو ولي الأمر موافق على التسجيل');return}
-  setBusy(true);try{await api('/auth/register',{method:'POST',body:JSON.stringify({name:form.name,email:form.email,password:form.password,role:'student',guardian_email:form.email,guardian_consent:true})});setDone(true)}catch(err){setError(err.message)}finally{setBusy(false)}};
- const resend=async()=>{setBusy(true);setError('');try{await api('/auth/resend-verification',{method:'POST',body:JSON.stringify({email:form.email})});setDone(true)}catch(err){setError(err.message)}finally{setBusy(false)}};
- return <AuthLayout tag="STUDENT REGISTRATION" title="ابدأ رحلتك مع Mrs Sofia" description="سجّل بريدك الإلكتروني، وافتح رسالة التأكيد لتفعيل حسابك قبل حجز الكورسات.">
+ const submit=async e=>{
+  e.preventDefault();setError('');
+  if(form.name.trim().length<2){setError('اكتب اسم الطالب كاملًا');return}
+  if(!consent){setError('يجب أن يوافق ولي الأمر بنفسه على سياسة الخصوصية وشروط التسجيل');return}
+  setBusy(true);
+  try{await api('/auth/register',{method:'POST',body:JSON.stringify({
+   name:form.name,email:form.email,password:form.password,role:'student',
+   guardian_email:form.email,guardian_consent:true
+  })});setDone(true)}
+  catch(err){setError(err.message)}finally{setBusy(false)}
+ };
+ const resend=async()=>{setBusy(true);setError('');
+  try{await api('/auth/resend-verification',{method:'POST',body:JSON.stringify({email:form.email})});setDone(true)}
+  catch(err){setError(err.message)}finally{setBusy(false)}
+ };
+ return <AuthLayout tag="GUARDIAN-MANAGED STUDENT ACCOUNT" title="ابدأ رحلة طفلك مع Mrs Sofia" description="حساب الطالب يُدار ببريد ولي الأمر. بعد تأكيد الحساب تختار الدورة، وترسل طلب الحجز، وتنتظر موافقة الإدارة على التحويل قبل دخول الحصص.">
   <ErrorMessage message={error}/>
   {done?<><Notice>تم إرسال رابط تفعيل حسابك إلى <strong dir="ltr">{form.email}</strong>. افتح البريد (وجرب مجلد Spam) واضغط رابط التفعيل؛ بعدها ارجع لتسجيل الدخول.</Notice>
-   {mailMode==='local-preview'&&<p className="sofia-auth-hint">هذه نسخة محلية للاختبار: رسالة التأكيد موجودة في مجلد private-email-preview على جهاز تشغيل الموقع، وليست رسالة بريد خارجية.</p>}
+   {mailMode==='local-preview'&&<p className="sofia-auth-hint">هذه نسخة محلية للاختبار فقط، وتوجد الرسالة في مجلد البريد التجريبي.</p>}
    <button className="sofia-auth-linkbtn" disabled={busy} onClick={resend}>إعادة إرسال رابط التفعيل</button>
-   <div className="sofia-auth-switch"><Link to="/login">العودة لتسجيل الدخول</Link></div></>:
-  <form className="sofia-auth-form" onSubmit={submit}>
-   {mailMode==='disabled'&&<ErrorMessage message="تسجيل الطلاب متوقف مؤقتًا حتى تفعيل خدمة إرسال البريد الإلكتروني."/>}
-   <label>اسم الطالب بالكامل<input required autoComplete="name" maxLength={80} value={form.name} onChange={e=>update('name',e.target.value)} placeholder="الاسم كما يظهر للمعلمة"/></label>
-   <label>بريد ولي الأمر المسؤول عن الطالب<input required type="email" autoComplete="email" value={form.email} onChange={e=>update('email',e.target.value)} placeholder="example@gmail.com"/></label>
-   <PasswordInput label="كلمة مرور قوية (10 أحرف على الأقل)" value={form.password} onChange={v=>update('password',v)}/>
-   <label className="sofia-consent"><input type="checkbox" checked={consent} onChange={e=>setConsent(e.target.checked)}/> <span>أُقرّ أنني ولي أمر الطالب وصاحب هذا البريد الإلكتروني، وأوافق على إنشاء حساب تعليمي للطالب وفق <Link to="/privacy">سياسة الخصوصية</Link> و<Link to="/terms">شروط الاشتراك</Link>.</span></label>
-   <button type="submit" className="sofia-cta sofia-auth-submit" disabled={busy||mailMode==='disabled'}>{busy?'جارٍ التسجيل...':'إنشاء حساب الطالب'}<ArrowLeft size={17}/></button>
-  </form>}
+   <div className="sofia-auth-switch"><Link to="/login">العودة لتسجيل الدخول</Link></div>
+  </>:<>
+   <div className="sofia-guardian-signup">
+    <h2>١. بيانات الطالب وموافقة ولي الأمر</h2>
+    <label className="sofia-guardian-name">اسم الطالب بالكامل<input required autoComplete="off" maxLength={80} value={form.name} onChange={e=>update('name',e.target.value)} placeholder="الاسم الذي سيظهر للمعلمة"/></label>
+    <label className="sofia-consent"><input type="checkbox" checked={consent} onChange={e=>setConsent(e.target.checked)}/>
+     <span>أُقر بأنني ولي أمر الطالب وأتحكم في البريد المستخدم، وأوافق على إنشاء حساب تعليمي وفق <Link to="/privacy">سياسة الخصوصية</Link> و<Link to="/terms">شروط الاشتراك</Link>.</span>
+    </label>
+    {googleRegistration&&<p className="sofia-auth-hint">عند اختيار Google لن تحتاج إلى كلمة مرور أو كتابة بريد إلكتروني؛ سنعتمد بريد ولي الأمر المؤكد لدى Google.</p>}
+    <GoogleAdminButton api={api} setUser={setUser} purpose="student" registration studentName={form.name} guardianConsent={consent}/>
+   </div>
+   {emailRegistration?<form className="sofia-auth-form sofia-guardian-email-form" onSubmit={submit}>
+    <h2>٢. أو أنشئ الحساب بالبريد وكلمة المرور</h2>
+    <label>بريد ولي الأمر الإلكتروني<input required type="email" autoComplete="email" value={form.email} onChange={e=>update('email',e.target.value)} placeholder="parent@gmail.com"/></label>
+    <PasswordInput label="كلمة مرور قوية (10 أحرف على الأقل)" value={form.password} onChange={v=>update('password',v)}/>
+    <button type="submit" className="sofia-cta sofia-auth-submit" disabled={busy||!consent}>{busy?'جارٍ التسجيل...':'إنشاء حساب بالبريد'}<ArrowLeft size={17}/></button>
+    <small>يجب تأكيد البريد من الرسالة المرسلة إليه قبل تسجيل الدخول.</small>
+   </form>:
+   !googleRegistration&&<p className="sofia-auth-hint">إنشاء حسابات الطلاب لم يُفتح بعد. لا ترسل أي مدفوعات قبل ظهور وسيلة التسجيل الرسمية داخل الموقع.</p>}
+  </>}
   <div className="sofia-auth-switch">عندك حساب؟ <Link to="/login">سجّل دخولك</Link></div>
  </AuthLayout>;
 }

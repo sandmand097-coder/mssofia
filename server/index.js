@@ -10,7 +10,8 @@ import { AccessToken, WebhookReceiver } from 'livekit-server-sdk';
 import { getRoomService, participantPermission, videoGrant, MAX_ACTIVE_SPEAKERS } from './classroom.js';
 import { randomBytes, createHash } from 'node:crypto';
 import { sendAccountEmail, canRegister, mailMode } from './email.js';
-import {attachGoogleAdminAuth,googleAdminConfig} from './google-admin-auth.js';
+import {attachGoogleAdminAuth,googleAdminConfig,googleStudentConfig} from './google-admin-auth.js';
+import {schoolReadiness} from './release-readiness.js';
 import {attachAdminOnlyGuard} from './admin-only.js';
 import {attachPaymentRoutes} from './payment-routes.js';
 import { get, all, run, uid, now, publicUser, checkConnection } from './db-adapter.js';
@@ -83,7 +84,7 @@ const authLimiter = rateLimit({
 });
 app.use('/api/auth/login', authLimiter);
 app.use('/api/auth/register', authLimiter);
-attachGoogleAdminAuth(app,{get,run,now,publicUser,secret,limiter:authLimiter});
+attachGoogleAdminAuth(app,{get,run,uid,now,publicUser,secret,limiter:authLimiter});
 const send = (res, status, data) => res.status(status).json(data);
 const asyncRoute = f => (req, res, next) => Promise.resolve(f(req, res, next)).catch(next);
 const auth = async (req, res, next) => {
@@ -109,6 +110,7 @@ const role = (...roles) => (req, res, next) => roles.includes(req.user.role) ? n
 });
 attachAdminOnlyGuard(app,{auth,role,enabled:adminOnly});
 attachPaymentRoutes(app,{auth,role,get,all,run,uid,now});
+app.get('/api/admin/setup-status',auth,role('admin'),(req,res)=>res.json(schoolReadiness()));
 const valid = (v, max = 120) => typeof v === 'string' && v.trim().length > 0 && v.trim().length <= max;
 const owns = (course, user) => user.role === 'admin' || user.role === 'teacher' && course.teacher_id === user.id;
 const intRange = (v, min, max) => (typeof v === 'number' || typeof v === 'string' && v.trim() !== '') && Number.isInteger(Number(v)) && Number(v) >= min && Number(v) <= max;
@@ -169,7 +171,9 @@ const accountLimiter = rateLimit({
   }
 });
 app.get('/api/auth/registration-status', (req, res) => res.json({
-  registrationAvailable: canRegister(),
+  registrationAvailable: canRegister()||googleStudentConfig().registrationEnabled,
+  emailRegistrationAvailable: canRegister(),
+  googleRegistrationAvailable: googleStudentConfig().registrationEnabled,
   emailMode: mailMode()
 }));
 app.post('/api/auth/register', asyncRoute(async (req, res) => {
