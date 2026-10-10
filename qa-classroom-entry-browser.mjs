@@ -22,7 +22,7 @@ try{
   await wait(120);
  }
  assert.ok(available,'preview failed to launch');
- browser=await chromium.launch({headless:true,executablePath:'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe',args:['--use-fake-device-for-media-stream','--use-fake-ui-for-media-stream']});
+ browser=await chromium.launch({headless:true,...(process.platform==='win32'?{executablePath:'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe'}:{}),args:['--use-fake-device-for-media-stream','--use-fake-ui-for-media-stream']});
  for(const width of [390,1366]){
   for(const role of ['admin','student']){
    const context=await browser.newContext({viewport:{width,height:850},locale:'ar-EG',permissions:['camera','microphone']});
