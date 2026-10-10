@@ -39,7 +39,7 @@ export function createEarlyLiveInspector({
    new Promise((_,reject)=>{
     timer=setTimeout(()=>reject(Error('LiveKit instructor state timed out')),timeoutMs);
    })
-  ]).catch(()=>false).then(value=>{
+  ]).catch(()=>({connected:false,publishing:false})).then(value=>{
    const current=cache.get(key);
    if(current?.pending===pending)cache.set(key,{value,expires:clock()+ttlMs});
    return value;
