@@ -1,0 +1,15 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /admin
+Disallow: /student
+Disallow: /teacher
+Disallow: /dashboard
+Disallow: /lesson/
+Disallow: /login
+Disallow: /register
+Disallow: /reset-password
+Disallow: /forgot-password
+Disallow: /verify-email
+
+Sitemap: https://mssofia.pages.dev/sitemap.xml
