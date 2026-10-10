@@ -11,6 +11,7 @@ const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 app.disable('x-powered-by');
 app.use(helmet({contentSecurityPolicy:false}));
 const cloudVideoPrepared=Boolean(/^wss:\/\/[^/]+\.livekit\.cloud\/?$/i.test(process.env.LIVEKIT_URL||'')&&process.env.LIVEKIT_API_KEY&&process.env.LIVEKIT_API_SECRET);
+let cloudVideoVerified=false;
 async function verifyCloudVideoConnection(){
  if(!cloudVideoPrepared){
   console.warn('Mrs Sofia LiveKit check: CLOUD_CONFIGURATION_MISSING');
@@ -25,6 +26,7 @@ async function verifyCloudVideoConnection(){
    service.listRooms(),
    new Promise((_,reject)=>setTimeout(()=>reject(Error('timed out')),12000))
   ]);
+  cloudVideoVerified=true;
   console.log('Mrs Sofia LiveKit check: CLOUD_API_VERIFIED');
  }catch{
   console.warn('Mrs Sofia LiveKit check: CLOUD_API_UNAVAILABLE');
@@ -34,7 +36,7 @@ if(process.env.VERIFY_LIVEKIT_CLOUD==='true'){
  // Background-only validation: public HTTP startup must never wait for LiveKit.
  void verifyCloudVideoConnection();
 }
-app.get('/api/health',(req,res)=>res.json({ok:true,mode:'preview',registrationAvailable:false,videoConfigured:false,videoCloudReady:cloudVideoPrepared,videoMode:'preview-disabled'}));
+app.get('/api/health',(req,res)=>res.json({ok:true,mode:'preview',registrationAvailable:false,videoConfigured:false,videoCloudReady:cloudVideoVerified,videoMode:'preview-disabled'}));
 app.get('/api/auth/registration-status',(req,res)=>res.json({registrationAvailable:false,emailMode:'disabled'}));
 app.get('/api/auth/me',(req,res)=>res.status(401).json({error:'لم يتم تسجيل الدخول'}));
 app.get('/api/courses',(req,res)=>res.json({courses:[]}));
