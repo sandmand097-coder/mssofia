@@ -12,12 +12,32 @@ export default function ClassroomQuestions({lessonId,host}){
  const [busy,setBusy]=useState(false),[error,setError]=useState(''),[updated,setUpdated]=useState(false);
  const path='/lessons/'+encodeURIComponent(lessonId)+'/questions';
  useEffect(()=>{
-  let mounted=true;
-  const load=()=>api(path).then(data=>{if(mounted){setQuestions(data.questions||[]);setUpdated(true)}})
-   .catch(err=>{if(mounted)setError(err.message)});
-  load();const poll=setInterval(load,3500);
-  return()=>{mounted=false;clearInterval(poll)};
- },[path]);
+  let mounted=true,timer=null,inflight=false,failures=0;
+  const base=host?9000:17000;
+  const refresh=async()=>{
+   if(!mounted)return;
+   // Do not poll while the tab is hidden or when a previous request is pending.
+   if(document.visibilityState==='hidden'||inflight){schedule(15000);return}
+   inflight=true;
+   try{
+    const result=await api(path);
+    if(mounted){setQuestions(result.questions||[]);setUpdated(true);setError('');failures=0}
+   }catch(err){
+    if(mounted){setError(err.message);failures=Math.min(failures+1,4)}
+   }finally{
+    inflight=false;
+    if(mounted)schedule(Math.min(60000,base*Math.pow(2,failures)));
+   }
+  };
+  const schedule=ms=>{
+   clearTimeout(timer);
+   timer=setTimeout(refresh,Math.round(ms*(.85+Math.random()*.3)));
+  };
+  const focus=()=>{if(document.visibilityState==='visible'&&!inflight){clearTimeout(timer);void refresh()}};
+  document.addEventListener('visibilitychange',focus);
+  void refresh();
+  return()=>{mounted=false;clearTimeout(timer);document.removeEventListener('visibilitychange',focus)};
+ },[path,host]);
  const ask=async e=>{
   e.preventDefault();if(busy||!draft.trim())return;
   setBusy(true);setError('');
