@@ -1,34 +1,66 @@
-import React,{useEffect,useState} from 'react';
+import React,{useEffect,useMemo,useState} from 'react';
 import {CheckCircle2,ShieldCheck,Smartphone,RefreshCw,AlertTriangle} from 'lucide-react';
+
+const money=amount=>Number(amount).toLocaleString('ar-EG')+' جنيه';
+const dateTime=value=>value?new Intl.DateTimeFormat('ar-EG',{dateStyle:'medium',timeStyle:'short',timeZone:'Africa/Cairo'}).format(new Date(value)):'—';
+
 export default function AdminPayments(){
  const [data,setData]=useState(null),[error,setError]=useState(''),[busy,setBusy]=useState(''),[checked,setChecked]=useState({}),[reasons,setReasons]=useState({});
- const load=async()=>{const response=await fetch('/api/admin/payments',{credentials:'same-origin'});const result=await response.json();if(!response.ok)throw Error(result.error||'تعذر تحميل التحويلات');setData(result.payments)};
- useEffect(()=>{load().catch(e=>setError(e.message))},[]);
- const decide=async(payment,decision)=>{
-  setError('');
-  if(decision==='approved'&&!checked[payment.id]){setError('أكّدي أولًا أنك رأيت وصول المبلغ على هاتف فودافون كاش');return}
-  if(decision==='rejected'&&String(reasons[payment.id]||'').trim().length<5){setError('اكتبي سبب رفض الإيصال للطالب');return}
-  setBusy(payment.id);
-  try{const response=await fetch('/api/admin/payments/'+payment.id+'/review',{credentials:'same-origin',method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({decision,confirmedOnPhone:checked[payment.id]===true,reason:reasons[payment.id]||''})});const result=await response.json();if(!response.ok)throw Error(result.error||'تعذرت المراجعة');await load();setChecked(s=>({...s,[payment.id]:false}))}
-  catch(e){setError(e.message)}finally{setBusy('')}
+ const load=async()=>{
+  const response=await fetch('/api/admin/payments',{credentials:'same-origin'});
+  const result=await response.json().catch(()=>({}));
+  if(!response.ok)throw Error(result.error||'تعذر تحميل تحويلات الطلاب');
+  setData(result.payments||[]);setError('');
  };
- return <section className="portal-panel sofia-payment-panel">
-  <h2><Smartphone size={22}/> مراجعة تحويلات فودافون كاش</h2>
-  <p>المديرة تتحقق من وصول مبلغ التحويل على هاتف المدرسة ثم تضغط الموافقة. <strong>صورة الإيصال وحدها ليست إثبات وصول الأموال.</strong></p>
-  <div className="sofia-payment-instruction"><ShieldCheck size={21}/> قارني المبلغ ورقم الموبايل والصورة مع التحويل المستلم قبل قبول الطالب وفتح الحصص. ويمكنك مراجعة الإيصال من الرابط المرسل إلى بريد الإدارة.</div>
+ useEffect(()=>{load().catch(e=>setError(e.message))},[]);
+ const payments=useMemo(()=>[...(data||[])].sort((a,b)=>(a.status==='pending'?0:1)-(b.status==='pending'?0:1)||Date.parse(b.submitted_at)-Date.parse(a.submitted_at)),[data]);
+ const pendingCount=payments.filter(payment=>payment.status==='pending').length;
+ const decide=async(payment,decision)=>{
+  if(busy)return;
+  setError('');
+  if(decision==='approved'&&checked[payment.id]!==true){setError('يجب التأكد على هاتف المحفظة الرسمي من وصول نفس المبلغ ومن نفس الرقم قبل القبول');return}
+  if(decision==='rejected'&&String(reasons[payment.id]||'').trim().length<5){setError('اكتب سبب رفض واضحًا، مثل عدم وصول المبلغ أو اختلاف رقم المرسل');return}
+  setBusy(payment.id);
+  try{
+   const response=await fetch('/api/admin/payments/'+encodeURIComponent(payment.id)+'/review',{
+    credentials:'same-origin',method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({decision,confirmedOnPhone:checked[payment.id]===true,reason:reasons[payment.id]||''})
+   });
+   const result=await response.json().catch(()=>({}));
+   if(!response.ok)throw Error(result.error||'تعذرت مراجعة هذا الإيصال');
+   await load();setChecked(current=>({...current,[payment.id]:false}));
+  }catch(e){setError(e.message)}
+  finally{setBusy('')}
+ };
+ return <section className="portal-panel sofia-payment-panel" aria-label="طلبات الدفع اليدوية">
+  <h2><Smartphone size={22}/> تأكيد أو رفض تحويلات فودافون كاش</h2>
+  <p>كل طالب يرسل رقم الهاتف الذي حوّل منه وصورة الإيصال. قارني **المبلغ ورقم المرسل والتحويل الوارد إلى محفظتك على الهاتف**. صورة الإيصال ليست دليلًا كافيًا، ولا يُفتح الاشتراك المدفوع قبل قبولك.</p>
+  <div className="sofia-payment-instruction"><ShieldCheck size={21}/> القبول يدوي فقط: افتحي تطبيق فودافون كاش، وتأكدي من وصول التحويل للمحفظة الرسمية ومن تطابق قيمته ورقم المرسل، ثم ضعي علامة التأكيد واضغطي «قبول الدفع»؛ وإلا اختاري الرفض مع السبب.</div>
   {error&&<div role="alert" className="portal-alert">{error}</div>}
-  <button className="portal-soft-btn" onClick={()=>load().catch(e=>setError(e.message))}><RefreshCw size={15}/> تحديث التحويلات</button>
-  {!data?<p>جارٍ تحميل إيصالات التحويلات...</p>:!data.length?<p>لا توجد تحويلات مُرسلة للمراجعة حتى الآن.</p>:<div className="sofia-payments-review">{data.map(p=><article className="sofia-payment-review" key={p.id}>
-   <div className="sofia-payment-review-head"><h3>{p.student_name}</h3><span className={'sofia-payment-review-status status-'+p.status}>{p.status==='approved'?'مقبول':p.status==='rejected'?'مرفوض':'بانتظار مراجعة'}</span></div>
-   <p>{p.course_title} • <strong>{p.amount_egp} جنيه</strong></p><p>رقم الموبايل الذي تم التحويل منه: <strong dir="ltr">{p.sender_phone||'إيصال قديم'}</strong></p>
-   <small>{p.student_email}</small>
-   <div className="sofia-payment-proof"><a href={'/api/admin/payments/'+p.id+'/proof'} target="_blank" rel="noopener noreferrer">فتح صورة الإيصال في تبويب خاص</a>{p.status==='pending'&&<img src={'/api/admin/payments/'+p.id+'/proof'} loading="lazy" alt={'إيصال مقدم من '+p.student_name}/>}</div>
-   {p.status==='pending'?<div className="sofia-payment-review-actions">
-    <label className="sofia-payment-check"><input type="checkbox" checked={checked[p.id]===true} onChange={e=>setChecked(s=>({...s,[p.id]:e.target.checked}))}/> تأكدت بنفسي من وصول المبلغ على موبايل فودافون كاش وتطابق رقم الموبايل</label>
-    <button className="portal-primary-btn" disabled={busy===p.id||!checked[p.id]} onClick={()=>decide(p,'approved')}><CheckCircle2 size={16}/> تأكيد التحويل وقبول الطالب</button>
-    <label>سبب الرفض<input value={reasons[p.id]||''} onChange={e=>setReasons(s=>({...s,[p.id]:e.target.value}))} placeholder="مثال: المبلغ لم يصل أو رقم العملية غير صحيح" maxLength={500}/></label>
-    <button className="portal-soft-btn danger" disabled={busy===p.id} onClick={()=>decide(p,'rejected')}><AlertTriangle size={15}/> رفض الإيصال</button>
-   </div>:<p>{p.status==='approved'?'تم تأكيد المبلغ والموافقة على الطالب.':'تم إبلاغ الطالب بسبب الرفض: '+(p.review_note||'')}</p>}
+  <button type="button" className="portal-soft-btn" onClick={()=>load().catch(e=>setError(e.message))}><RefreshCw size={15}/> تحديث طلبات الدفع</button>
+  <p role="status"><strong>طلبات تنتظر مراجعتك: {pendingCount.toLocaleString('ar-EG')}</strong></p>
+  {!data?<p>جارٍ تحميل إيصالات التحويلات...</p>:payments.length===0?<p>لا توجد إيصالات مُرسلة حتى الآن.</p>:
+  <div className="sofia-payments-review">{payments.map(payment=><article className="sofia-payment-review" key={payment.id}>
+   <div className="sofia-payment-review-head">
+    <h3>{payment.student_name}</h3>
+    <span className={'sofia-payment-review-status status-'+payment.status}>{payment.status==='approved'?'مقبول':payment.status==='rejected'?'مرفوض':'بانتظار فحص التحويل'}</span>
+   </div>
+   <p>{payment.course_title} • المبلغ المطلوب: <strong>{money(payment.amount_egp)}</strong></p>
+   <p>رقم الهاتف الذي صرّح الطالب بأنه أرسل منه: <strong dir="ltr">{payment.sender_phone||'غير مسجّل'}</strong></p>
+   <small>وقت استلام الإيصال في الموقع: {dateTime(payment.submitted_at)} — ليس بالضرورة وقت التحويل</small>
+   <div className="sofia-payment-proof">
+    <a href={'/api/admin/payments/'+payment.id+'/proof'} target="_blank" rel="noopener noreferrer">عرض إيصال الطالب الخاص</a>
+    {payment.status==='pending'&&<img src={'/api/admin/payments/'+payment.id+'/proof'} loading="lazy" alt={'إيصال مُرسل من '+payment.student_name}/>}
+   </div>
+   {payment.status==='pending'?<div className="sofia-payment-review-actions">
+    <label className="sofia-payment-check">
+     <input type="checkbox" checked={checked[payment.id]===true} onChange={e=>setChecked(current=>({...current,[payment.id]:e.target.checked}))}/>
+     راجعت محفظتي بنفسي، وتأكدت من وصول {money(payment.amount_egp)} فعليًا من الرقم {payment.sender_phone||'غير مسجّل'}.
+    </label>
+    <button type="button" className="portal-primary-btn" disabled={busy!==''||checked[payment.id]!==true} onClick={()=>decide(payment,'approved')}><CheckCircle2 size={16}/> قبول الدفع وفتح الاشتراك 30 يومًا</button>
+    <label>سبب الرفض الذي سيظهر للطالب<input type="text" value={reasons[payment.id]||''} onChange={e=>setReasons(current=>({...current,[payment.id]:e.target.value}))} placeholder="المبلغ لم يصل إلى المحفظة / رقم المرسل غير مطابق" maxLength={500}/></label>
+    <button type="button" className="portal-soft-btn danger" disabled={busy!==''} onClick={()=>decide(payment,'rejected')}><AlertTriangle size={15}/> رفض إيصال التحويل</button>
+   </div>:<p>{payment.status==='approved'?'تم اعتماد هذا التحويل بعد تأكيد وصول المبلغ.':'مرفوض: '+(payment.review_note||'لم يتم اعتماد التحويل')}</p>}
   </article>)}</div>}
- </section>
+ </section>;
 }
