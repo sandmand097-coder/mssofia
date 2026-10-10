@@ -22,7 +22,7 @@ try{
   await wait(120);
  }
  assert.ok(available,'preview failed to launch');
- browser=await chromium.launch({headless:true,executablePath:'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe',args:['--use-fake-device-for-media-stream','--use-fake-ui-for-media-stream']});
+ browser=await chromium.launch({headless:true,...(process.platform==='win32'?{executablePath:'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe'}:{}),args:['--use-fake-device-for-media-stream','--use-fake-ui-for-media-stream']});
  for(const width of [390,1366]){
   for(const role of ['admin','student']){
    const context=await browser.newContext({viewport:{width,height:850},locale:'ar-EG',permissions:['camera','microphone']});
@@ -34,11 +34,11 @@ try{
     if(pathname==='/api/health')return reply(200,{ok:true,mode:role==='admin'?'admin':'full',registrationAvailable:false});
     if(pathname==='/api/auth/me')return reply(200,{user:{id:role==='admin'?'director':'approved-student',name:role==='admin'?'Miss Sofia':'Science learner',role,status:'active',email:role+'@example.test'}});
     if(pathname==='/api/lessons/future-lesson/token'&&route.request().method()==='POST')return reply(503,{error:'تعذر الاتصال التجريبي بخدمة البث'});
-    if(pathname==='/api/lessons/fixture-lesson'||pathname==='/api/lessons/future-lesson')return reply(200,{lesson:{
-     id:pathname.endsWith('future-lesson')?'future-lesson':'fixture-lesson',title:'حصة علوم تجريبية',course_title:'كورس علوم',
-     starts_at:new Date(Date.now()+(pathname.endsWith('future-lesson')?40:8)*60000).toISOString(),duration_minutes:60,
+    if(['/api/lessons/fixture-lesson','/api/lessons/future-lesson','/api/lessons/early-live-lesson'].includes(pathname))return reply(200,{lesson:{
+     id:pathname.endsWith('future-lesson')?'future-lesson':pathname.endsWith('early-live-lesson')?'early-live-lesson':'fixture-lesson',title:'حصة علوم تجريبية',course_title:'كورس علوم',
+     starts_at:new Date(Date.now()+(pathname.endsWith('fixture-lesson')?8:40)*60000).toISOString(),duration_minutes:60,
      status:'scheduled',teacher_id:'different-original-instructor',meet_url:null
-    },videoConfigured:true,videoLocalOnly:false});
+    },studentEarlyLive:pathname.endsWith('early-live-lesson')&&role==='student',videoConfigured:true,videoLocalOnly:false});
     return reply(403,{error:'API disabled in isolated classroom test'});
    });
    await page.goto(origin+'/lesson/fixture-lesson',{waitUntil:'domcontentloaded',timeout:30000});
@@ -73,6 +73,12 @@ try{
     await page.locator('.video-warning').filter({hasText:/تعذر الاتصال التجريبي/}).waitFor();
    }else{
     await page.getByText(/يُفتح دخول الطلاب قبل موعد الحصة/).waitFor();
+    await page.goto(origin+'/lesson/early-live-lesson',{waitUntil:'domcontentloaded',timeout:30000});
+    const earlyJoin=page.getByRole('button',{name:'الدخول لمشاهدة الحصة'});
+    await earlyJoin.waitFor({timeout:16000});
+    assert.equal(await earlyJoin.isDisabled(),false,'paid student joins 40 minutes ahead when teacher already live');
+    await page.getByText(/المعلمة بدأت البث المباشر الآن/).waitFor({timeout:6500});
+
    }
    assert.deepEqual(errors,[],'page errors: '+errors.join('; ').slice(0,250));
    console.log('PASS '+role+' live classroom entry and director-only controls ('+width+'px)');

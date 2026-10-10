@@ -41,5 +41,7 @@ jobs:
         run: npx --yes playwright@1.64.0 install --with-deps chromium
       - name: Verify transient classroom recovery and permanent denial in browser
         run: node qa-classroom-join-recovery-browser.mjs
+      - name: Verify early live classroom entry on mobile and desktop
+        run: node qa-classroom-entry-browser.mjs
       - name: Audit runtime dependencies
         run: npm audit --omit=dev --audit-level=high

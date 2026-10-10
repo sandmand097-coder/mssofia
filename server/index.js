@@ -16,6 +16,7 @@ import {createDiagnosticReader} from './deployment-diagnostics.js';
 import {attachAdminOnlyGuard} from './admin-only.js';
 import {attachPaymentRoutes} from './payment-routes.js';
 import {createLiveAdmission} from './live-admission.js';
+import {createEarlyLiveInspector} from './live-presence.js';
 import {attachClassroomQuestions,classroomQuestionsEnabled} from './classroom-questions.js';
 import {evaluateMonthlyAccess,accessView,countCurrentMembers,renewalEndSelect} from './monthly-access.js';
 import { get, all, run, uid, now, publicUser, checkConnection, withTransaction, isCloudDatabase } from './db-adapter.js';
@@ -37,6 +38,7 @@ app.use(helmet({
   contentSecurityPolicy: false
 }));
 const roomService = getRoomService();
+const earlyLiveInspector=createEarlyLiveInspector({roomService,lookupUser:id=>get('SELECT role,status FROM users WHERE id=?',id)});
 const admission=createLiveAdmission({studentLimit:Number(process.env.LIVE_JOIN_STUDENT_INFLIGHT||14),totalLimit:Number(process.env.LIVE_JOIN_TOTAL_INFLIGHT||20)});
 const webhookReceiver = process.env.LIVEKIT_API_KEY && process.env.LIVEKIT_API_SECRET ? new WebhookReceiver(process.env.LIVEKIT_API_KEY, process.env.LIVEKIT_API_SECRET) : null;
 // LiveKit sends a signed raw body. Never mark a student present when merely requesting a token.
@@ -893,17 +895,25 @@ app.post('/api/lessons/:id/moderate', auth, role('teacher', 'admin'), asyncRoute
   }
 }));
 app.get('/api/lessons/:id', auth, async (req, res) => {
-  const l = await get('SELECT l.id,l.title,l.course_id,l.starts_at,l.duration_minutes,l.status,l.meet_url,c.title AS course_title,c.teacher_id FROM lessons l JOIN courses c ON c.id=l.course_id WHERE l.id=?', req.params.id);
+  const l = await get('SELECT l.id,l.title,l.course_id,l.starts_at,l.duration_minutes,l.status,l.meet_url,l.room_key,c.title AS course_title,c.teacher_id FROM lessons l JOIN courses c ON c.id=l.course_id WHERE l.id=?', req.params.id);
   if (!l) return send(res, 404, {
     error: 'الحصة غير موجودة'
   });
   if (!(await roomPermitted(l, req.user))) return send(res, 403, {
     error: 'الحصة للطلاب المقبولين فقط'
   });
-  const liveWindow=Date.now()>=Date.parse(l.starts_at)-15*60000&&Date.now()<=Date.parse(l.starts_at)+(l.duration_minutes+30)*60000;
-  if(req.user.role==='student'&&!liveWindow)l.meet_url=null;
-  res.json({
-    lesson: l,
+  const timestamp=Date.now(),begins=Date.parse(l.starts_at);
+  const opensAt=begins-15*60000,closesAt=begins+(l.duration_minutes+30)*60000;
+  const liveWindow=timestamp>=opensAt&&timestamp<=closesAt;
+  // Teachers can publish before the scheduled window. Once an AUTHORIZED
+  // director/instructor is actually streaming media in this specific room,
+  // paid and approved learners may join, but cannot bypass expiry or bans.
+  const studentEarlyLive=req.user.role==='student'&&l.status==='scheduled'
+   &&Number.isFinite(begins)&&timestamp<opensAt&&timestamp<=closesAt
+   ?await earlyLiveInspector.isBroadcasting(l):false;
+  if(req.user.role==='student'&&!liveWindow&&!studentEarlyLive)l.meet_url=null;
+  res.set('Cache-Control','no-store, private').json({
+    lesson:(()=>{const {room_key,...safeLesson}=l;return safeLesson})(),studentEarlyLive,
     videoConfigured: !!(process.env.LIVEKIT_URL && process.env.LIVEKIT_API_KEY && process.env.LIVEKIT_API_SECRET),
     videoLocalOnly: localVideo
   });
@@ -931,10 +941,17 @@ app.post('/api/lessons/:id/token',auth,classroomJoinLimiter,admission.middleware
   const starts = Date.parse(l.starts_at),
     ends = starts + l.duration_minutes * 60000;
   const host = admin || teacher;
-  // The host can enter early for device rehearsal; students are still blocked
-  // until 15 minutes before the scheduled lesson. An ended room stays closed.
-  if (!Number.isFinite(starts) || Date.now() > ends + 30 * 60000 || (!host && Date.now() < starts - 15 * 60000)) return send(res, 403, {
-    error: host ? 'انتهى وقت الاستوديو لهذه الحصة' : 'دخول الطلاب متاح من 15 دقيقة قبل الدرس وحتى 30 دقيقة بعد انتهائه'
+  // An instructor may begin teaching before the scheduled 15-minute window.
+  // Allow early viewers ONLY while an active, authenticated school broadcaster
+  // has published media, after roomPermitted has checked paid subscription.
+  const timestamp=Date.now();
+  const needsEarlyCheck=!host&&Number.isFinite(starts)&&timestamp<starts-15*60000;
+  const broadcasterAlreadyLive=needsEarlyCheck&&timestamp<=ends+30*60000
+   ?await earlyLiveInspector.isBroadcasting(l):false;
+  if (!Number.isFinite(starts) || timestamp > ends + 30 * 60000
+    || (needsEarlyCheck&&!broadcasterAlreadyLive)) return send(res, 403, {
+    code:needsEarlyCheck?'LESSON_NOT_LIVE_YET':'LESSON_WINDOW_CLOSED',
+    error:host?'انتهى وقت الاستوديو لهذه الحصة':'المعلمة لم تبدأ البث بعد. يمكنك الدخول الآن إذا بدأت المعلمة البث، أو قبل موعد الحصة بـ15 دقيقة.'
   });
   if (!process.env.LIVEKIT_URL || !process.env.LIVEKIT_API_KEY || !process.env.LIVEKIT_API_SECRET) return send(res, 503, {
     error: 'لم يتم إعداد مزود البث LiveKit بعد'
