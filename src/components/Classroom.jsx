@@ -169,17 +169,34 @@ export function MeetingStudio({connection,onDisconnected,onTimingChange}){
    if(audio.state==='running')gentleArrivalChime(audio);
   }catch{/* Visual notification stays available if autoplay policy blocks audio. */}
  };
+ const arrivalBatch=useRef({count:0,timer:null,lastSoundAt:0});
  useEffect(()=>{
   if(!host)return;
   const onArrival=participant=>{
    let role='';
    try{role=JSON.parse(participant.metadata||'{}').mrsSofiaRole}catch{}
    if(role!=='viewer')return;
-   setArrivalNotice((participant.name||'طالب')+' انضم إلى الحصة');
-   if(joinSound)void playArrivalSound();
+   // Coalesce arrivals when a large class joins together. Avoid a chime and
+   // React state update for each of hundreds of incoming participants.
+   arrivalBatch.current.count++;
+   if(arrivalBatch.current.timer)return;
+   arrivalBatch.current.timer=setTimeout(()=>{
+    const batch=arrivalBatch.current;
+    const joined=batch.count;
+    batch.count=0;batch.timer=null;
+    setArrivalNotice(joined===1?'انضم طالب جديد إلى الحصة':'انضم '+joined+' طلاب إلى الحصة');
+    if(joinSound&&Date.now()-batch.lastSoundAt>6000){
+     batch.lastSoundAt=Date.now();
+     void playArrivalSound();
+    }
+   },950);
   };
   room.on(RoomEvent.ParticipantConnected,onArrival);
-  return()=>room.off(RoomEvent.ParticipantConnected,onArrival);
+  return()=>{
+   room.off(RoomEvent.ParticipantConnected,onArrival);
+   clearTimeout(arrivalBatch.current.timer);
+   arrivalBatch.current.timer=null;arrivalBatch.current.count=0;
+  };
  },[room,host,joinSound]);
  useEffect(()=>{
   if(!arrivalNotice)return;
