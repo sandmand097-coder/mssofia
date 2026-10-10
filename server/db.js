@@ -47,6 +47,20 @@ CREATE TABLE IF NOT EXISTS subscription_renewals (
 CREATE UNIQUE INDEX IF NOT EXISTS idx_renewal_one_pending ON subscription_renewals(booking_id) WHERE status='pending';
 CREATE INDEX IF NOT EXISTS idx_renewals_booking_period ON subscription_renewals(booking_id,status,period_end);
 CREATE INDEX IF NOT EXISTS idx_renewals_review_queue ON subscription_renewals(status,submitted_at);
+CREATE TABLE IF NOT EXISTS lesson_questions (
+ id TEXT PRIMARY KEY,
+ lesson_id TEXT NOT NULL REFERENCES lessons(id) ON DELETE CASCADE,
+ student_id TEXT NOT NULL REFERENCES users(id),
+ body TEXT NOT NULL CHECK(length(body) BETWEEN 1 AND 300),
+ answer TEXT CHECK(answer IS NULL OR length(answer) BETWEEN 1 AND 500),
+ created_at TEXT NOT NULL,
+ answered_at TEXT,
+ answered_by TEXT REFERENCES users(id),
+ CHECK ((answer IS NULL AND answered_at IS NULL AND answered_by IS NULL) OR
+  (answer IS NOT NULL AND answered_at IS NOT NULL AND answered_by IS NOT NULL))
+);
+CREATE INDEX IF NOT EXISTS idx_lesson_questions_lesson_time ON lesson_questions(lesson_id,created_at);
+CREATE INDEX IF NOT EXISTS idx_lesson_questions_student ON lesson_questions(student_id,lesson_id);
 `);
 const columns=new Set(db.prepare('PRAGMA table_info(users)').all().map(x=>x.name));
 if(!columns.has('email_verified_at'))db.exec('ALTER TABLE users ADD COLUMN email_verified_at TEXT');
