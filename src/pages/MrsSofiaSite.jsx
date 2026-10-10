@@ -45,7 +45,7 @@ export function MrsHome({api}){
      ['أقدر أشوف مواعيد حصصي فين؟','من لوحة الطالب، افتح جدول الحصص. المواعيد بتظهر بعد الموافقة على حجزك في الدورة.'],
      ['هل فيه حصص أونلاين مباشرة؟','المنصة فيها فصل مباشر تفاعلي بالصوت والفيديو ومشاركة الشاشة، ويحتاج تفعيل خدمة البث قبل الاستخدام الفعلي.'],
      ['عرض الشهر الأول بكام؟','عرض شرح العلوم للطالب الجديد: 100 جنيه في الشهر الأول بدل 170 جنيه، وبعده 170 جنيه شهريًا. تأكيد الاشتراك بعد مراجعة الإدارة للتحويل.'],
-     ['إزاي أدفع الاشتراك؟','بعد فتح تسجيل الطلاب هتقدر تحوّل على فودافون كاش وترفع صورة الإيصال في حسابك، والمديرة هتوافق بعد مراجعة وصول المبلغ على هاتفها.']
+     ['إزاي أدفع الاشتراك؟','تسجيل الطالب يتم بحساب Google الخاص بولي الأمر. التحويل عبر فودافون كاش لن يكون متاحًا إلا عندما يظهر رقم المحفظة داخل لوحة الطالب بعد فحص مخزن الإيصالات الخاص، والمديرة تراجع الدفع قبل قبول الحجز.']
    ].map(([q,a],i)=><details className="sofia-faq-item" key={q} open={i===0}><summary><span>{q}</span><span className="sofia-faq-plus">+</span></summary><p>{a}</p></details>)}</div></div></section>
   <section className="sofia-container"><div className="sofia-bottom-cta"><div className="sofia-bottom-molecule"><Atom size={108} strokeWidth={1.2}/></div><div><span>خلّي الفضول يقودك ✦</span><h2>جاهز تشوف العلوم بشكل مختلف؟</h2><p>ابدأ خطوة جديدة في رحلة الفهم والاكتشاف مع Mrs Sofia.</p></div><Link to="/register" className="sofia-cta sofia-cta-white">أنشئ حسابك <ArrowLeft size={19}/></Link></div></section>
  </div>;
@@ -83,7 +83,7 @@ export function MrsCourseDetails({api,user,show}){
    {!user?<Link to="/login" className="sofia-cta sofia-detail-book">سجّل دخولك للحجز <ArrowLeft size={17}/></Link>:<button type="button" className="sofia-cta sofia-detail-book" disabled={!canBook||busy} onClick={book}>{busy?'جارٍ إرسال الطلب...':bookingStatus==='approved'?'تمت الموافقة على حجزك':bookingStatus==='pending'?'طلبك قيد المراجعة':bookingStatus==='rejected'?'تم رفض طلب الحجز':!isStudent?'الحجز متاح للطلاب فقط':'اطلب الحجز الآن'} <ArrowLeft size={17}/></button>}
    {bookingStatus==='approved'&&<Link className="sofia-dashboard-link" to="/student">تابع حصصك من لوحة الطالب <ArrowLeft size={16}/></Link>}
    <p className="sofia-detail-fine"><ShieldCheck size={17}/> سيتم مراجعة الطلب قبل السماح بدخول الحصص.</p>
-   {c.price>0&&<p className="sofia-detail-fine">الدفع الإلكتروني غير مفعل حالياً داخل المنصة.</p>}
+   {c.price>0&&<p className="sofia-detail-fine">الدفع غير متاح حاليًا؛ لا ترسل تحويلًا قبل ظهور رقم المحفظة الرسمي داخل لوحة الطالب.</p>}
   </aside></div></div></main>;
 }
 

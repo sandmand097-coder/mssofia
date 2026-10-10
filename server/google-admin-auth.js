@@ -2,6 +2,7 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import {randomBytes} from 'node:crypto';
 import {OAuth2Client} from 'google-auth-library';
+import {guardianRegistrationReleaseReady} from './school-contact.js';
 
 const normalized=value=>typeof value==='string'?value.trim().toLowerCase():'';
 const trustedIssuers=new Set(['https://accounts.google.com','accounts.google.com']);
@@ -31,9 +32,7 @@ export function googleStudentConfig(env=process.env){
   &&env.PUBLIC_LAUNCH_MODE==='full'
   &&isValidClientId(clientId)
   &&(env.NODE_ENV!=='production'||origin.startsWith('https://'));
- const registrationEnabled=enabled&&env.REGISTRATION_ENABLED==='true'
-  &&env.SCHOOL_PRIVACY_APPROVED==='true'
-  &&/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(env.SCHOOL_CONTACT_EMAIL||'');
+ const registrationEnabled=enabled&&guardianRegistrationReleaseReady(env);
  return{enabled,registrationEnabled,clientId};
 }
 

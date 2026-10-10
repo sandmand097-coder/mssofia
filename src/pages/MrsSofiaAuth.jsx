@@ -29,7 +29,7 @@ export function SignInPage({api,user,setUser,adminOnly=false}){
    <button type="submit" className="sofia-cta sofia-auth-submit" disabled={busy}>{busy?'جارٍ الدخول...':'تسجيل الدخول'}<ArrowLeft size={18}/></button>
   </form>}
   <GoogleAdminButton api={api} setUser={setUser} purpose={adminOnly?'admin':'school'}/>
-  {!adminOnly&&<div className="sofia-auth-switch">طالب جديد؟ <Link to="/register">اعمل حساب بالبريد الإلكتروني</Link></div>}
+  {!adminOnly&&<div className="sofia-auth-switch">طالب جديد؟ <Link to="/register">أنشئ حساب الطالب باستخدام Google ولي الأمر</Link></div>}
  </AuthLayout>;
 }
 export function RegisterPage({api,user,setUser}){

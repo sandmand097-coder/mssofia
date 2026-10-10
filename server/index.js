@@ -152,7 +152,7 @@ const courseQuery = `SELECT c.*,u.name AS teacher_name,u.specialty AS teacher_sp
 app.get('/api/health', (req, res) => res.json({
   ok: true,
   mode:adminOnly?'admin':'full',
-  registrationAvailable:adminOnly?false:canRegister(),
+  registrationAvailable:adminOnly?false:canRegister()||googleStudentConfig().registrationEnabled,
   videoConfigured: !!(process.env.LIVEKIT_URL && process.env.LIVEKIT_API_KEY && process.env.LIVEKIT_API_SECRET),
   videoMode: localVideo ? 'local-development' : process.env.LIVEKIT_URL ? 'remote' : 'disabled'
 }));
@@ -448,7 +448,7 @@ app.post('/api/courses/:id/book', auth, role('student'), async (req, res) => {
   });
   await run('INSERT INTO bookings(id,course_id,student_id,status,created_at) VALUES(?,?,?,?,?)', uid(), c.id, req.user.id, 'pending', now());
   res.status(201).json({
-    message: 'تم إرسال طلب الحجز. إذا كانت الدورة مدفوعة، ارفع إيصال فودافون كاش وانتظر مراجعة الإدارة للمبلغ الحقيقي'
+    message:Number(c.price)>0?'تم تسجيل طلبك. لا ترسل أي تحويل قبل ظهور وسيلة الدفع المعتمدة داخل حساب الطالب؛ يظل دخول الحصة معلقًا حتى تؤكد الإدارة الاشتراك.':'تم إرسال طلب الالتحاق بالدورة المجانية. انتظر موافقة الإدارة على الحجز.'
   });
 });
 app.post('/api/courses', auth, role('teacher', 'admin'), async (req, res) => {

@@ -116,7 +116,6 @@ export default function App(){
   <PageTitle/>
   <BrandHeader user={user} logout={logout} previewMode={publicOnly} adminOnly={adminOnly}/>
   {(publicOnly)&&<div className="sofia-public-preview-notice" role="status">موقع Mrs Sofia متاح للتعرّف على المدرسة والعروض. تسجيل الطلاب والبث المباشر هيفتحوا بعد اكتمال التجهيز الآمن.</div>}
-  {adminOnly&&<div className="sofia-public-preview-notice" role="status">حسابات الطلاب والمدفوعات لم تُفتح بعد. دخول مديرة المدرسة متاح بحساب Google المعتمد فقط.</div>}
   {user===undefined?<div className="loading">جارٍ تجهيز مدرسة العلوم...</div>:
    <Suspense fallback={<div className="loading">جارٍ تحميل الصفحة...</div>}>
     <Routes>

@@ -3,10 +3,11 @@ import os from 'node:os';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import nodemailer from 'nodemailer';
+import {guardianRegistrationReleaseReady} from './school-contact.js';
 
 const configured=()=>Boolean((process.env.RESEND_API_KEY||process.env.SMTP_HOST)&&process.env.MAIL_FROM);
 export const mailMode=()=>configured()?'provider':process.env.NODE_ENV==='production'?'disabled':'local-preview';
-export const canRegister=()=>process.env.NODE_ENV==='production'?(mailMode()==='provider'&&process.env.REGISTRATION_ENABLED==='true'&&process.env.SCHOOL_PRIVACY_APPROVED==='true'&&/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(process.env.SCHOOL_CONTACT_EMAIL||'')):mailMode()!=='disabled';
+export const canRegister=()=>process.env.NODE_ENV==='production'?(mailMode()==='provider'&&guardianRegistrationReleaseReady()):mailMode()!=='disabled';
 const sender=()=>process.env.MAIL_FROM||'Mrs Sofia <no-reply@localhost>';
 
 export async function sendAccountEmail({to,subject,text,url,kind}){

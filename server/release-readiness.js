@@ -1,12 +1,13 @@
 // Administrators can inspect deployment prerequisites without access to any
 // secret value. "Configured" never implies a verified payment or email delivery.
 import {googleAdminConfig,googleStudentConfig} from './google-admin-auth.js';
+import {schoolContactConfigured} from './school-contact.js';
 
 export function schoolReadiness(env=process.env){
  const admin=googleAdminConfig(env),guardian=googleStudentConfig(env);
  const privacyApproved=env.SCHOOL_PRIVACY_APPROVED==='true';
  const registrationFlag=env.REGISTRATION_ENABLED==='true';
- const ownerContactConfigured=/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(env.SCHOOL_CONTACT_EMAIL||'');
+ const ownerContactConfigured=schoolContactConfigured(env);
  const senderConfigured=Boolean(env.MAIL_FROM&&(env.RESEND_API_KEY||env.SMTP_HOST));
  const walletNumberConfigured=/^01[0125]\d{8}$/.test(env.VODAFONE_CASH_NUMBER||'');
  const receiptStorageConfigured=Boolean(
