@@ -100,8 +100,16 @@ function NotFound(){
 function PageTitle(){
  const {pathname}=useLocation();
  useEffect(()=>{
-  const title=pathname==='/privacy'?'الخصوصية':pathname==='/terms'?'شروط الاشتراك':pathname==='/courses'?'الكورسات':pathname.startsWith('/courses/')?'تفاصيل الكورس':pathname==='/login'?'تسجيل الدخول':pathname==='/register'?'إنشاء حساب':pathname==='/student'?'لوحة الطالب':pathname==='/admin'?'لوحة الإدارة':pathname==='/teacher'?'لوحة المعلم':pathname.startsWith('/lesson/')?'الفصل المباشر':'مدرسة العلوم';
-  document.title=title+' | mrsofia — Mrs Sofia';
+  const path=pathname.endsWith('/')&&pathname!=='/'?pathname.slice(0,-1):pathname;
+  const label=path==='/privacy'?'الخصوصية':path==='/terms'?'شروط الاشتراك':path==='/courses'?'كورسات العلوم':path.startsWith('/courses/')?'تفاصيل كورس العلوم':path==='/login'?'تسجيل الدخول':path==='/register'?'إنشاء حساب':path==='/student'?'لوحة الطالب':path==='/admin'?'لوحة الإدارة':path==='/teacher'?'لوحة المعلم':path.startsWith('/lesson/')?'الفصل المباشر':'مدرسة العلوم أونلاين';
+  document.title=path==='/'?'مس صوفيا للعلوم | مدرسة العلوم أونلاين — Mrs Sofia':label+' | مس صوفيا للعلوم';
+  const publicPage=path==='/'||path==='/courses'||path==='/privacy'||path==='/terms'||path.startsWith('/courses/');
+  const canonical=document.querySelector('link[rel="canonical"]');
+  if(canonical)canonical.setAttribute('href','https://mssofia.pages.dev'+(publicPage?path:'/')+(publicPage&&path==='/'?'':''));
+  const robots=document.querySelector('meta[name="robots"]');
+  if(robots)robots.setAttribute('content',publicPage?'index, follow, max-image-preview:large':'noindex, nofollow');
+  const ogUrl=document.querySelector('meta[property="og:url"]');
+  if(ogUrl)ogUrl.setAttribute('content','https://mssofia.pages.dev'+(publicPage?path:'/' ));
  },[pathname]);
  return null;
 }
