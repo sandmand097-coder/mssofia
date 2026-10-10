@@ -43,6 +43,12 @@ try {
  assert.equal((await call('/api/auth/me',{cookie:adminCookie})).status,200);
  assert.equal((await call('/api/admin/dashboard',{cookie:studentCookie})).status,403);
  assert.equal((await call('/api/admin/dashboard',{cookie:adminCookie})).status,200);
+ assert.equal((await call('/api/admin/dependencies')).status,401);
+ assert.equal((await call('/api/admin/dependencies',{cookie:studentCookie})).status,403);
+ const checked=await call('/api/admin/dependencies',{cookie:adminCookie});
+ assert.equal(checked.status,200);
+ assert.equal(checked.data.databaseConnected,false,'local test is never mistaken for a cloud database');
+ assert.equal(checked.data.mailDeliveryTested,false,'never claim email delivery without test');
  assert.equal((await call('/api/courses')).status,401);
  assert.equal((await call('/api/courses',{cookie:adminCookie})).status,200);
  assert.equal((await call('/payment-review?token=not-real')).status,503);

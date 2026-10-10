@@ -12,6 +12,11 @@ const steps=[
  {title:'٦. راجعي تحويل فودافون كاش',detail:'من «تحويلات فودافون كاش» افتحي الإيصال، وقارني المبلغ ورقم الهاتف مع ما وصل فعلًا، ثم فعّلي مربع التأكيد واضغطي «تأكيد التحويل وقبول الطالب».',icon:ShieldCheck,tab:'payments',action:'مراجعة التحويلات'},
  {title:'٧. الحضور والمشاركة داخل الفصل',detail:'بعد الموافقة يظهر جدول الحصص في لوحة الطالب. يبدأ الاستماع فقط، ويرفع يده، والمعلمة تمنح إذن الميكروفون أو الكاميرا وتتابع الحضور.',icon:CheckCircle2,tab:'attendance',action:'سجل الحضور'}
 ];
+const liveVerification=[
+ {key:'databaseConnected',label:'اتصال قاعدة بيانات الطلاب والمديرة',description:'استعلام فعلي بقاعدة PostgreSQL وبصلاحية تطبيق المدرسة'},
+ {key:'livekitApiVerified',label:'الاتصال السحابي بغرف البث LiveKit',description:'طلب فعلي إلى LiveKit Cloud، بدون إنشاء غرفة أو فتح كاميرا'},
+ {key:'receiptBucketPrivateVerified',label:'المخزن الخاص لإيصالات فودافون كاش',description:'فحص مخزن Supabase الصحيح والتأكد أنه غير متاح للعامة'}
+];
 const readiness=[
  {key:'adminGoogleEnabled',label:'Google دخول المديرة'},
  {key:'studentGoogleEnabled',label:'Google لولي الأمر / الطالب'},
@@ -23,7 +28,7 @@ const readiness=[
  {key:'privateReceiptStorageConfigured',label:'إعداد مخزن إيصالات الدفع الخاص'},
  {key:'livekitCredentialsConfigured',label:'إعداد LiveKit للبث المباشر'}
 ];
-export default function AdminOperations({setup,onNavigate}){
+export default function AdminOperations({setup,diagnostics,onRefresh,onNavigate}){
  return <div className="sofia-operations" dir="rtl">
   <section className="portal-panel">
    <PanelHeading title="خريطة تشغيل مدرسة Mrs Sofia" description="خطوات الإدارة والطالب من أول إنشاء الدورة حتى قبول الاشتراك ودخول البث المباشر."/>
@@ -34,6 +39,16 @@ export default function AdminOperations({setup,onNavigate}){
      <button className="portal-soft-btn" onClick={()=>onNavigate(item.tab)}>{item.action} <ArrowLeft size={15}/></button>
     </div>})}
    </div>
+  </section>
+  <section className="portal-panel">
+   <PanelHeading title="اختبار الخدمات الفعلي" description="نتائج من خادم المدرسة، وليست مجرد وجود مفاتيح إعدادات." action={<button type="button" className="portal-soft-btn" onClick={onRefresh}>إعادة فحص الخدمات</button>}/>
+   <div className="portal-list">
+    {liveVerification.map(item=><div className="portal-list-item" key={item.key}>
+     <span className="portal-list-icon">{diagnostics?.[item.key]?<CheckCircle2 size={20}/>:<AlertCircle size={20}/>}</span>
+     <div className="portal-list-copy"><strong>{item.label}</strong><small>{!diagnostics?'جارٍ إجراء الفحص الآمن...':diagnostics[item.key]?'تم التحقق من الاتصال': 'لم يجتز الفحص بعد'}</small><small>{item.description}</small></div>
+    </div>)}
+   </div>
+   {diagnostics?.checkedAt&&<p className="sofia-auth-hint">آخر فحص: {new Intl.DateTimeFormat('ar-EG',{dateStyle:'medium',timeStyle:'short',timeZone:'Africa/Cairo'}).format(new Date(diagnostics.checkedAt))}. لا يثبت الفحص وحده إرسال بريد تأكيد أو استلام تحويل مالي أو جودة بث بجهازين.</p>}
   </section>
   <section className="portal-panel">
    <PanelHeading title="التحقق من التجهيز للإطلاق العام" description="هذه حالات إعدادات الخادم؛ وجود المفتاح لا يعني وحده أن تحويل الأموال أو تسليم البريد اختُبر عمليًا."/>

@@ -33,6 +33,7 @@ try{
    if(pathname==='/api/admin/dashboard')return reply(200,{statistics:{students:0,teachers:0,courses:0,pendingBookings:0},latestUsers:[],upcomingLessons:[],pendingBookings:[],registrationTrend:[]});
    if(pathname==='/api/my/overview')return reply(200,{courses:[],bookings:[],lessons:[],stats:{courses:0,bookings:0,upcoming:0}});
    if(pathname==='/api/admin/users')return reply(200,{users:[]});
+   if(pathname==='/api/admin/dependencies')return reply(200,{checkedAt:new Date().toISOString(),databaseConnected:true,livekitApiVerified:true,receiptBucketPrivateVerified:false,mailDeliveryTested:false});
    if(pathname==='/api/admin/setup-status')return reply(200,{
     launchMode:'admin',adminGoogleEnabled:true,studentGoogleEnabled:false,studentGoogleRegistrationEnabled:false,
     guardianPrivacyApproved:false,registrationAllowedBySchool:false,schoolContactConfigured:false,
@@ -48,6 +49,8 @@ try{
   await page.getByRole('heading',{name:'خريطة تشغيل مدرسة Mrs Sofia'}).waitFor({timeout:15000});
   await page.getByText('٦. راجعي تحويل فودافون كاش').waitFor();
   await page.getByRole('heading',{name:'التحقق من التجهيز للإطلاق العام'}).waitFor();
+  await page.getByRole('heading',{name:'اختبار الخدمات الفعلي'}).waitFor();
+  await page.getByText('اتصال قاعدة بيانات الطلاب والمديرة').waitFor();
   const pixel=await page.evaluate(()=>({view:window.innerWidth,scroll:document.documentElement.scrollWidth}));
   assert.ok(pixel.scroll<=pixel.view+2,'horizontal overflow in admin operations '+width);
   assert.deepEqual(errors,[],'no browser errors in admin operations');

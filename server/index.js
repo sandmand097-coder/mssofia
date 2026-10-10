@@ -12,6 +12,7 @@ import { randomBytes, createHash } from 'node:crypto';
 import { sendAccountEmail, canRegister, mailMode } from './email.js';
 import {attachGoogleAdminAuth,googleAdminConfig,googleStudentConfig} from './google-admin-auth.js';
 import {schoolReadiness} from './release-readiness.js';
+import {createDiagnosticReader} from './deployment-diagnostics.js';
 import {attachAdminOnlyGuard} from './admin-only.js';
 import {attachPaymentRoutes} from './payment-routes.js';
 import { get, all, run, uid, now, publicUser, checkConnection } from './db-adapter.js';
@@ -111,6 +112,18 @@ const role = (...roles) => (req, res, next) => roles.includes(req.user.role) ? n
 attachAdminOnlyGuard(app,{auth,role,enabled:adminOnly});
 attachPaymentRoutes(app,{auth,role,get,all,run,uid,now});
 app.get('/api/admin/setup-status',auth,role('admin'),(req,res)=>res.json(schoolReadiness()));
+const readSchoolDiagnostics=createDiagnosticReader({
+ env:process.env,roomService,
+ checkDatabase:async()=>{
+  if(!process.env.DATABASE_URL||!(await checkConnection()))return false;
+  const row=await get("SELECT id FROM users WHERE role='admin' AND status='active' AND lower(email)=lower(?) LIMIT 1",process.env.GOOGLE_ADMIN_EMAIL||'');
+  return Boolean(row?.id);
+ }
+});
+const diagnosticLimiter=rateLimit({windowMs:60000,limit:12,standardHeaders:'draft-8',legacyHeaders:false});
+app.get('/api/admin/dependencies',auth,role('admin'),diagnosticLimiter,asyncRoute(async(req,res)=>{
+ res.set('Cache-Control','no-store, private').json(await readSchoolDiagnostics());
+}));
 const valid = (v, max = 120) => typeof v === 'string' && v.trim().length > 0 && v.trim().length <= max;
 const owns = (course, user) => user.role === 'admin' || user.role === 'teacher' && course.teacher_id === user.id;
 const intRange = (v, min, max) => (typeof v === 'number' || typeof v === 'string' && v.trim() !== '') && Number.isInteger(Number(v)) && Number(v) >= min && Number(v) <= max;
@@ -877,4 +890,20 @@ app.use((err, req, res, next) => {
 });
 const bindHost = process.env.NODE_ENV === 'production' ? '0.0.0.0' : '127.0.0.1';
 await checkConnection();
-app.listen(PORT, bindHost, () => console.log('Mrs Sofia server listening on ' + bindHost + ':' + PORT));
+app.listen(PORT, bindHost, () => {
+ console.log('Mrs Sofia server listening on ' + bindHost + ':' + PORT);
+ if(process.env.NODE_ENV==='production'){
+  // Logs contain boolean-only readiness; no secret, wallet number or user data.
+  void readSchoolDiagnostics().then(result=>{
+   console.log('Mrs Sofia operations audit',JSON.stringify({
+    db:result.databaseConnected,livekit:result.livekitApiVerified,
+    privateProofBucket:result.receiptBucketPrivateVerified,
+    studentSignup:result.guardianRegistrationAllowed,
+    privacyApproved:result.privacyApproved,
+    schoolContact:result.schoolContactConfigured,
+    walletConfigured:result.walletConfigured,
+    mailProviderConfigured:result.mailProviderConfigured
+   }));
+  }).catch(()=>console.warn('Mrs Sofia operations audit unavailable'));
+ }
+});
