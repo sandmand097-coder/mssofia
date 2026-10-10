@@ -8,6 +8,7 @@ import path from 'node:path';
 import net from 'node:net';
 import http from 'node:http';
 import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
 import {fileURLToPath} from 'node:url';
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const temp=fs.mkdtempSync(path.join(os.tmpdir(),'sofia-early-live-'));
@@ -31,14 +32,23 @@ run('INSERT INTO bookings(id,student_id,course_id,status,created_at) VALUES(?,?,
 run('INSERT INTO bookings(id,student_id,course_id,status,created_at) VALUES(?,?,?,?,?)',uid(),unpaid.id,course,'approved',now());
 run('INSERT INTO payment_submissions(id,booking_id,student_id,course_id,amount_egp,transfer_reference,proof_key,status,submitted_at,reviewed_at,confirmed_on_phone) VALUES(?,?,?,?,?,?,?,?,?,?,?)',
  uid(),paidBooking,student.id,course,100,'VERIFIED-TEST-PAYMENT','test/receipt/not-a-real-file','approved',now(),now(),1);
+// Additional authorized children exist only inside this disposable database.
+const synthetic50=Array.from({length:49},()=>newUser('student'));
+for(const learner of synthetic50){
+ const bookingId=uid();
+ run('INSERT INTO bookings(id,student_id,course_id,status,created_at) VALUES(?,?,?,?,?)',bookingId,learner.id,course,'approved',now());
+ run('INSERT INTO payment_submissions(id,booking_id,student_id,course_id,amount_egp,transfer_reference,proof_key,status,submitted_at,reviewed_at,confirmed_on_phone) VALUES(?,?,?,?,?,?,?,?,?,?,?)',
+  uid(),bookingId,learner.id,course,100,'SURGE-'+uid(),'test/surge/'+uid(),'approved',now(),now(),1);
+}
 db.close();
-let published=true;
+let listCalls=0,published=false,connected=true;
 const fake=http.createServer(async(req,res)=>{
  if(req.url!=='/twirp/livekit.RoomService/ListParticipants'){res.writeHead(404);res.end('{}');return}
  const body=[];for await(const x of req)body.push(x);
+ listCalls++;
  const data=JSON.parse(Buffer.concat(body).toString()||'{}');
  const ok=data.room===room;
- const participants=ok?[{identity:teacher.id,tracks:published?[{source:2,muted:false}]:[]}]:[];
+ const participants=ok&&connected?[{identity:teacher.id,tracks:published?[{source:2,muted:false}]:[]}]:[];
  res.writeHead(200,{'Content-Type':'application/json'});res.end(JSON.stringify({participants}));
 });
 const listen=s=>new Promise(r=>s.listen(0,'127.0.0.1',()=>r(s.address().port)));
@@ -47,10 +57,11 @@ const port=await new Promise((resolve,reject)=>{
  const s=net.createServer().once('error',reject);
  s.listen(0,'127.0.0.1',()=>{const n=s.address().port;s.close(()=>resolve(n))});
 });
+const testSecret=randomBytes(54).toString('hex');
 const app=spawn(process.execPath,['server/index.js'],{
  cwd:root,windowsHide:true,
  env:{...process.env,NODE_ENV:'test',PORT:String(port),
-  JWT_SECRET:randomBytes(54).toString('hex'),
+  JWT_SECRET:testSecret,
   LIVEKIT_URL:'ws://127.0.0.1:'+fakePort,
   LIVEKIT_API_KEY:'FAKE_SERVER_ONLY',LIVEKIT_API_SECRET:randomBytes(38).toString('hex')}
 });
@@ -83,23 +94,40 @@ try{
   unpaid:await login(unpaid),stranger:await login(stranger)
  };
  const path='/lessons/'+lesson;
- const view=await call(path,'GET',null,signed.student);
- ok(view.status===200&&view.data.studentEarlyLive===true,'enrolled paying student sees active early broadcast before 15-minute window');
- ok(!('room_key' in view.data.lesson),'LiveKit room key is not revealed to student before token issuance');
- const entry=await call(path+'/token','POST',{},signed.student);
- ok(entry.status===200&&!!entry.data.token&&entry.data.canPublish===false,'verified paid student obtains read-only LiveKit token early');
- ok((await call(path,'GET',null,signed.unpaid)).status===403,'unpaid booking cannot see early classroom');
- ok((await call(path+'/token','POST',{},signed.unpaid)).status===403,'approved booking without verified transfer cannot get early token');
- ok((await call(path,'GET',null,signed.stranger)).status===403,'stranger not enrolled cannot discover early classroom');
- ok((await call(path+'/token','POST',{},signed.stranger)).status===403,'stranger cannot request paid room token');
- ok((await call(path+'/token','POST',{},signed.teacher)).status===200,'teacher can prepare classroom earlier than its schedule');
- ok((await call(path+'/token','POST',{},signed.admin)).status===200,'school director can broadcast on legacy teacher room');
+ const lobby=await call(path,'GET',null,signed.student);
+ ok(lobby.status===200&&lobby.data.studentRoomOpen===true,'enrolled paying child sees private lobby as soon as instructor opens studio');
+ ok(lobby.data.hostConnected===true&&lobby.data.hostPublishing===false,'camera/mic may remain OFF in private waiting lobby');
+ ok(!('room_key' in lobby.data.lesson),'LiveKit room key never exposed in pre-stream lobby response');
+ const earlyToken=await call(path+'/token','POST',{},signed.student);
+ ok(earlyToken.status===403&&earlyToken.data.code==='LESSON_NOT_BROADCASTING','no early SFU token before teacher publishes: protects free WebRTC minutes');
+ ok((await call(path,'GET',null,signed.unpaid)).status===403,'unpaid booking cannot read private lobby');
+ ok((await call(path+'/token','POST',{},signed.unpaid)).status===403,'unverified payment cannot obtain LiveKit token');
+ ok((await call(path,'GET',null,signed.stranger)).status===403,'stranger cannot discover private lesson');
+ ok((await call(path+'/token','POST',{},signed.stranger)).status===403,'stranger cannot join authorized lobby');
+ ok((await call(path+'/token','POST',{},signed.teacher)).status===200,'teacher can rehearse without published media');
+ ok((await call(path+'/token','POST',{},signed.admin)).status===200,'admin can control older teacher room');
  const wait=ms=>new Promise(r=>setTimeout(r,ms));
+ const cookies=synthetic50.map(learner=>'session='+jwt.sign({sub:learner.id,role:'student',version:0},testSecret,{algorithm:'HS256',expiresIn:'10m'}));
+ const before=listCalls;
+ const flood=await Promise.all(cookies.map(cookie=>call(path,'GET',null,cookie)));
+ ok(flood.every(r=>r.status===200&&r.data.studentRoomOpen&&r.data.hostPublishing===false),'49 additional paying students can enter no-media lobby during large arrival wave');
+ ok(listCalls-before<=1,'50-player lobby wave coalesces LiveKit host-presence requests');
+ published=true;
+ await wait(5400);
+ const broadcasting=await call(path,'GET',null,signed.student);
+ ok(broadcasting.status===200&&broadcasting.data.hostPublishing===true,'client can automatically start WebRTC media when instructor begins teaching');
+ const authorizedVideo=await call(path+'/token','POST',{},signed.student);
+ ok(authorizedVideo.status===200&&authorizedVideo.data.canPublish===false,'after live media starts paid child can connect with read-only LiveKit grant');
  published=false;
- await wait(5200);
- const stopped=await call(path,'GET',null,signed.student);
- ok(stopped.status===200&&stopped.data.studentEarlyLive===false,'after teacher stops publishing, early waiting room closes');
- ok((await call(path+'/token','POST',{},signed.student)).status===403,'paid student cannot join early with inactive teacher');
+ await wait(5400);
+ const paused=await call(path,'GET',null,signed.student);
+ ok(paused.status===200&&paused.data.hostConnected===true&&paused.data.hostPublishing===false,'stopping camera keeps waiting room available to subscribed child');
+ ok((await call(path+'/token','POST',{},signed.student)).status===403,'pausing instructor media returns viewer to cost-free waiting state before timetable window');
+ connected=false;
+ await wait(5400);
+ const left=await call(path,'GET',null,signed.student);
+ ok(left.status===200&&left.data.studentRoomOpen===false,'early lobby closes when teacher leaves LiveKit studio');
+ ok((await call(path+'/token','POST',{},signed.student)).status===403,'paid child cannot join early without connected teacher');
  console.log('RESULT '+count+' early-live HTTP checks passed (all fake accounts/LiveKit)');
 }finally{
  app.kill();

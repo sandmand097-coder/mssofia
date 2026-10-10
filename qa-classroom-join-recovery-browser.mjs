@@ -33,7 +33,7 @@ try{
    if(url==='/api/health')return respond(200,{ok:true,mode:'full',videoConfigured:true});
    if(url==='/api/auth/me')return respond(200,{user:{id:'viewer-test',name:'طالب تجريبي',role:'student',status:'active',email:'viewer@test.invalid'}});
    if(url==='/api/lessons/test-lesson'&&route.request().method()==='GET')
-    return respond(200,{lesson:{id:'test-lesson',title:'درس علوم تجريبي',course_title:'علوم',starts_at:new Date(Date.now()+5*60000).toISOString(),duration_minutes:60,status:'scheduled',teacher_id:'teacher-test'},videoConfigured:true,videoLocalOnly:false});
+    return respond(200,{lesson:{id:'test-lesson',title:'درس علوم تجريبي',course_title:'علوم',starts_at:new Date(Date.now()+5*60000).toISOString(),duration_minutes:60,status:'scheduled',teacher_id:'teacher-test'},studentRoomOpen:true,hostConnected:true,hostPublishing:true,videoConfigured:true,videoLocalOnly:false});
    if(url==='/api/lessons/test-lesson/token'&&route.request().method()==='POST'){
     tokenCalls++;
     if(tokenCalls===1)return respond(firstStatus,{error:firstStatus===503?'يوجد ضغط على دخول الحصة':'انتهى الاشتراك',code:firstStatus===503?'CLASSROOM_BUSY':'DENIED'},firstStatus===503?{'retry-after':'1'}:{});

@@ -57,11 +57,11 @@ function RoutePortal(){
  return <Navigate to="/" replace/>;
 }
 function LessonRoom(){
- const {id}=useParams(),{show,user}=useApp(),[data,setData]=useState(null),[connection,setConnection]=useState(null),[error,setError]=useState(''),[joining,setJoining]=useState(false),[preview,setPreview]=useState(false),[deviceStatus,setDeviceStatus]=useState(''),[deviceChecking,setDeviceChecking]=useState(false),[clock,setClock]=useState(Date.now()),[recoveryNotice,setRecoveryNotice]=useState('');
- const requestRef=useRef(null),recoveryRef=useRef({timer:null,attempts:0});
+ const {id}=useParams(),{show,user}=useApp(),[data,setData]=useState(null),[connection,setConnection]=useState(null),[error,setError]=useState(''),[joining,setJoining]=useState(false),[preview,setPreview]=useState(false),[deviceStatus,setDeviceStatus]=useState(''),[deviceChecking,setDeviceChecking]=useState(false),[clock,setClock]=useState(Date.now()),[recoveryNotice,setRecoveryNotice]=useState(''),[waitingRoom,setWaitingRoom]=useState(false);
+ const requestRef=useRef(null),recoveryRef=useRef({timer:null,attempts:0}),autoAttemptRef=useRef(false);
  useEffect(()=>{
   let live=true;
-  setData(null);setConnection(null);setError('');setDeviceStatus('');
+  setData(null);setConnection(null);setError('');setDeviceStatus('');setWaitingRoom(false);autoAttemptRef.current=false;
   api('/lessons/'+id).then(result=>{if(live)setData(result)}).catch(e=>{if(live)setError(e.message)});
   return ()=>{live=false;requestRef.current?.abort();clearTimeout(recoveryRef.current.timer);recoveryRef.current.attempts=0};
  },[id]);
@@ -70,14 +70,15 @@ function LessonRoom(){
  const begins=Date.parse(data?.lesson?.starts_at||'');
  const opensAt=begins-15*60000;
  const closesAt=begins+(Number(data?.lesson?.duration_minutes||0)+30)*60000;
- // A subscribed viewer can join early if the director or assigned instructor
- // is already publishing media in this room. The server independently checks.
- const teacherBroadcasting=Boolean(data?.studentEarlyLive);
- const roomJoinable=Boolean(data?.lesson?.status==='scheduled'&&Number.isFinite(begins)&&clock<=closesAt&&(isHost||clock>=opensAt||teacherBroadcasting));
+ // When an authorized instructor enters the LiveKit studio, enrolled students
+ // can wait on the website without using LiveKit participant-minutes.
+ const teacherBroadcasting=Boolean(data?.hostPublishing??data?.studentEarlyLive);
+ const studioOpen=Boolean(data?.studentRoomOpen||data?.hostConnected||data?.studentEarlyLive);
+ const roomJoinable=Boolean(data?.lesson?.status==='scheduled'&&Number.isFinite(begins)&&clock<=closesAt&&(isHost||clock>=opensAt||studioOpen));
  useEffect(()=>{
-  // The director may begin a lesson at any moment. Refresh just the private
-  // lesson availability in the waiting room, without reloading the page.
-  if(!data||isHost||connection||!Number.isFinite(opensAt)||clock>=opensAt||clock>closesAt||data.lesson.status!=='scheduled')return;
+  // Keep a paid student's waiting screen updated without allocating WebRTC
+  // participant-minutes before the teacher begins streaming.
+  if(!data||isHost||connection||!Number.isFinite(opensAt)||(!waitingRoom&&clock>=opensAt)||clock>closesAt||data.lesson.status!=='scheduled')return;
   let closed=false,pending=false;
   const timer=setInterval(async()=>{
    if(pending||document.visibilityState==='hidden')return;
@@ -88,9 +89,9 @@ function LessonRoom(){
    }catch(err){
     if(!closed&&[401,403,404].includes(err.status)){setData(null);setError(err.message)}
    }finally{pending=false}
-  },12000);
+  },8500);
   return()=>{closed=true;clearInterval(timer)};
- },[id,isHost,Boolean(connection),Boolean(data),Number.isFinite(opensAt)&&clock<opensAt,closesAt]);
+ },[id,isHost,Boolean(connection),Boolean(data),waitingRoom,Number.isFinite(opensAt)&&clock<opensAt,closesAt]);
  const checkDevices=async()=>{
   if(!isHost)return;
   if(!navigator.mediaDevices?.getUserMedia){setDeviceStatus('المتصفح لا يدعم اختبار الأجهزة؛ استخدمي Chrome أو Edge من رابط HTTPS.');return}
@@ -127,6 +128,28 @@ function LessonRoom(){
    setJoining(false);
   }
  };
+ const enterRoom=()=>{
+  if(isHost){void join(false);return}
+  if(!roomJoinable){setError('الاستوديو لم يُفتح بعد. انتظر دخول المعلمة أو موعد الحصة.');return}
+  setError('');setWaitingRoom(true);autoAttemptRef.current=false;
+ };
+ // Join the actual SFU only when the teacher is publishing media, never for
+ // idle viewers in the waiting lobby. Prevent retries on permanent failures.
+ useEffect(()=>{
+  if(!waitingRoom||isHost||connection||!data?.hostPublishing){
+   if(!data?.hostPublishing)autoAttemptRef.current=false;
+   return;
+  }
+  if(joining||autoAttemptRef.current)return;
+  // Spread 40-50 students over a short randomized window so their browser
+  // requests do not all hit the single Render worker at the same instant.
+  const timeout=setTimeout(()=>{
+   if(autoAttemptRef.current||requestRef.current)return;
+   autoAttemptRef.current=true;
+   void join(true);
+  },Math.floor(Math.random()*1700));
+  return()=>clearTimeout(timeout);
+ },[waitingRoom,isHost,Boolean(connection),Boolean(data?.hostPublishing),joining]);
  const recover=()=>{
   setConnection(null);
   if(!roomJoinable)return;
@@ -148,7 +171,21 @@ function LessonRoom(){
  return <main className="room-page"><div className="container">
   <div className="room-head"><div><Link className="breadcrumb" to="/dashboard">لوحة التحكم <ChevronLeft size={15}/> الحصة المباشرة</Link><h1>{data.lesson.title}</h1><p>{data.lesson.course_title} • {fmt(data.lesson.starts_at)}</p></div><span className="room-secure"><ShieldCheck size={17}/> غرفة خاصة بالطلاب المقبولين</span></div>
   {connection?<Suspense fallback={<div className="loading">جارٍ تحميل الفصل المباشر...</div>}><Classroom connection={connection} onDisconnected={()=>{setConnection(null);setRecoveryNotice('')}} onRecover={recover} onConnectionError={message=>{setConnection(null);setError(message);setRecoveryNotice('')}} onTimingChange={result=>setData(current=>current?{...current,lesson:{...current.lesson,duration_minutes:result.duration_minutes}}:current)}/></Suspense>:
-  <div className="room-placeholder"><div className="video-illustration"><Video size={56}/><span className="video-ring"/></div><h2>{user?.role==='admin'?'استوديو بث المديرة':'غرفة الحصة المباشرة'}</h2><p>{user?.role==='admin'?'أنتِ مقدمة البث. بعد فتح الاستوديو اضغطي «ابدئي البث الآن» لتشغيل صوتك والكاميرا، أو اختاري مشاركة الشاشة. الطلاب يشاهدون ويستمعون فقط حتى تسمحي بالمشاركة.':'تابع شرح المعلمة بالصوت والفيديو ومشاركة الشاشة. الأطفال يبدأون في وضع الاستماع، والمعلمة وحدها تمنح إذن فتح الميكروفون والكاميرا بعد رفع اليد.'}</p>{!data.videoConfigured&&<div className="video-warning">البث المباشر يحتاج تفعيل LiveKit وإعداد المفاتيح على الخادم.</div>}{data.videoLocalOnly&&<div className="video-warning">تم تفعيل بث تجريبي محلي يعمل على هذا الكمبيوتر فقط. دخول الطلاب من خارج المنزل يحتاج ربط LiveKit Cloud ونشر الموقع بأمان.</div>}{error&&<div className="video-warning">{error}</div>}{recoveryNotice&&<div className="video-warning" role="status" aria-live="polite">{recoveryNotice}</div>}{isHost&&roomJoinable&&clock<opensAt&&<div className="video-warning" role="status">الاستوديو متاح لكِ الآن للتحضير وتجربة الكاميرا والميكروفون ومشاركة الشاشة. دخول الطلاب يظل مغلقًا حتى 15 دقيقة قبل موعد الحصة.</div>}{!isHost&&teacherBroadcasting&&clock<opensAt&&<div className="video-warning" role="status">المعلمة بدأت البث المباشر الآن. يمكنك الدخول مبكرًا لأن اشتراكك ساري.</div>}{!roomJoinable&&<div className="video-warning" role="status">{data.lesson.status==='ended'||clock>closesAt?'انتهى وقت هذه الحصة.':'يُفتح دخول الطلاب قبل موعد الحصة بـ15 دقيقة. الوقت المتبقي: '+Math.max(1,Math.ceil((opensAt-clock)/60000))+' دقيقة.'}</div>}<button className="sofia-cta" onClick={()=>void join(false)} disabled={joining||!data.videoConfigured||!roomJoinable}><Play size={17}/>{joining?'جارٍ الاتصال...':isHost?'فتح استوديو البث':'الدخول لمشاهدة الحصة'}</button><small>{isHost?'يمكنك فتح الاستوديو للتحضير قبل موعد الدرس. لن تعمل الكاميرا أو الميكروفون تلقائيًا، ولن يستطيع الطلاب الدخول قبل الموعد بـ15 دقيقة.':'دخول الطلاب متاح قبل الموعد بـ15 دقيقة، أو فور بدء المعلمة البث فعليًا، مع اشتراك ساري.'}</small>{isHost&&<div className="sofia-director-device-check"><button className="portal-soft-btn" type="button" disabled={deviceChecking} onClick={checkDevices}>{deviceChecking?'جارٍ اختبار الأجهزة...':'فحص الكاميرا والميكروفون قبل البث'}</button>{deviceStatus&&<small role="status">{deviceStatus}</small>}</div>}</div>}
+  waitingRoom&&!isHost?<div className="room-placeholder sofia-waiting-lobby" role="region" aria-label="قاعة انتظار الحصة">
+   <div className="video-illustration"><Video size={53}/><span className="video-ring"/></div>
+   <h2>أنت الآن في قاعة انتظار الحصة</h2>
+   <p>{teacherBroadcasting?'المعلمة بدأت الشرح؛ جارٍ تجهيز اتصال الفيديو الآمن...':studioOpen?'المعلمة فتحت الاستوديو. يمكنك الانتظار هنا إلى أن تبدأ الشرح.':'في انتظار دخول المعلمة للاستوديو أو بدء موعد الحصة.'}</p>
+   <p>اشتراكك ساري. لن تُستخدم الكاميرا أو الميكروفون من جهازك بدون إذنك، ولن يُفتح اتصال الفيديو أثناء انتظار المعلمة.</p>
+   {joining&&<div className="video-warning" role="status">جارٍ الاتصال ببث المعلمة...</div>}
+   {recoveryNotice&&<div className="video-warning" role="status">{recoveryNotice}</div>}
+   {error&&<div className="video-warning" role="alert">{error}</div>}
+   <div className="sofia-waiting-actions">
+    <button className="portal-soft-btn" type="button" onClick={()=>{setWaitingRoom(false);autoAttemptRef.current=false;setError('')}}>مغادرة قاعة الانتظار</button>
+    {teacherBroadcasting&&<button className="sofia-cta" type="button" disabled={joining} onClick={()=>{autoAttemptRef.current=true;void join(false)}}>إعادة محاولة الاتصال بالبث</button>}
+   </div>
+   <small>عندما تبدأ المعلمة بث الصوت أو الفيديو سينتقل الفصل تلقائيًا إلى العرض المباشر. لا تغلق هذه الصفحة.</small>
+  </div>:
+  <div className="room-placeholder"><div className="video-illustration"><Video size={56}/><span className="video-ring"/></div><h2>{user?.role==='admin'?'استوديو بث المديرة':'غرفة الحصة المباشرة'}</h2><p>{user?.role==='admin'?'أنتِ مقدمة البث. بعد فتح الاستوديو اضغطي «ابدئي البث الآن» لتشغيل صوتك والكاميرا، أو اختاري مشاركة الشاشة. الطلاب يشاهدون ويستمعون فقط حتى تسمحي بالمشاركة.':'تابع شرح المعلمة بالصوت والفيديو ومشاركة الشاشة. الأطفال يبدأون في وضع الاستماع، والمعلمة وحدها تمنح إذن فتح الميكروفون والكاميرا بعد رفع اليد.'}</p>{!data.videoConfigured&&<div className="video-warning">البث المباشر يحتاج تفعيل LiveKit وإعداد المفاتيح على الخادم.</div>}{data.videoLocalOnly&&<div className="video-warning">تم تفعيل بث تجريبي محلي يعمل على هذا الكمبيوتر فقط. دخول الطلاب من خارج المنزل يحتاج ربط LiveKit Cloud ونشر الموقع بأمان.</div>}{error&&<div className="video-warning">{error}</div>}{recoveryNotice&&<div className="video-warning" role="status" aria-live="polite">{recoveryNotice}</div>}{isHost&&roomJoinable&&clock<opensAt&&<div className="video-warning" role="status">الاستوديو متاح لكِ الآن للتحضير وتجربة الكاميرا والميكروفون ومشاركة الشاشة. يمكن للطلاب المشتركين الدخول إلى قاعة الانتظار بمجرد فتح الاستوديو، حتى قبل بدء الفيديو.</div>}{!isHost&&teacherBroadcasting&&clock<opensAt&&<div className="video-warning" role="status">فتحت المعلمة الاستوديو وبدأت الشرح، ويمكنك الدخول لأن اشتراكك ساري.</div>}{!roomJoinable&&<div className="video-warning" role="status">{data.lesson.status==='ended'||clock>closesAt?'انتهى وقت هذه الحصة.':'يُفتح دخول الطلاب قبل موعد الحصة بـ15 دقيقة. الوقت المتبقي: '+Math.max(1,Math.ceil((opensAt-clock)/60000))+' دقيقة.'}</div>}<button className="sofia-cta" onClick={enterRoom} disabled={joining||!data.videoConfigured||!roomJoinable}><Play size={17}/>{joining?'جارٍ الاتصال...':isHost?'فتح استوديو البث':'الدخول لمشاهدة الحصة'}</button><small>{isHost?'يمكنك فتح الاستوديو للتحضير قبل موعد الدرس. لن تعمل الكاميرا أو الميكروفون تلقائيًا، ولن يستطيع الطلاب الدخول قبل الموعد بـ15 دقيقة.':'قاعة الانتظار متاحة عند فتح استوديو المعلمة أو قبل الموعد بـ15 دقيقة؛ يبدأ الفيديو تلقائيًا مع بدء الشرح.'}</small>{isHost&&<div className="sofia-director-device-check"><button className="portal-soft-btn" type="button" disabled={deviceChecking} onClick={checkDevices}>{deviceChecking?'جارٍ اختبار الأجهزة...':'فحص الكاميرا والميكروفون قبل البث'}</button>{deviceStatus&&<small role="status">{deviceStatus}</small>}</div>}</div>}
   {!connection&&<div style={{textAlign:'center',marginTop:18}}><button type="button" className="portal-soft-btn" onClick={()=>setPreview(v=>!v)}>{preview?'إخفاء معاينة الفصل':'معاينة تصميم الفصل الجديد'}</button></div>}
   {!connection&&preview&&<Suspense fallback={<div className="loading">جارٍ عرض المعاينة...</div>}><ClassroomPreview isHost={user?.role==='teacher'||user?.role==='admin'}/></Suspense>}
  </div></main>;

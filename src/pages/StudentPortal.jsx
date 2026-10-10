@@ -10,7 +10,7 @@ export default function StudentPortal({user,setUser,show}){
  const load=()=>Promise.all([api('/my/overview'),api('/student/dashboard')]).then(([overview,extra])=>{setData(overview);setLearning(extra);setError('')}).catch(e=>setError(e.message));
  useEffect(()=>{load()},[]);
  const bookings=data?.bookings||[],lessons=data?.lessons||[],courses=learning?.learning||[],attendance=new Set(learning?.attendedLessonIds||[]);
- const upcoming=lessons.filter(x=>Date.parse(x.starts_at)+x.duration_minutes*60000>Date.now()).sort((a,b)=>Date.parse(a.starts_at)-Date.parse(b.starts_at));
+ const upcoming=lessons.filter(x=>Date.parse(x.starts_at)+(Number(x.duration_minutes)+30)*60000>Date.now()).sort((a,b)=>Date.parse(a.starts_at)-Date.parse(b.starts_at));
  const pending=bookings.filter(x=>x.status==='pending').length,attended=courses.reduce((n,c)=>n+c.attended_lessons,0),total=courses.reduce((n,c)=>n+c.total_lessons,0);
  const nav=[{id:'overview',label:'الرئيسية',icon:LayoutDashboard},{id:'courses',label:'دوراتي',icon:BookOpen},{id:'schedule',label:'جدول الحصص',icon:CalendarDays},{id:'bookings',label:'طلباتي',icon:ClipboardList,count:pending},{id:'payments',label:'فودافون كاش',icon:ClipboardList},{id:'profile',label:'الملف الشخصي',icon:UserRound}];
  const headings={overview:'رحلتك التعليمية تبدأ من هنا',courses:'دوراتي التعليمية',schedule:'جدول حصصي',bookings:'متابعة طلبات الحجز',payments:'إرسال صورة التحويل',profile:'ملفي الشخصي'};

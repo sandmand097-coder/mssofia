@@ -598,17 +598,31 @@ app.patch('/api/lessons/:id/duration', auth, role('teacher', 'admin'), async (re
  if(!lesson)return send(res,404,{error:'الحصة غير موجودة'});
  if(!owns(lesson,req.user))return send(res,403,{error:'تغيير المدة متاح لمقدمة الحصة فقط'});
  if(lesson.status!=='scheduled')return send(res,409,{error:'لا يمكن تعديل حصة انتهت'});
- const value=Number(req.body?.duration_minutes);
- if(!Number.isInteger(value)||value<15||value>240)return send(res,400,{error:'اختاري مدة صحيحة من 15 إلى 240 دقيقة'});
+ const increment=req.body?.add_minutes!==undefined;
+ const delta=Number(req.body?.add_minutes);
+ if(increment&&![15,30,60].includes(delta))return send(res,400,{error:'التمديد السريع مسموح بـ15 أو 30 أو 60 دقيقة فقط'});
+ const value=increment?Number(lesson.duration_minutes)+delta:Number(req.body?.duration_minutes);
+ if(!Number.isInteger(value)||value<15||value>240)return send(res,400,{error:'المدة الإجمالية المسموحة من 15 إلى 240 دقيقة'});
  const start=Date.parse(lesson.starts_at),clock=Date.now();
  const presentEnd=start+Number(lesson.duration_minutes)*60000+30*60000;
  if(!Number.isFinite(start)||clock>presentEnd)return send(res,409,{error:'انتهت نافذة تعديل هذه الحصة'});
  if(clock>=start && start+value*60000<clock+3*60000)
   return send(res,409,{error:'المدة المختارة يجب أن تترك ثلاث دقائق على الأقل من وقت الحصة'});
- await run("UPDATE lessons SET duration_minutes=? WHERE id=? AND status='scheduled'",value,lesson.id);
- res.set('Cache-Control','no-store').json({ok:true,duration_minutes:value,starts_at:lesson.starts_at,
-  ends_at:new Date(start+value*60000).toISOString(),
-  note:'تم تحديث موعد نهاية الحصة. لإنهاء اتصال الطلاب الحاليين فورًا استخدمي زر إنهاء الحصة للجميع.'});
+ let newMinutes=value;
+ if(increment){
+  // Atomic increment: double-clicks or parallel directors cannot overwrite a
+  // previous extension or exceed the 4-hour lesson cap.
+  const minimum=Math.max(15,Math.ceil((clock+3*60000-start)/60000));
+  const updated=await run("UPDATE lessons SET duration_minutes=duration_minutes+? WHERE id=? AND status='scheduled' AND duration_minutes+? BETWEEN ? AND 240",
+   delta,lesson.id,delta,minimum);
+  if(!updated.changes)return send(res,409,{error:'لم يمكن التمديد؛ تحققي من الوقت الحالي وحد الأربع ساعات'});
+  newMinutes=Number((await get('SELECT duration_minutes FROM lessons WHERE id=?',lesson.id)).duration_minutes);
+ }else{
+  await run("UPDATE lessons SET duration_minutes=? WHERE id=? AND status='scheduled'",value,lesson.id);
+ }
+ res.set('Cache-Control','no-store').json({ok:true,duration_minutes:newMinutes,starts_at:lesson.starts_at,
+  ends_at:new Date(start+newMinutes*60000).toISOString(),
+  note:'تم تحديث نهاية الحصة. مدة LiveKit الفعلية تخضع لرصيد الدقائق وحدود الباقة، ولا يضيف تمديد الجدول رصيدًا مجانيًا.'});
 });
 // Paid bookings are settled exclusively by a verified payment decision.
 // The generic booking action may RECONCILE an already confirmed payment but
@@ -905,15 +919,18 @@ app.get('/api/lessons/:id', auth, async (req, res) => {
   const timestamp=Date.now(),begins=Date.parse(l.starts_at);
   const opensAt=begins-15*60000,closesAt=begins+(l.duration_minutes+30)*60000;
   const liveWindow=timestamp>=opensAt&&timestamp<=closesAt;
-  // Teachers can publish before the scheduled window. Once an AUTHORIZED
-  // director/instructor is actually streaming media in this specific room,
-  // paid and approved learners may join, but cannot bypass expiry or bans.
-  const studentEarlyLive=req.user.role==='student'&&l.status==='scheduled'
-   &&Number.isFinite(begins)&&timestamp<opensAt&&timestamp<=closesAt
-   ?await earlyLiveInspector.isBroadcasting(l):false;
-  if(req.user.role==='student'&&!liveWindow&&!studentEarlyLive)l.meet_url=null;
+  // Only previously authorized learners receive studio state. A connected,
+  // authorized director opens the private waiting lobby even with media off;
+  // this lobby does not consume LiveKit participant-minutes.
+  const presence=req.user.role==='student'&&l.status==='scheduled'
+   &&Number.isFinite(begins)&&timestamp<=closesAt
+   ?await earlyLiveInspector.getStatus(l):{connected:false,publishing:false};
+  const studentRoomOpen=l.status==='scheduled'&&timestamp<=closesAt&&(liveWindow||presence.connected);
+  const studentEarlyLive=timestamp<opensAt&&presence.publishing;
+  if(req.user.role==='student'&&!studentRoomOpen)l.meet_url=null;
   res.set('Cache-Control','no-store, private').json({
-    lesson:(()=>{const {room_key,...safeLesson}=l;return safeLesson})(),studentEarlyLive,
+    lesson:(()=>{const {room_key,...safeLesson}=l;return safeLesson})(),
+    studentRoomOpen,hostConnected:presence.connected,hostPublishing:presence.publishing,studentEarlyLive,
     videoConfigured: !!(process.env.LIVEKIT_URL && process.env.LIVEKIT_API_KEY && process.env.LIVEKIT_API_SECRET),
     videoLocalOnly: localVideo
   });
@@ -941,17 +958,18 @@ app.post('/api/lessons/:id/token',auth,classroomJoinLimiter,admission.middleware
   const starts = Date.parse(l.starts_at),
     ends = starts + l.duration_minutes * 60000;
   const host = admin || teacher;
-  // An instructor may begin teaching before the scheduled 15-minute window.
-  // Allow early viewers ONLY while an active, authenticated school broadcaster
-  // has published media, after roomPermitted has checked paid subscription.
+  // Opening the instructor's studio exposes only a website waiting lobby.
+  // To protect the free media allowance, early WebRTC tokens are minted ONLY
+  // after the authorized presenter publishes media, never while merely idle.
+  // Payment/subscription and room bans were verified by roomPermitted above.
   const timestamp=Date.now();
   const needsEarlyCheck=!host&&Number.isFinite(starts)&&timestamp<starts-15*60000;
-  const broadcasterAlreadyLive=needsEarlyCheck&&timestamp<=ends+30*60000
+  const liveMedia=needsEarlyCheck&&timestamp<=ends+30*60000
    ?await earlyLiveInspector.isBroadcasting(l):false;
   if (!Number.isFinite(starts) || timestamp > ends + 30 * 60000
-    || (needsEarlyCheck&&!broadcasterAlreadyLive)) return send(res, 403, {
-    code:needsEarlyCheck?'LESSON_NOT_LIVE_YET':'LESSON_WINDOW_CLOSED',
-    error:host?'انتهى وقت الاستوديو لهذه الحصة':'المعلمة لم تبدأ البث بعد. يمكنك الدخول الآن إذا بدأت المعلمة البث، أو قبل موعد الحصة بـ15 دقيقة.'
+    || (needsEarlyCheck&&!liveMedia)) return send(res, 403, {
+    code:needsEarlyCheck?'LESSON_NOT_BROADCASTING':'LESSON_WINDOW_CLOSED',
+    error:host?'انتهى وقت الاستوديو لهذه الحصة':'أنت في قاعة الانتظار؛ يبدأ اتصال الفيديو فور بدء صوت أو كاميرا المعلمة.'
   });
   if (!process.env.LIVEKIT_URL || !process.env.LIVEKIT_API_KEY || !process.env.LIVEKIT_API_SECRET) return send(res, 503, {
     error: 'لم يتم إعداد مزود البث LiveKit بعد'

@@ -275,3 +275,9 @@
 }
 .sofia-viewer-recovery-tools select:focus-visible{outline:3px solid #b6ead6;outline-offset:2px}
 @media(max-width:640px){.sofia-viewer-recovery-tools{align-items:stretch;flex-direction:column}.sofia-viewer-recovery-tools select{width:100%;flex-basis:auto}}
+
+/* Instructor can extend the same lesson atomically without disconnecting students. */
+.sofia-duration-shortcuts{display:flex;gap:7px;flex-wrap:wrap;align-items:center;justify-content:flex-start;width:100%}
+.sofia-duration-shortcuts button{border:1px solid #9ccdb8;border-radius:9px;background:#e8f8ef;color:#0b604e;cursor:pointer;padding:9px 13px;font-weight:800;font-size:12px;min-height:40px}
+.sofia-duration-shortcuts button:focus-visible{outline:3px solid #48b58f;outline-offset:2px}
+.sofia-duration-shortcuts button:disabled{opacity:.45;cursor:not-allowed}
