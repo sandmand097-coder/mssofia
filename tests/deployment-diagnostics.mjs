@@ -34,6 +34,7 @@ const healthy=await testProductionConnections(options);
 assert.equal(healthy.databaseConnected,true);
 assert.equal(healthy.livekitApiVerified,true);
 assert.equal(healthy.receiptBucketPrivateVerified,true);
+assert.equal(healthy.privateReceiptStorageConfigured,true);
 assert.equal(healthy.guardianRegistrationAllowed,false);
 assert.equal(healthy.mailDeliveryTested,false);
 assert.equal(healthy.mediaTwoDeviceTested,false);
@@ -57,6 +58,7 @@ const missing=await testProductionConnections({
 assert.equal(missing.databaseConnected,false);
 assert.equal(missing.livekitApiVerified,false);
 assert.equal(missing.receiptBucketPrivateVerified,false);
+assert.equal(missing.privateReceiptStorageConfigured,false);
 assert.equal(missing.mailDeliveryTested,false);
 assert.ok(!JSON.stringify(missing).includes('password leaked'));
 let calls=0;

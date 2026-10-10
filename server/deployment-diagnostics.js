@@ -51,6 +51,7 @@ export async function testProductionConnections({env=process.env,checkDatabase=a
   databaseConnected:database,
   livekitApiVerified:livekit,
   receiptBucketPrivateVerified:receiptBucket,
+  privateReceiptStorageConfigured:flags.privateReceiptStorageConfigured,
   guardianGoogleConfigured:flags.studentGoogleEnabled,
   guardianRegistrationAllowed:flags.studentGoogleRegistrationEnabled,
   privacyApproved:flags.guardianPrivacyApproved,

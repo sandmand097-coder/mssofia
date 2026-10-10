@@ -6,6 +6,8 @@ import path from 'node:path';
 import multer from 'multer';
 import sharp from 'sharp';
 import {withTransaction,isCloudDatabase} from './db-adapter.js';
+import {verifyPrivateStorage} from './deployment-diagnostics.js';
+import {createPaymentStorageGate} from './payment-storage-gate.js';
 
 export const FIRST_MONTH_EGP=100;
 export const REGULAR_MONTH_EGP=170;
@@ -21,6 +23,7 @@ const requiredAmount=c=>Number(c.price)<=0?0:isScience(c.subject)?FIRST_MONTH_EG
 const prodStorage=()=>Boolean(process.env.SUPABASE_URL&&process.env.SUPABASE_SERVICE_ROLE_KEY);
 const devStorage=()=>process.env.NODE_ENV!=='production'&&!!process.env.TEST_PAYMENT_UPLOAD_DIR;
 const enabled=()=>Boolean(/^01[0125]\d{8}$/.test(process.env.VODAFONE_CASH_NUMBER||'')&&(prodStorage()||devStorage()));
+const storageReady=createPaymentStorageGate({configured:enabled,development:devStorage,verify:()=>verifyPrivateStorage(process.env)});
 const isEgyptianPhone=s=>/^01[0125]\d{8}$/.test(s||'');
 const storageBase=()=>process.env.SUPABASE_URL.replace(/\/$/,'');
 async function saveProof(key,bytes){
@@ -45,18 +48,25 @@ async function removeProof(key){
 export function attachPaymentRoutes(app,{auth,role,get,all,run,uid,now}){
  const onlyStudent=role('student'),onlyAdmin=role('admin');
  const notifyPaymentReviewer=attachEmailReview(app,{get,run,uid,now,loadProof,withTransaction,isCloudDatabase});
- app.get('/api/payments/config',auth,(req,res)=>res.json({
-   enabled:enabled(),method:'vodafone_cash',
-   number:enabled()?process.env.VODAFONE_CASH_NUMBER:null,
-   introductoryMonthEGP:FIRST_MONTH_EGP,regularMonthEGP:REGULAR_MONTH_EGP,
-   information:'الموافقة على الحجز بعد تحقق الإدارة من وصول التحويل فعليًا على الهاتف.'
- }));
- app.post('/api/bookings/:id/payment',auth,onlyStudent,(req,res,next)=>{
-  if(!enabled())return json(res,503,{error:'فودافون كاش غير مفعل بعد. لا ترسل أي تحويل قبل إعلان رقم المدرسة.'});
-  receiptUpload.single('receipt')(req,res,err=>{
-   if(err)return json(res,400,{error:'ارفع صورة واحدة PNG أو JPEG أو WebP لا تتجاوز 8 ميجابايت'});
-   next();
-  });
+ app.get('/api/payments/config',auth,async(req,res,next)=>{
+  try{
+   const verified=await storageReady();
+   return res.json({
+    enabled:verified,method:'vodafone_cash',
+    number:verified?process.env.VODAFONE_CASH_NUMBER:null,
+    introductoryMonthEGP:FIRST_MONTH_EGP,regularMonthEGP:REGULAR_MONTH_EGP,
+    information:'الموافقة على الحجز بعد تحقق الإدارة من وصول التحويل فعليًا على الهاتف.'
+   });
+  }catch(err){next(err)}
+ });
+ app.post('/api/bookings/:id/payment',auth,onlyStudent,async(req,res,next)=>{
+  try{
+   if(!(await storageReady()))return json(res,503,{error:'التحويلات غير متاحة لأن حفظ الإيصالات الخاصة لم ينجح فحص الأمان بعد. لا ترسل أي تحويل.'});
+   receiptUpload.single('receipt')(req,res,err=>{
+    if(err)return json(res,400,{error:'ارفع صورة واحدة PNG أو JPEG أو WebP لا تتجاوز 8 ميجابايت'});
+    next();
+   });
+  }catch(err){next(err)}
  },async(req,res,next)=>{
   let newKey;
   try{

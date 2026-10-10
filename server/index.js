@@ -420,7 +420,7 @@ app.get('/api/my/overview', auth, async (req, res) => {
     bookings = await all(`SELECT b.*,c.title AS course_title,u.name AS student_name,u.email AS student_email FROM bookings b JOIN courses c ON c.id=b.course_id JOIN users u ON u.id=b.student_id WHERE c.teacher_id=? ORDER BY b.created_at DESC`, u.id);
   } else {
     courses = await all(courseQuery);
-    bookings = await all(`SELECT b.*,c.title AS course_title,u.name AS student_name FROM bookings b JOIN courses c ON c.id=b.course_id JOIN users u ON u.id=b.student_id ORDER BY b.created_at DESC`);
+    bookings = await all(`SELECT b.*,c.title AS course_title,c.price AS course_price,(SELECT p.status FROM payment_submissions p WHERE p.booking_id=b.id) AS payment_status,u.name AS student_name FROM bookings b JOIN courses c ON c.id=b.course_id JOIN users u ON u.id=b.student_id ORDER BY b.created_at DESC`);
   }
   const lessons = await all(`SELECT l.id,l.title,l.course_id,l.starts_at,l.duration_minutes,l.status,l.meet_url,c.title AS course_title FROM lessons l JOIN courses c ON c.id=l.course_id WHERE ${u.role === 'student' ? "c.id IN (SELECT course_id FROM bookings WHERE student_id=? AND status='approved')" : u.role === 'teacher' ? 'c.teacher_id=?' : '1=1'} ORDER BY l.starts_at ASC LIMIT 120`, ...(u.role === 'admin' ? [] : [u.id]));
   res.json({
@@ -898,6 +898,7 @@ app.listen(PORT, bindHost, () => {
    console.log('Mrs Sofia operations audit',JSON.stringify({
     db:result.databaseConnected,livekit:result.livekitApiVerified,
     privateProofBucket:result.receiptBucketPrivateVerified,
+    proofStorageConfigured:result.privateReceiptStorageConfigured,
     studentSignup:result.guardianRegistrationAllowed,
     privacyApproved:result.privacyApproved,
     schoolContact:result.schoolContactConfigured,

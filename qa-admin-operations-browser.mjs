@@ -31,7 +31,7 @@ try{
    if(pathname==='/api/health')return reply(200,{ok:true,mode:'admin',registrationAvailable:false});
    if(pathname==='/api/auth/me')return reply(200,{user:{id:'admin-1',name:'Mrs Sofia',email:'admin@example.com',role:'admin',status:'active'}});
    if(pathname==='/api/admin/dashboard')return reply(200,{statistics:{students:0,teachers:0,courses:0,pendingBookings:0},latestUsers:[],upcomingLessons:[],pendingBookings:[],registrationTrend:[]});
-   if(pathname==='/api/my/overview')return reply(200,{courses:[],bookings:[],lessons:[],stats:{courses:0,bookings:0,upcoming:0}});
+   if(pathname==='/api/my/overview')return reply(200,{courses:[],bookings:[{id:'paid-1',status:'pending',student_name:'طالب حجز مدفوع',course_title:'علوم مدفوعة',course_price:170,payment_status:'pending'},{id:'free-1',status:'pending',student_name:'طالب حجز مجاني',course_title:'حصة مجانية',course_price:0}],lessons:[],stats:{courses:0,bookings:2,upcoming:0}});
    if(pathname==='/api/admin/users')return reply(200,{users:[]});
    if(pathname==='/api/admin/dependencies')return reply(200,{checkedAt:new Date().toISOString(),databaseConnected:true,livekitApiVerified:true,receiptBucketPrivateVerified:false,mailDeliveryTested:false});
    if(pathname==='/api/admin/setup-status')return reply(200,{
@@ -51,6 +51,12 @@ try{
   await page.getByRole('heading',{name:'التحقق من التجهيز للإطلاق العام'}).waitFor();
   await page.getByRole('heading',{name:'اختبار الخدمات الفعلي'}).waitFor();
   await page.getByText('اتصال قاعدة بيانات الطلاب والمديرة').waitFor();
+  await page.getByRole('button',{name:'الحجوزات',exact:true}).click();
+  const paid=page.locator('.portal-list-item').filter({hasText:'طالب حجز مدفوع'});
+  const free=page.locator('.portal-list-item').filter({hasText:'طالب حجز مجاني'});
+  await paid.getByRole('button',{name:'مراجعة التحويل أولًا'}).waitFor({timeout:7000});
+  assert.equal(await paid.getByRole('button',{name:/قبول الحجز المجاني/}).count(),0,'paid course cannot be approved from booking list');
+  await free.getByRole('button',{name:'قبول الحجز المجاني'}).waitFor({timeout:7000});
   const pixel=await page.evaluate(()=>({view:window.innerWidth,scroll:document.documentElement.scrollWidth}));
   assert.ok(pixel.scroll<=pixel.view+2,'horizontal overflow in admin operations '+width);
   assert.deepEqual(errors,[],'no browser errors in admin operations');
