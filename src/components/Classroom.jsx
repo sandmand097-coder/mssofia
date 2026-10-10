@@ -12,6 +12,7 @@ import {
 import '@livekit/components-styles';
 import './ClassroomStudio.css';
 import {broadcasterIdentity} from './broadcast-presenter.js';
+import ClassroomQuestions from './ClassroomQuestions.jsx';
 
 const api=async(path,opts={})=>{
  const res=await fetch('/api'+path,{credentials:'same-origin',...opts,headers:{'Content-Type':'application/json',...opts.headers}});
@@ -142,6 +143,7 @@ export function MeetingStudio({connection,onDisconnected}){
       <div className="sofia-meeting-host-actions"><button disabled={busy} onClick={()=>moderate('mute_all')}><MicOff size={17}/> قفل كل ميكروفونات الطلاب</button><button disabled={busy} className="danger" onClick={()=>moderate('end_room')}><LogOut size={17}/> إنهاء الحصة للجميع</button></div>
      </div>:<div className="sofia-meeting-listener"><span><BookOpen size={30}/></span><h3>أهلاً بك في فصل Mrs Sofia</h3><p>ركّز في الفيديو والشرح، وارفع إيدك لما تحب تسأل المعلمة. مش هتحتاج تشغل كاميرتك عشان تستمع.</p></div>)}
     {tab==='messages'&&<div className="sofia-meeting-messages"><div className="sofia-meeting-chat-list">{announcements.length?announcements.map((msg,i)=><div className="sofia-meeting-chat" key={msg.id||i}><strong>المعلمة</strong><p>{msg.message}</p></div>):<div className="sofia-meeting-empty">الإعلانات اللي بتكتبها المعلمة هتظهر هنا.</div>}</div>{host&&<form className="sofia-meeting-compose" onSubmit={publishAnnouncement}><label htmlFor="sofia-announcement">رسالة للطلاب</label><textarea id="sofia-announcement" rows={3} maxLength={240} value={announcement} onChange={e=>setAnnouncement(e.target.value)} placeholder="اكتبي تعليمات أو ملحوظة للطلاب..."/><button disabled={isSending||!announcement.trim()} type="submit"><Send size={15}/> إرسال للجميع</button></form>}</div>}
+   {tab==='messages'&&roomInfo?.qaEnabled&&<ClassroomQuestions lessonId={roomId} host={host}/>}
    </aside>
   </div>
  );
