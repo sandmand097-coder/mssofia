@@ -12,7 +12,7 @@ for(const file of files){
  if(!/\.(?:m?js|jsx|md|html|css|txt|cmd|ya?ml)$/i.test(file))continue;
  if(/\bMrs\.?\s+Sofia\b/i.test(readFileSync(path.join(root,file),'utf8')))oldBrand.push(file);
 }
-check(oldBrand.length===0,'no legacy Mrs Sofia text remains in website or documentation');
+check(oldBrand.length===0,'legacy honorific branding is absent from website and documentation');
 const html=readFileSync(path.join(root,'index.html'),'utf8');
 const logo=readFileSync(path.join(root,'src/components/MrsSofiaBrand.jsx'),'utf8');
 const app=readFileSync(path.join(root,'src/App.jsx'),'utf8');
