@@ -72,7 +72,7 @@ function VideoSurface({refTrack,emptyText,icon:Icon=Video,small=false,onDimensio
 function ClassButton({icon:Icon,children,onClick,disabled=false,active=false,danger=false,title}){
  return <button title={title} type="button" disabled={disabled} onClick={onClick} className={'sofia-class-button '+(active?'is-active ':'')+(danger?'danger ':'')}><Icon size={19}/><span>{children}</span></button>;
 }
-export function MeetingStudio({connection,onDisconnected}){
+export function MeetingStudio({connection,onDisconnected,onTimingChange}){
  const room=useRoomContext();
  const {localParticipant,isMicrophoneEnabled,isCameraEnabled,isScreenShareEnabled}=useLocalParticipant();
  const permission=useLocalParticipantPermissions();
@@ -165,6 +165,7 @@ export function MeetingStudio({connection,onDisconnected}){
   try{
    const result=await api('/lessons/'+roomId+'/duration',{method:'PATCH',body:JSON.stringify({duration_minutes:minutes})});
    setRoomInfo(old=>({...old,...result}));
+   onTimingChange?.(result);
    setDurationDraft('');
   }catch(e){setError(e.message)}
   finally{setBusy(false)}
@@ -310,10 +311,10 @@ export function MeetingStudio({connection,onDisconnected}){
 export function ClassroomPreview({isHost=false}){
  return <div className="sofia-class-preview" dir="rtl"><div className="sofia-class-preview-top"><span><span className="sofia-live-led"/> معاينة التصميم — البث غير مفعل</span><strong>Mrs Sofia • الفصل الافتراضي</strong></div><div className="sofia-class-preview-body"><div className="sofia-class-preview-stage"><span><Video size={52}/></span><h3>شاشة شرح المعلمة</h3><p>ستُعرض هنا كاميرا المعلمة أو الشاشة التي تشاركها مع الطلاب.</p></div><aside><h3>{isHost?'لوحة تحكم المعلمة':'مساحة الطالب'}</h3><p>{isHost?'رفع اليد • السماح بالصوت • قفل الجميع • استبعاد الطالب • إنهاء الحصة':'استمع للشرح، وشاهد الفيديو، وارفع يدك لطلب الكلام.'}</p><div><MicOff size={20}/><Users size={20}/><Hand size={20}/></div></aside></div></div>;
 }
-export default function Classroom({connection,onDisconnected,onConnectionError}){
+export default function Classroom({connection,onDisconnected,onConnectionError,onTimingChange}){
  return <div className="live-frame sofia-classroom-live">
   <LiveKitRoom token={connection.token} serverUrl={connection.serverUrl} connect audio={false} video={false} options={{adaptiveStream:true,dynacast:true}} onDisconnected={onDisconnected} onError={e=>{console.error('Classroom connection:',e?.message);onConnectionError?.('تعذر الاتصال بغرفة البث. تحققي من الإنترنت ثم اضغطي «فتح استوديو البث» للمحاولة مرة أخرى.')}} data-lk-theme="default">
-   <MeetingStudio connection={connection} onDisconnected={onDisconnected}/>
+   <MeetingStudio connection={connection} onDisconnected={onDisconnected} onTimingChange={onTimingChange}/>
   </LiveKitRoom>
  </div>;
 }
