@@ -231,13 +231,14 @@ export function MeetingStudio({connection,onDisconnected,onTimingChange}){
    await track.applyConstraints({advanced:[constraint]});
   }catch{setError('الكاميرا لا تدعم تغيير التعريض من المتصفح. استخدمي إضاءة أمامية مناسبة.')}
  };
- const updateDuration=async(e)=>{
-  e.preventDefault();if(!host||busy)return;
-  const minutes=Number(durationDraft||roomInfo?.duration_minutes);
-  if(!Number.isInteger(minutes)||minutes<15||minutes>240){setError('حددي مدة من 15 إلى 240 دقيقة');return}
+ const updateDuration=async(e,add=0)=>{
+  e.preventDefault();if(!host||busy||!roomInfo)return;
+  const minutes=add?Number(roomInfo.duration_minutes)+add:Number(durationDraft||roomInfo.duration_minutes);
+  if(!Number.isInteger(minutes)||minutes<15||minutes>240){setError('الحد الأقصى لمدة الحصة أربع ساعات (240 دقيقة)');return}
   setBusy(true);setError('');
   try{
-   const result=await api('/lessons/'+roomId+'/duration',{method:'PATCH',body:JSON.stringify({duration_minutes:minutes})});
+   const body=add?{add_minutes:add}:{duration_minutes:minutes};
+   const result=await api('/lessons/'+roomId+'/duration',{method:'PATCH',body:JSON.stringify(body)});
    setRoomInfo(old=>({...old,...result}));
    onTimingChange?.(result);
    setDurationDraft('');
@@ -314,6 +315,7 @@ export function MeetingStudio({connection,onDisconnected,onTimingChange}){
     {(networkQuality==='poor'||networkQuality==='lost')&&networkState!=='reconnecting'&&
      <div className="sofia-network-banner degraded" role="status"><Wifi size={16}/> الاتصال ضعيف. نخفض جودة الفيديو للمحافظة على صوت الشرح.</div>}
     {mediaWarning&&<div className="sofia-network-banner degraded" role="status"><AlertTriangle size={16}/>{mediaWarning}</div>}
+    {host&&onlineCount>=35&&<div className="sofia-network-banner degraded" role="status"><AlertTriangle size={16}/> يوجد عدد كبير من الطلاب. اختاري جودة «اقتصادية» لتقليل بيانات الفيديو، وراجعي رصيد دقائق المشاركين في LiveKit؛ خفض الجودة لا يوفّر دقائق الاتصال.</div>}
     {!host&&<div className="sofia-viewer-recovery-tools">
      <label htmlFor="sofia-viewer-mode">وضع المشاهدة</label>
      <select id="sofia-viewer-mode" value={viewerMode} onChange={e=>selectViewerMode(e.target.value)}>
@@ -347,6 +349,11 @@ export function MeetingStudio({connection,onDisconnected,onTimingChange}){
         value={durationDraft!==''?durationDraft:roomInfo?.duration_minutes??60}
         onChange={e=>setDurationDraft(e.target.value)} inputMode="numeric"/>
        <button type="submit" disabled={busy||!roomInfo||Number(durationDraft||roomInfo.duration_minutes)===Number(roomInfo.duration_minutes)}>حفظ المدة</button>
+       <div className="sofia-duration-shortcuts" aria-label="تمديد سريع لمدة الحصة">
+        <button type="button" onClick={e=>void updateDuration(e,15)} disabled={busy||!roomInfo||Number(roomInfo.duration_minutes)>225}>+15 دقيقة</button>
+        <button type="button" onClick={e=>void updateDuration(e,30)} disabled={busy||!roomInfo||Number(roomInfo.duration_minutes)>210}>+30 دقيقة</button>
+        <button type="button" onClick={e=>void updateDuration(e,60)} disabled={busy||!roomInfo||Number(roomInfo.duration_minutes)>180}>+60 دقيقة</button>
+       </div>
        {roomInfo?.ends_at&&<small>النهاية المجدولة: {new Intl.DateTimeFormat('ar-EG',{hour:'numeric',minute:'2-digit',timeZone:'Africa/Cairo'}).format(new Date(roomInfo.ends_at))} بتوقيت القاهرة</small>}
       </form>
       <div className="sofia-meeting-camera-controls">
@@ -361,7 +368,7 @@ export function MeetingStudio({connection,onDisconnected,onTimingChange}){
         <input type="range" min={exposureRange.min} max={exposureRange.max} step={exposureRange.step||.1} value={exposureValue} onChange={e=>void changeExposure(e.target.value)}/>
        </label>:
        <small className="sofia-meeting-light-tip"><Sun size={15}/> لأفضل إضاءة: ضعي مصدر الضوء أمام وجهك، وابتعدي عن النافذة خلفك. التحكم الإلكتروني في التعريض يظهر فقط إذا دعمته الكاميرا.</small>}
-      <small className="sofia-meeting-duration-note">تغيير المدة يحدّث نهاية الحصة؛ ولإنهائها فورًا افصلي الجميع من لوحة الطلاب.</small>
+      <small className="sofia-meeting-duration-note">تغيير المدة يحدّث نهاية الحصة داخل الموقع. رصيد دقائق LiveKit وحدود الخطة مستقلان عن هذا الإعداد. لإغلاق الفصل اضغطي إنهاء الحصة للجميع.</small>
      </div>}
     <div className="sofia-meeting-tools"><div className="sofia-meeting-tool-group">
      {host&&<ClassButton icon={isMicrophoneEnabled?Mic:MicOff} onClick={()=>toggle('mic')} active={isMicrophoneEnabled} disabled={busy}>{isMicrophoneEnabled?'إيقاف صوتي':'تشغيل صوتي'}</ClassButton>}
