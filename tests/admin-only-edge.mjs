@@ -27,6 +27,9 @@ try {
  assert.equal(lastRequest.headers.get('cookie'),'session=fake-test-token');
  assert.equal(signed.headers.get('cache-control'),'no-store, private');
  assert.equal(calls,2);
+ assert.equal((await invoke('/api/admin/payments/test/review',{method:'POST',cookie:'session=fake-test-token',body:{decision:'approved'}})).status,503);
+ assert.equal((await invoke('/api/bookings/test/payment',{method:'POST',cookie:'session=fake-test-token',body:{}})).status,503);
+ assert.equal(calls,2,'financial decisions must not wake the backend during admin-only launch');
  assert.equal((await invoke('/api/auth/google/login',{method:'POST',body:{credential:'test'}})).status,200);
  assert.equal(calls,3);
  const failClosed=await invoke('/api/health',{env:{PUBLIC_LAUNCH_MODE:'admin'}});

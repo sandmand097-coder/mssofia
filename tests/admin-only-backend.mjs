@@ -46,6 +46,7 @@ try {
  assert.equal((await call('/api/courses')).status,401);
  assert.equal((await call('/api/courses',{cookie:adminCookie})).status,200);
  assert.equal((await call('/payment-review?token=not-real')).status,503);
+ assert.equal((await call('/api/admin/payments/test/review',{method:'POST',cookie:adminCookie,body:{decision:'approved',confirmedOnPhone:true}})).status,503,'admin cannot approve payments before financial release');
  const created=await call('/api/courses',{method:'POST',cookie:adminCookie,body:{title:'علوم التجربة',description:'برنامج علمي للاختبار',subject:'علوم',level:'الابتدائي',price:170,capacity:10,duration_minutes:60,teacher_id:admin}});
  assert.equal(created.status,201,'administrator can prepare course while registration is closed');
  assert.equal((await call('/api/courses/'+created.data.id+'/book',{method:'POST',cookie:studentCookie,body:{}})).status,403);

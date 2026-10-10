@@ -57,6 +57,8 @@ export async function onRequest(context){
     videoConfigured:false,videoCloudReady:false,videoMode:'admin-setup'});
   if(request.method==='GET'&&pathname==='/api/auth/registration-status')
    return json(200,{registrationAvailable:false,emailMode:'disabled'});
+  if(request.method==='POST'&&(/^\/api\/admin\/payments\/[^/]+\/review$/.test(pathname)||/^\/api\/bookings\/[^/]+\/payment$/.test(pathname)))
+   return json(503,{error:'التحويلات وقبول الاشتراكات غير مفتوحين خلال تجهيز إدارة المدرسة'});
   const hasSession=(request.headers.get('cookie')||'').split(';').some(c=>c.trim().startsWith('session='));
   if(request.method==='GET'&&pathname==='/api/auth/me'&&!hasSession)
    return json(401,{error:'لم يتم تسجيل الدخول'});

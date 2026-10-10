@@ -9,6 +9,8 @@ export function attachAdminOnlyGuard(app, {auth, role, enabled}) {
   if (req.method==='GET' && pathname==='/auth/registration-status')
    return res.status(200).json({registrationAvailable:false,emailMode:'disabled'});
   if (req.method==='POST' && pathname==='/auth/logout') return next();
+  if (req.method==='POST' && (/^\/admin\/payments\/[^/]+\/review$/.test(pathname)||/^\/bookings\/[^/]+\/payment$/.test(pathname)))
+   return res.status(503).json({error:'مراجعة التحويلات محجوبة حتى يبدأ التسجيل والدفع العام بعد الاعتماد'});
   if (pathname.startsWith('/auth/') && pathname!=='/auth/me')
    return res.status(503).json({error:'دخول المديرة عبر Google فقط. تسجيل الطلاب غير متاح بعد'});
   // Even valid older student/teacher JWTs cannot access the API in this phase.
