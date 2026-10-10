@@ -15,6 +15,7 @@ import {schoolReadiness} from './release-readiness.js';
 import {createDiagnosticReader} from './deployment-diagnostics.js';
 import {attachAdminOnlyGuard} from './admin-only.js';
 import {attachPaymentRoutes} from './payment-routes.js';
+import {attachClassroomQuestions,classroomQuestionsEnabled} from './classroom-questions.js';
 import {evaluateMonthlyAccess,accessView,countCurrentMembers,renewalEndSelect} from './monthly-access.js';
 import { get, all, run, uid, now, publicUser, checkConnection } from './db-adapter.js';
 const app = express(),
@@ -679,6 +680,7 @@ const selectedStudent = async(l,id)=>{
  const student=await get("SELECT u.id,u.name FROM users u WHERE u.id=? AND u.role='student' AND u.status='active'",id);
  return student&&(await studentCanStream(l.course_id,id))?student:null;
 };
+attachClassroomQuestions(app,{auth,role,get,all,run,uid,now,roomLesson,roomPermitted,isLessonHost});
 app.get('/api/lessons/:id/classroom', auth, async (req, res) => {
   const l = await roomLesson(req.params.id);
   if (!l) return send(res, 404, {
@@ -700,6 +702,7 @@ app.get('/api/lessons/:id/classroom', auth, async (req, res) => {
     hands,
     speakers,
     status: l.status,
+    qaEnabled: classroomQuestionsEnabled(),
     maxActiveSpeakers: MAX_ACTIVE_SPEAKERS
   });
 });
