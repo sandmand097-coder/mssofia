@@ -64,7 +64,7 @@ export async function resolveGoogleStudent(profile,input,{get,run,uid,now,env=pr
  if(email===normalized(env.GOOGLE_ADMIN_EMAIL))return{status:403,error:'استخدم حساب الإدارة من صفحة دخول المديرة'};
  let user=await get('SELECT * FROM users WHERE email=?',email);
  if(!user){
-  if(!flags.registrationEnabled)return{status:503,error:'تسجيل حسابات الطلاب غير متاح حتى تعتمد المدرسة سياسة الخصوصية'};
+  if(!flags.registrationEnabled)return{status:503,error:'تسجيل حسابات الطلاب غير متاح حتى تعتمد المُدرِّسة سياسة الخصوصية'};
   const name=typeof input?.student_name==='string'?input.student_name.trim():'';
   if(input?.register_student!==true||input?.guardian_consent!==true||name.length<2||name.length>80)
    return{status:400,error:'اكتب اسم الطالب وأكد أنك ولي أمره وتوافق على شروط التسجيل'};
@@ -76,7 +76,7 @@ export async function resolveGoogleStudent(profile,input,{get,run,uid,now,env=pr
   user=await get('SELECT * FROM users WHERE email=?',email);
  }
  if(!eligibleGoogleStudent(profile,user)){
-  return{status:403,error:'هذا البريد مرتبط بحساب آخر أو لم تُستكمل موافقة ولي الأمر. تواصل مع المدرسة'};
+  return{status:403,error:'هذا البريد مرتبط بحساب آخر أو لم تُستكمل موافقة ولي الأمر. تواصل مع المُدرِّسة'};
  }
  // Identity subject is immutable on this record. A verified email match alone
  // can never replace a previously bound Google account.
@@ -112,7 +112,7 @@ export function attachGoogleAdminAuth(app,{get,run,uid,now,publicUser,secret,lim
     if(!admin.enabled||req.body?.register_student===true)return res.status(403).json({error:'حساب الإدارة لا يمكن تسجيله كطالب'});
     user=await get('SELECT * FROM users WHERE email=?',admin.email);
     if(!eligibleGoogleAdmin(profile,user,admin.email))
-     return res.status(403).json({error:'هذا الحساب غير مصرح له بإدارة المدرسة'});
+     return res.status(403).json({error:'هذا الحساب غير مصرح له بالإدارة'});
     const binding=await run('UPDATE users SET google_sub=?,email_verified_at=COALESCE(email_verified_at,?) WHERE id=? AND (google_sub IS NULL OR google_sub=?)',
      profile.sub,now(),user.id,profile.sub);
     if(!binding.changes)return res.status(403).json({error:'هوية Google غير متطابقة مع المديرة'});

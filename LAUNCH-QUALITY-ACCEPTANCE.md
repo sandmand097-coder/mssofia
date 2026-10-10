@@ -1,4 +1,4 @@
-# Mrs Sofia — live classroom, verified wallet payments, and discoverability
+# Miss Sofia — live classroom, verified wallet payments, and discoverability
 
 ## Released behaviour
 - Camera and shared-screen video use **contain**, never crop/stretch. Natural WebRTC track dimensions select portrait 9:16, square 1:1 or laptop landscape layouts. Video adjusts when switching sources. Classroom remains responsive at 390px, 768px and 1366px.

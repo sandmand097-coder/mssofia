@@ -26,7 +26,7 @@ export default function PortalShell({variant='student',user,nav,active,onNavigat
   <div className="portal-frame">
    <aside className="portal-rail">
     <div className="portal-rail-head"><span className="portal-rail-logo">{isAdmin?<ShieldCheck size={24}/>:isTeacher?<Presentation size={24}/>:<FlaskConical size={24}/>}</span>
-      <div><strong>{isAdmin?'مركز الإدارة':isTeacher?'مساحة المعلم':'مساحة الطالب'}</strong><span>MRS SOFIA SCIENCE</span></div></div>
+      <div><strong>{isAdmin?'مركز الإدارة':isTeacher?'مساحة المعلم':'مساحة الطالب'}</strong><span>MISS SOFIA SCIENCE</span></div></div>
     <div className="portal-rail-caption">القائمة الرئيسية</div>
     <nav className="portal-menu" aria-label={isAdmin?'قائمة الإدارة':isTeacher?'قائمة المعلم':'قائمة الطالب'}>
      {nav.map(item=>{const Icon=item.icon;return <button key={item.id} type="button" className={'portal-menu-item '+(active===item.id?'is-active':'')} aria-current={active===item.id?'page':undefined} onClick={()=>onNavigate(item.id)}><Icon size={19}/><span>{item.label}</span>{item.count>0&&<em>{item.count}</em>}</button>})}
@@ -37,10 +37,10 @@ export default function PortalShell({variant='student',user,nav,active,onNavigat
     </div>
    </aside>
    <section className="portal-workspace">
-    <div className="portal-topline"><div className="portal-breadcrumb"><Link to="/">Mrs Sofia</Link><ChevronLeft size={14}/><span>{isAdmin?'لوحة الإدارة':isTeacher?'لوحة المعلم':'لوحة الطالب'}</span></div><div className="portal-today"><CalendarClock size={16}/>{new Intl.DateTimeFormat('ar-EG',{weekday:'long',day:'numeric',month:'long',timeZone:'Africa/Cairo'}).format(new Date())}</div></div>
+    <div className="portal-topline"><div className="portal-breadcrumb"><Link to="/">Miss Sofia</Link><ChevronLeft size={14}/><span>{isAdmin?'لوحة الإدارة':isTeacher?'لوحة المعلم':'لوحة الطالب'}</span></div><div className="portal-today"><CalendarClock size={16}/>{new Intl.DateTimeFormat('ar-EG',{weekday:'long',day:'numeric',month:'long',timeZone:'Africa/Cairo'}).format(new Date())}</div></div>
     <header className="portal-heading"><div><div className="portal-kicker">{isAdmin?'ADMINISTRATOR WORKSPACE':isTeacher?'TEACHER WORKSPACE':'STUDENT LEARNING SPACE'}</div><h1>{title}</h1><p>{subtitle}</p></div>{toolbar&&<div className="portal-heading-action">{toolbar}</div>}</header>
     <div className="portal-workspace-body">{children}</div>
-    <footer className="portal-page-footer">Mrs Sofia — مدرسة العلوم <span>•</span> مساحة آمنة ومنظمة للتعلم والمتابعة</footer>
+    <footer className="portal-page-footer">Miss Sofia — مُدرِّسة العلوم <span>•</span> مساحة آمنة ومنظمة للتعلم والمتابعة</footer>
    </section>
   </div>
  </main>;

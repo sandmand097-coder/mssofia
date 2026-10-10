@@ -14,7 +14,7 @@ const steps=[
  {title:'٨. تابعي مدة الاشتراك والتجديد',detail:'من الاشتراكات الشهرية تابعي الطلاب الذين اقترب انتهاء مدة الثلاثين يومًا لديهم. يرسل ولي الأمر إيصال تجديد مستقلًا، ولا يمتد الاشتراك إلا بعد مطابقة التحويل وقبوله من الإدارة.',icon:CalendarDays,tab:'subscriptions',action:'الاشتراكات الشهرية'}
 ];
 const liveVerification=[
- {key:'databaseConnected',label:'اتصال قاعدة بيانات الطلاب والمديرة',description:'استعلام فعلي بقاعدة PostgreSQL وبصلاحية تطبيق المدرسة'},
+ {key:'databaseConnected',label:'اتصال قاعدة بيانات الطلاب والمديرة',description:'استعلام فعلي بقاعدة PostgreSQL وبصلاحية تطبيق المُدرِّسة'},
  {key:'livekitApiVerified',label:'الاتصال السحابي بغرف البث LiveKit',description:'طلب فعلي إلى LiveKit Cloud، بدون إنشاء غرفة أو فتح كاميرا'},
  {key:'receiptBucketPrivateVerified',label:'المخزن الخاص لإيصالات فودافون كاش',description:'فحص مخزن Supabase الصحيح والتأكد أنه غير متاح للعامة'}
 ];
@@ -23,7 +23,7 @@ const readiness=[
  {key:'studentGoogleEnabled',label:'Google لولي الأمر / الطالب'},
  {key:'studentGoogleRegistrationEnabled',label:'فتح إنشاء الطلاب باستخدام Google'},
  {key:'guardianPrivacyApproved',label:'اعتماد سياسة الخصوصية وموافقة ولي الأمر'},
- {key:'schoolContactConfigured',label:'بريد التواصل الرسمي للمدرسة'},
+ {key:'schoolContactConfigured',label:'بريد التواصل الرسمي للمُدرِّسة'},
  {key:'outboundMailConfigured',label:'إعداد مزود إرسال بريد التأكيد (إن استُخدمت كلمات المرور)'},
  {key:'paymentWalletConfigured',label:'إعداد رقم محفظة فودافون كاش'},
  {key:'privateReceiptStorageConfigured',label:'إعداد مخزن إيصالات الدفع الخاص'},
@@ -34,7 +34,7 @@ const readiness=[
 export default function AdminOperations({setup,diagnostics,onRefresh,onNavigate}){
  return <div className="sofia-operations" dir="rtl">
   <section className="portal-panel">
-   <PanelHeading title="خريطة تشغيل مدرسة Mrs Sofia" description="خطوات الإدارة والطالب من أول إنشاء الدورة حتى قبول الاشتراك ودخول البث المباشر."/>
+   <PanelHeading title="خريطة تشغيل مُدرِّسة Miss Sofia" description="خطوات الإدارة والطالب من أول إنشاء الدورة حتى قبول الاشتراك ودخول البث المباشر."/>
    <div className="portal-list">
     {steps.map((item,i)=>{const Icon=item.icon;return <div className="portal-list-item" key={item.title}>
      <span className="portal-list-icon"><Icon size={21}/></span>
@@ -44,7 +44,7 @@ export default function AdminOperations({setup,diagnostics,onRefresh,onNavigate}
    </div>
   </section>
   <section className="portal-panel">
-   <PanelHeading title="اختبار الخدمات الفعلي" description="نتائج من خادم المدرسة، وليست مجرد وجود مفاتيح إعدادات." action={<button type="button" className="portal-soft-btn" onClick={onRefresh}>إعادة فحص الخدمات</button>}/>
+   <PanelHeading title="اختبار الخدمات الفعلي" description="نتائج من خادم المُدرِّسة، وليست مجرد وجود مفاتيح إعدادات." action={<button type="button" className="portal-soft-btn" onClick={onRefresh}>إعادة فحص الخدمات</button>}/>
    <div className="portal-list">
     {liveVerification.map(item=><div className="portal-list-item" key={item.key}>
      <span className="portal-list-icon">{diagnostics?.[item.key]?<CheckCircle2 size={20}/>:<AlertCircle size={20}/>}</span>

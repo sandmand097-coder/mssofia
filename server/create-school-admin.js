@@ -8,7 +8,7 @@ import {get,run,uid,now} from './db.js';
 if(process.env.NODE_ENV==='production')throw Error('Admin creation in production must use the controlled deployment process, not this local bootstrap script.');
 const option=name=>{const i=process.argv.indexOf('--'+name);return i>=0?process.argv[i+1]:null};
 const email=(option('email')||'admin@mrsofia.local').trim().toLowerCase();
-const displayName=option('name')||'Mrs Sofia — مدرسة العلوم';
+const displayName=option('name')||'Miss Sofia — مُدرِّسة العلوم';
 if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))throw Error('Specify a valid admin email using --email');
 const current=get('SELECT id,role FROM users WHERE email=?',email);
 if(current)throw Error('Admin email already exists. No existing account was changed.');

@@ -37,10 +37,10 @@ export default function StudentPayments({bookings=[],refresh}){
  };
  return <section className="portal-panel sofia-payment-panel" aria-label="دفع الاشتراك عبر فودافون كاش">
   <h2><Smartphone size={23}/> دفع الاشتراك عبر فودافون كاش</h2>
-  <p>يُفعَّل اشتراك الطالب لمدة 30 يومًا <strong>بعد مراجعة المديرة لتحويل فودافون كاش على هاتف المدرسة وقبوله</strong>، وليس بمجرد رفع صورة الإيصال. يحق للإدارة الرفض إذا لم تصل الأموال أو لم تتطابق البيانات.</p>
+  <p>يُفعَّل اشتراك الطالب لمدة 30 يومًا <strong>بعد مراجعة المديرة لتحويل فودافون كاش على هاتف المُدرِّسة وقبوله</strong>، وليس بمجرد رفع صورة الإيصال. يحق للإدارة الرفض إذا لم تصل الأموال أو لم تتطابق البيانات.</p>
   {!config?<p>جارٍ التأكد من جاهزية الدفع...</p>:!config.enabled?
    <div className="portal-alert" role="status">استقبال التحويلات متوقف مؤقتًا. لا تحوّل أي مبلغ قبل ظهور رقم المحفظة الرسمي هنا.</div>:
-   <div className="sofia-payment-number"><span>رقم فودافون كاش الرسمي للمدرسة</span><strong dir="ltr">{config.number}</strong><small>تحقق من رقم المستلم قبل إرسال المبلغ، ثم احتفظ بإشعار التحويل.</small></div>}
+   <div className="sofia-payment-number"><span>رقم فودافون كاش الرسمي للمُدرِّسة</span><strong dir="ltr">{config.number}</strong><small>تحقق من رقم المستلم قبل إرسال المبلغ، ثم احتفظ بإشعار التحويل.</small></div>}
   {error&&<p role="alert" className="portal-alert">{error}</p>}
   {success&&<p role="status" className="sofia-payment-success"><CheckCircle2 size={16}/>{success}</p>}
   {!paid.length?<p>اختَر دورة مدفوعة وأرسل طلب الانضمام، ثم ستظهر هنا قيمة الدفع ورفع الإيصال.</p>:
@@ -59,7 +59,7 @@ export default function StudentPayments({bookings=[],refresh}){
       booking.status==='rejected'?
       <div className="portal-alert" role="status">تم رفض طلب الحجز. تواصل مع الإدارة قبل أي تحويل جديد.</div>:
       booking.status==='approved'?
-      <div className="portal-alert" role="status">حجزك ظاهر كمعتمد لكن تأكيد الدفع غير مكتمل. تواصل مع إدارة المدرسة؛ لا تدفع مرتين.</div>:
+      <div className="portal-alert" role="status">حجزك ظاهر كمعتمد لكن تأكيد الدفع غير مكتمل. تواصل مع الإدارة؛ لا تدفع مرتين.</div>:
       !config?.enabled?<p>رفع الإيصالات غير متاح حاليًا حتى يكتمل فحص الأمان.</p>:
       <>
        {booking.payment_status==='rejected'&&<div className="portal-alert">لم يُقبل الإيصال السابق: {booking.payment_note||'راجع تفاصيل التحويل وأعد إرسال إثبات صحيح بعد التأكد من العملية'}</div>}
@@ -72,7 +72,7 @@ export default function StudentPayments({bookings=[],refresh}){
         </label>
        </div>
        <button type="button" className="portal-primary-btn" disabled={!canUpload||busy!==''} onClick={()=>upload(booking.id)}><UploadCloud size={16}/>{busy===booking.id?'جارٍ رفع الإيصال...':'إرسال الإيصال إلى المديرة للمراجعة'}</button>
-       <small>ستقارن المديرة المبلغ ورقم هاتف المرسل مع التحويل الوارد فعليًا إلى محفظة المدرسة قبل الضغط على قبول أو رفض. لا ترسل الرقم السري أو رمز OTP.</small>
+       <small>ستقارن المديرة المبلغ ورقم هاتف المرسل مع التحويل الوارد فعليًا إلى محفظة المُدرِّسة قبل الضغط على قبول أو رفض. لا ترسل الرقم السري أو رمز OTP.</small>
       </>
      }
     </div>;

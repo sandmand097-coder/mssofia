@@ -11,12 +11,12 @@ try{
   await page.route('**/api/auth/google/config',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(width===1366?{enabled:true,clientId:'test-admin.apps.googleusercontent.com'}:{enabled:false})}));
   await page.route('https://accounts.google.com/gsi/client',route=>route.fulfill({status:200,contentType:'application/javascript',body:"window.google={accounts:{id:{initialize(){},renderButton(node){const button=document.createElement('button');button.textContent='Google Sign In';node.append(button)}}}}"}));
   await page.goto(origin+'/login',{waitUntil:'networkidle',timeout:20000});
-  await page.getByRole('heading',{name:'دخول مديرة مدرسة Mrs Sofia'}).waitFor({timeout:10000});
+  await page.getByRole('heading',{name:'دخول المُدرِّسة Miss Sofia'}).waitFor({timeout:10000});
   assert.equal(await page.locator('input[type=password]').count(),0,'admin-only page does not offer legacy passwords');
   if(width===1366)await page.getByRole('button',{name:'Google Sign In'}).waitFor({state:'visible'});
   if(width<=680){
    await page.getByRole('button',{name:'فتح القائمة'}).click();
-   await page.getByRole('link',{name:'دخول مديرة المدرسة'}).waitFor({state:'visible'});
+   await page.getByRole('link',{name:'دخول المُدرِّسة'}).waitFor({state:'visible'});
   }else{
    assert.equal(await page.getByRole('link',{name:'دخول المديرة'}).count(),1,'desktop exposes administrator login');
   }

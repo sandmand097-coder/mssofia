@@ -1,4 +1,4 @@
-# Mrs Sofia — controlled Supabase project migration
+# Miss Sofia — controlled Supabase project migration
 
 ## Ownership and integrity
 

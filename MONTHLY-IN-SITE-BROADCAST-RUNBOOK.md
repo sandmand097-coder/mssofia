@@ -1,4 +1,4 @@
-# Mrs Sofia — in-site livestream and monthly access
+# Miss Sofia — in-site livestream and monthly access
 
 ## Director starts a science lesson
 1. Open https://mssofia.pages.dev/login and use the approved director Google identity.
@@ -7,7 +7,7 @@
    **24-hour hour and minutes in Cairo time**. For example, 16:30 means 4:30 PM
    Egypt local time. The form uses the Africa/Cairo timezone, including DST.
 4. **No Google Meet URL** is needed or accepted. Creating a lesson reserves
-   an internal LiveKit room in Mrs Sofia and redirects no student to Meet.
+   an internal LiveKit room in Miss Sofia and redirects no student to Meet.
 5. In **الحصص** open **استوديو البث الخاص بي** from 15 minutes before the
    scheduled start; inside click **ابدئي البث الآن** to enable mic/camera after
    browser permission. Screen sharing, hand raising and director-controlled

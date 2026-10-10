@@ -53,7 +53,7 @@ export function attachSubscriptionRenewalRoutes(app,{
 
  app.post('/api/bookings/:id/renewal',auth,student,uploadLimiter,async(req,res,next)=>{
   try{
-   if(!renewalsEnabled())return json(res,503,{error:'التجديد غير مُتاح حتى تجهز المدرسة قاعدة البيانات'});
+   if(!renewalsEnabled())return json(res,503,{error:'التجديد غير مُتاح حتى تجهز المُدرِّسة قاعدة البيانات'});
    if(!(await storageReady()))return json(res,503,{error:'التجديد متوقف إلى أن يجتاز تخزين الإيصالات فحص الخصوصية. لا ترسل أي تحويل'});
    receiptUpload.single('receipt')(req,res,error=>{
     if(error)return json(res,400,{error:'ارفع إيصال PNG أو JPEG أو WebP بحجم لا يتجاوز 8 ميجابايت'});
@@ -149,10 +149,10 @@ export function attachSubscriptionRenewalRoutes(app,{
    const senderPhone=String(req.body?.sender_phone||'').trim();
    const reference=String(req.body?.transfer_reference||'').trim().toUpperCase();
    const amount=Number(req.body?.amount_egp);
-   if(req.body?.confirmedOnPhone!==true)return json(res,400,{error:'يجب التأكد يدويًا من وصول التحويل على محفظة المدرسة'});
+   if(req.body?.confirmedOnPhone!==true)return json(res,400,{error:'يجب التأكد يدويًا من وصول التحويل على محفظة المُدرِّسة'});
    if(!isPhone(senderPhone))return json(res,400,{error:'أدخلي رقم المرسل الحقيقي كما ظهر في كشف المحفظة'});
    if(!/^[A-Z0-9][A-Z0-9./_-]{4,63}$/.test(reference))return json(res,400,{error:'أدخلي رقم عملية فودافون كاش من كشف المحفظة (5–64 حرفًا)'});
-   if(!Number.isSafeInteger(amount)||amount<=0)return json(res,400,{error:'أدخلي المبلغ الذي استلمته المدرسة فعليًا'});
+   if(!Number.isSafeInteger(amount)||amount<=0)return json(res,400,{error:'أدخلي المبلغ الذي استلمته المُدرِّسة فعليًا'});
    const result=await withTransaction(async tx=>{
     const lock=isCloudDatabase?' FOR UPDATE OF b,p,c':'';
     const booking=await tx.get(`SELECT b.id,b.student_id,b.course_id,b.status,c.price,c.subject,c.capacity,
@@ -206,7 +206,7 @@ export function attachSubscriptionRenewalRoutes(app,{
    const decision=req.body?.decision;
    if(!['approved','rejected'].includes(decision))return json(res,400,{error:'حدد الموافقة أو الرفض'});
    if(decision==='approved'&&req.body?.confirmedOnPhone!==true)
-    return json(res,400,{error:'يجب التأكد من وصول المبلغ الفعلي على هاتف المدرسة'});
+    return json(res,400,{error:'يجب التأكد من وصول المبلغ الفعلي على هاتف المُدرِّسة'});
    const reason=String(req.body?.reason||'').trim().slice(0,500);
    if(decision==='rejected'&&reason.length<5)return json(res,400,{error:'اكتب سببًا واضحًا للرفض'});
    const result=await withTransaction(async tx=>{
@@ -244,7 +244,7 @@ export function attachSubscriptionRenewalRoutes(app,{
       SET status='approved',reviewed_at=?,reviewed_by=?,review_note=?,
        confirmed_on_phone=TRUE,period_start=?,period_end=?
       WHERE id=? AND status='pending'`,reviewedNow,req.user.id,
-      'تمت مراجعة وصول تحويل الشهر التالي على هاتف المدرسة',
+      'تمت مراجعة وصول تحويل الشهر التالي على هاتف المُدرِّسة',
       new Date(start).toISOString(),new Date(end).toISOString(),renewal.id);
     if(!saved.changes)throw Error('Concurrent renewal approval');
     return{http:200,status:'approved',period_start:new Date(start).toISOString(),period_end:new Date(end).toISOString()};

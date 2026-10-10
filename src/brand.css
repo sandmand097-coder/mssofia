@@ -1,4 +1,4 @@
-/* Mrs Sofia — brand system. Marketing and learning experience. */
+/* Miss Sofia — brand system. Marketing and learning experience. */
 :root{--sf-ink:#14313a;--sf-mid:#38565c;--sf-muted:#72858a;--sf-primary:#087d70;--sf-primary-deep:#086255;--sf-light:#e8f6ee;--sf-line:#e5eeea;--sf-warm:#fffaf3;--sf-orange:#f8b774;--sf-card:#fff}
 html{scroll-behavior:smooth}
 body{color:var(--sf-ink)}

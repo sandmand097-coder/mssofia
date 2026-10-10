@@ -29,7 +29,7 @@ try{
    const pathname=new URL(route.request().url()).pathname;
    const reply=(status,data)=>route.fulfill({status,contentType:'application/json',body:JSON.stringify(data)});
    if(pathname==='/api/health')return reply(200,{ok:true,mode:'admin',registrationAvailable:false});
-   if(pathname==='/api/auth/me')return reply(200,{user:{id:'admin-1',name:'Mrs Sofia',email:'admin@example.com',role:'admin',status:'active'}});
+   if(pathname==='/api/auth/me')return reply(200,{user:{id:'admin-1',name:'Miss Sofia',email:'admin@example.com',role:'admin',status:'active'}});
    if(pathname==='/api/admin/dashboard')return reply(200,{statistics:{students:0,teachers:0,courses:0,pendingBookings:0},latestUsers:[],upcomingLessons:[],pendingBookings:[],registrationTrend:[]});
    if(pathname==='/api/my/overview')return reply(200,{courses:[],bookings:[{id:'paid-1',status:'pending',student_name:'طالب حجز مدفوع',course_title:'علوم مدفوعة',course_price:170,payment_status:'pending'},{id:'free-1',status:'pending',student_name:'طالب حجز مجاني',course_title:'حصة مجانية',course_price:0}],lessons:[],stats:{courses:0,bookings:2,upcoming:0}});
    if(pathname==='/api/admin/users')return reply(200,{users:[]});
@@ -51,7 +51,7 @@ try{
   const menu=page.getByRole('button',{name:'دليل التشغيل',exact:true});
   await menu.waitFor({timeout:15000});
   await menu.click();
-  await page.getByRole('heading',{name:'خريطة تشغيل مدرسة Mrs Sofia'}).waitFor({timeout:15000});
+  await page.getByRole('heading',{name:'خريطة تشغيل مُدرِّسة Miss Sofia'}).waitFor({timeout:15000});
   await page.getByText('٦. راجعي تحويل فودافون كاش').waitFor();
   await page.getByRole('heading',{name:'التحقق من التجهيز للإطلاق العام'}).waitFor();
   await page.getByRole('heading',{name:'اختبار الخدمات الفعلي'}).waitFor();

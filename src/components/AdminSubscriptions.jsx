@@ -47,6 +47,6 @@ export default function AdminSubscriptions(){
      {m.live_access_active&&m.live_access_days_remaining!==null&&m.live_access_days_remaining<=5&&<small>قرب الانتهاء</small>}</td>
     <td>{m.live_access_expires_at?dateTimeLabel(m.live_access_expires_at):m.live_access_status==='free'?'دورة مجانية':'—'}</td>
    </tr>)}</tbody></table></div>}
-  <p className="sofia-payment-footer-note"><ShieldCheck size={15}/> تجديد الاشتراك ومراجعة الإيصالات من قسم المدفوعات. لا تعتمد الحجز المدفوع دون فحص المبلغ على هاتف المدرسة.</p>
+  <p className="sofia-payment-footer-note"><ShieldCheck size={15}/> تجديد الاشتراك ومراجعة الإيصالات من قسم المدفوعات. لا تعتمد الحجز المدفوع دون فحص المبلغ على هاتف المُدرِّسة.</p>
  </section>;
 }

@@ -12,7 +12,7 @@ export const dashboardPath=user=>user?.role==='admin'?'/admin':user?.role==='tea
 export function BrandLogo({light=false}){
  return <Link className={'sofia-logo '+(light?'sofia-logo-light':'')} to="/" aria-label="مس صوفيا للعلوم — الرئيسية">
   <span className="sofia-logo-symbol"><FlaskConical size={25} strokeWidth={2.3}/><i/></span>
-  <span className="sofia-logo-copy"><b>mrs<span>sofia</span><em>.</em></b><small>مس صوفيا للعلوم</small></span>
+  <span className="sofia-logo-copy"><b>Miss<span> Sofia</span><em>.</em></b><small>المُدرِّسة • مس صوفيا للعلوم</small></span>
  </Link>;
 }
 
@@ -24,7 +24,7 @@ export function BrandHeader({user,logout,previewMode=false,adminOnly=false}){
   <BrandLogo/>
   <nav className={'sofia-nav-links '+(open?'is-open':'')} aria-label="القائمة الرئيسية">
    {links.map(item=>item.anchor?<a key={item.to} href={item.to} onClick={()=>setOpen(false)}>{item.label}</a>:<NavLink key={item.to} to={item.to} end={item.end} onClick={()=>setOpen(false)}>{item.label}</NavLink>)}
-   {adminOnly&&<Link to="/login" className="sofia-admin-mobile-link" onClick={()=>setOpen(false)}>دخول مديرة المدرسة</Link>}
+   {adminOnly&&<Link to="/login" className="sofia-admin-mobile-link" onClick={()=>setOpen(false)}>دخول المُدرِّسة</Link>}
   </nav>
   <div className="sofia-nav-actions">
    {user?<><Link to={dashboardPath(user)} className="sofia-nav-account"><UserCircle2 size={17}/> لوحتي</Link><button className="sofia-logout" title="تسجيل الخروج" aria-label="تسجيل الخروج" onClick={logout}><LogOut size={18}/></button></>:<>{previewMode?<><a href="/#offer" className="sofia-login">عرض أول شهر</a><a href="/#offer" className="sofia-cta sofia-cta-sm">شوف العرض <ArrowLeft size={17}/></a></>:adminOnly?<><Link to="/login" className="sofia-login">دخول المديرة</Link><a href="/#offer" className="sofia-cta sofia-cta-sm">عرض أول شهر <ArrowLeft size={17}/></a></>:<><Link to="/login" className="sofia-login">تسجيل الدخول</Link><Link to="/register" className="sofia-cta sofia-cta-sm">ابدأ رحلتك <ArrowLeft size={17}/></Link></>}</>}
@@ -39,9 +39,9 @@ export function BrandFooter({previewMode=false}){
    <div className="sofia-footer-about"><BrandLogo light/><p>العلوم أسهل لما نفهمها. مكان واحد للتعلّم، التجربة، وتنظيم رحلتك مع مس صوفيا للعلوم.</p></div>
    <div><h4>استكشف</h4><Link to="/">الرئيسية</Link><Link to="/courses">الكورسات المتاحة</Link><a href="/#method">طريقة التعلم</a><Link to="/privacy">الخصوصية وحماية الطلاب</Link><Link to="/terms">شروط الاشتراك</Link></div>
    <div><h4>{previewMode?'الإطلاق التعريفي':'حسابك'}</h4>{previewMode?<><a href="/#offer">عرض الشهر الأول</a><Link to="/courses">المواد والدورات</Link><small>فتح حسابات الطلاب قريبًا</small></>:<><Link to="/login">تسجيل الدخول</Link><Link to="/register">إنشاء حساب</Link><Link to="/dashboard">لوحة التحكم</Link></>}</div>
-   <div className="sofia-footer-note"><span className="sofia-footer-mini"><Atom size={20}/></span><b>التواصل مع إدارة مدرسة العلوم</b><a href="tel:01027661546" dir="ltr" style={{fontWeight:900,fontSize:20,color:'#d9f7ed',display:'inline-block',margin:'8px 0'}}>01027661546</a><small>رقم التواصل والاستفسارات. لا ترسل أي تحويل مالي قبل ظهور طريقة دفع مفعّلة وآمنة داخل حساب الطالب؛ قبول الاشتراك بقرار الإدارة فقط.</small></div>
+   <div className="sofia-footer-note"><span className="sofia-footer-mini"><Atom size={20}/></span><b>التواصل مع المُدرِّسة</b><a href="tel:01027661546" dir="ltr" style={{fontWeight:900,fontSize:20,color:'#d9f7ed',display:'inline-block',margin:'8px 0'}}>01027661546</a><small>رقم التواصل والاستفسارات. لا ترسل أي تحويل مالي قبل ظهور طريقة دفع مفعّلة وآمنة داخل حساب الطالب؛ قبول الاشتراك بقرار الإدارة فقط.</small></div>
   </div>
-  <div className="sofia-footer-bottom"><span>© {new Date().getFullYear()} مس صوفيا للعلوم | Mrs Sofia. جميع الحقوق محفوظة.</span><span>Made for curious minds <span aria-hidden="true">✦</span></span></div>
+  <div className="sofia-footer-bottom"><span>© {new Date().getFullYear()} مس صوفيا للعلوم | Miss Sofia. جميع الحقوق محفوظة.</span><span>Made for curious minds <span aria-hidden="true">✦</span></span></div>
  </div></footer>;
 }
 

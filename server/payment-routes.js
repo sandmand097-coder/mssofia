@@ -193,10 +193,10 @@ export function attachPaymentRoutes(app,{auth,role,get,all,run,uid,now}){
     const decision=req.body?.decision;
     if(!['approved','rejected'].includes(decision))return{http:400,error:'حدد الموافقة أو الرفض'};
     if(decision==='approved'){
-     if(req.body?.confirmedOnPhone!==true)return{http:400,error:'يجب التأكيد بأن المبلغ وصل فعليًا إلى تطبيق فودافون كاش على هاتف المدرسة'};
+     if(req.body?.confirmedOnPhone!==true)return{http:400,error:'يجب التأكيد بأن المبلغ وصل فعليًا إلى تطبيق فودافون كاش على هاتف المُدرِّسة'};
      const used=await countCurrentMembers(tx.all,row.course_id);
      if(Number(used)>=Number(row.capacity))return{http:409,error:'المقاعد اكتملت؛ تواصل مع ولي الأمر قبل الموافقة'};
-     const evidence=await tx.run("UPDATE payment_submissions SET status='approved',confirmed_on_phone=TRUE,reviewed_by=?,reviewed_at=?,review_note=? WHERE id=? AND status='pending'",req.user.id,now(),'تم التأكد من وصول المبلغ إلى هاتف المدرسة',row.id);
+     const evidence=await tx.run("UPDATE payment_submissions SET status='approved',confirmed_on_phone=TRUE,reviewed_by=?,reviewed_at=?,review_note=? WHERE id=? AND status='pending'",req.user.id,now(),'تم التأكد من وصول المبلغ إلى هاتف المُدرِّسة',row.id);
      if(!evidence.changes)throw Error('Concurrent payment review conflict');
      const booking=await tx.run("UPDATE bookings SET status='approved',reviewed_at=? WHERE id=? AND status='pending'",now(),row.booking_id);
      if(!booking.changes)throw Error('Concurrent booking review conflict');

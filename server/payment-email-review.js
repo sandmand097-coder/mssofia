@@ -18,7 +18,7 @@ const headers=res=>res.set({
  'X-Frame-Options':'DENY',
  'Content-Security-Policy':"default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'"
 });
-const page=(body,title='مراجعة تحويل الطالب')=>`<!doctype html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${htmlSafe(title)} — Mrs Sofia</title><style>body{font-family:Tahoma,Arial,sans-serif;background:#eff7f4;margin:0;padding:22px;color:#163f3a}main{max-width:640px;margin:30px auto;background:white;padding:30px;border:1px solid #d5ebe4;border-radius:20px;box-shadow:0 18px 50px #114b381a}h1{font-size:25px}p{line-height:2}.fact{background:#f0faf5;padding:15px;border-radius:12px;margin-bottom:16px}img{display:block;max-width:100%;max-height:450px;object-fit:contain;margin:12px auto;border:1px solid #ddd;border-radius:10px}button{font:700 16px Tahoma;cursor:pointer;padding:14px;border:0;border-radius:9px;width:100%;margin-top:10px}.accept{background:#0b806b;color:white}.reject{background:#ffeded;color:#ac2535}input[type=text]{width:95%;font:15px Tahoma;padding:11px;border:1px solid #ddd;border-radius:8px}.confirm{display:flex;align-items:flex-start;gap:11px;padding:14px;background:#ebf8ed;border:1px solid #acd7bb;border-radius:10px;font-weight:700;line-height:1.8}.confirm input{width:21px;height:21px;flex-shrink:0}small{color:#647771;display:block;line-height:2}strong{font-size:19px}section{margin-top:22px}</style></head><body><main><h1>Mrs Sofia — مدرسة العلوم</h1>${body}</main></body></html>`;
+const page=(body,title='مراجعة تحويل الطالب')=>`<!doctype html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${htmlSafe(title)} — Miss Sofia</title><style>body{font-family:Tahoma,Arial,sans-serif;background:#eff7f4;margin:0;padding:22px;color:#163f3a}main{max-width:640px;margin:30px auto;background:white;padding:30px;border:1px solid #d5ebe4;border-radius:20px;box-shadow:0 18px 50px #114b381a}h1{font-size:25px}p{line-height:2}.fact{background:#f0faf5;padding:15px;border-radius:12px;margin-bottom:16px}img{display:block;max-width:100%;max-height:450px;object-fit:contain;margin:12px auto;border:1px solid #ddd;border-radius:10px}button{font:700 16px Tahoma;cursor:pointer;padding:14px;border:0;border-radius:9px;width:100%;margin-top:10px}.accept{background:#0b806b;color:white}.reject{background:#ffeded;color:#ac2535}input[type=text]{width:95%;font:15px Tahoma;padding:11px;border:1px solid #ddd;border-radius:8px}.confirm{display:flex;align-items:flex-start;gap:11px;padding:14px;background:#ebf8ed;border:1px solid #acd7bb;border-radius:10px;font-weight:700;line-height:1.8}.confirm input{width:21px;height:21px;flex-shrink:0}small{color:#647771;display:block;line-height:2}strong{font-size:19px}section{margin-top:22px}</style></head><body><main><h1>Miss Sofia — مُدرِّسة العلوم</h1>${body}</main></body></html>`;
 
 export function attachEmailReview(app,{get,run,uid,now,loadProof,withTransaction,isCloudDatabase}){
  const reviewLimiter=rateLimit({windowMs:15*60*1000,limit:80,standardHeaders:'draft-8',legacyHeaders:false,message:'تم تجاوز عدد المحاولات، حاول مرة أخرى لاحقًا'});
@@ -53,7 +53,7 @@ export function attachEmailReview(app,{get,run,uid,now,loadProof,withTransaction
     <small>راجع وصول المبلغ داخل تطبيق فودافون كاش قبل الضغط على الموافقة. إرسال صورة وحدها لا يعني وصول الأموال.</small>
     <form method="POST" action="/payment-review/decision">
      <input type="hidden" name="token" value="${token}">
-     <label class="confirm"><input type="checkbox" name="confirmed_on_phone" value="yes"> تحققت بنفسي من وصول المبلغ المطلوب ومن رقم المُرسل على هاتف فودافون كاش الرسمي للمدرسة.</label>
+     <label class="confirm"><input type="checkbox" name="confirmed_on_phone" value="yes"> تحققت بنفسي من وصول المبلغ المطلوب ومن رقم المُرسل على هاتف فودافون كاش الرسمي للمُدرِّسة.</label>
      <button name="decision" value="approved" class="accept" type="submit">قبول الدفع بعد التحقق من وصول المبلغ</button>
      <section><label for="reason">سبب الرفض (اختياري)</label><input id="reason" name="reason" type="text" maxlength="250" placeholder="المبلغ لم يصل أو الإيصال غير واضح"></section>
      <button name="decision" value="rejected" class="reject" type="submit">رفض الإيصال</button>
@@ -77,7 +77,7 @@ export function attachEmailReview(app,{get,run,uid,now,loadProof,withTransaction
    const token=String(req.body?.token||'');
    const decision=String(req.body?.decision||'');
    if(!tokenValid(token)||!['approved','rejected'].includes(decision))return res.status(400).type('html').send(page('<p>طلب غير صالح.</p>'));
-    if(decision==='approved'&&req.body?.confirmed_on_phone!=='yes')return res.status(400).type('html').send(page('<p>لن يُقبل التحويل إلا بعد التأكيد صراحةً من هاتف المدرسة أن المبلغ وصل من رقم المرسل.</p>'));
+    if(decision==='approved'&&req.body?.confirmed_on_phone!=='yes')return res.status(400).type('html').send(page('<p>لن يُقبل التحويل إلا بعد التأكيد صراحةً من هاتف المُدرِّسة أن المبلغ وصل من رقم المرسل.</p>'));
    const configuredOrigin=process.env.APP_ORIGIN;
    if(req.headers.origin&&configuredOrigin&&req.headers.origin!==new URL(configuredOrigin).origin)return res.status(403).type('html').send(page('<p>مصدر الطلب غير موثوق.</p>'));
    const result=await withTransaction(async tx=>{
@@ -122,7 +122,7 @@ export function attachEmailReview(app,{get,run,uid,now,loadProof,withTransaction
   await run('INSERT INTO payment_review_links(id,payment_id,token_hash,recipient_email,expires_at,created_at) VALUES(?,?,?,?,?,?)',id,record.payment_id,sha(token),recipient,new Date(Date.now()+hours24).toISOString(),now());
   const url=String(process.env.APP_ORIGIN||'').replace(/\/$/,'')+'/payment-review?token='+token;
   try{
-   await sendAccountEmail({to:recipient,kind:'payment-review',subject:'Mrs Sofia — مراجعة تحويل اشتراك جديد',text:`وصل طلب تحويل يحتاج موافقة أو رفض منك.\nاسم الطالب: ${record.student_name}\nالكورس: ${record.course_title}\nالمبلغ: ${record.amount_egp} جنيه\nرقم الموبايل المرسل: ${record.sender_phone}\nالرابط يفتح صورة التحويل وزرّي الموافقة والرفض. لن يتفعّل الحجز إلا بعد قرارك.`,url});
+   await sendAccountEmail({to:recipient,kind:'payment-review',subject:'Miss Sofia — مراجعة تحويل اشتراك جديد',text:`وصل طلب تحويل يحتاج موافقة أو رفض منك.\nاسم الطالب: ${record.student_name}\nالكورس: ${record.course_title}\nالمبلغ: ${record.amount_egp} جنيه\nرقم الموبايل المرسل: ${record.sender_phone}\nالرابط يفتح صورة التحويل وزرّي الموافقة والرفض. لن يتفعّل الحجز إلا بعد قرارك.`,url});
    return true;
   }catch(e){await run('DELETE FROM payment_review_links WHERE id=?',id).catch(()=>{});throw e}
  };

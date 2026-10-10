@@ -177,7 +177,7 @@ const deliverAccountLink = async (user, purpose, token) => {
     to: user.email,
     url: link,
     kind: purpose,
-    subject: purpose === 'verify_email' ? 'تأكيد بريدك — Mrs Sofia' : 'تغيير كلمة المرور — Mrs Sofia',
+    subject: purpose === 'verify_email' ? 'تأكيد بريدك — Miss Sofia' : 'تغيير كلمة المرور — Miss Sofia',
     text: purpose === 'verify_email' ? 'اضغط على الرابط لتأكيد بريدك الإلكتروني وتفعيل حساب الطالب. صلاحية الرابط 30 دقيقة.' : 'اضغط على الرابط لتعيين كلمة مرور جديدة. صلاحية الرابط 20 دقيقة.'
   });
 };
@@ -497,7 +497,7 @@ app.post('/api/courses', auth, role('teacher', 'admin'), async (req, res) => {
   const id = uid(),
     teacherId = req.user.role === 'teacher' ? req.user.id : req.body?.teacher_id || req.user.id;
   if (!(await get("SELECT id FROM users WHERE id=? AND role IN ('teacher','admin') AND status='active'", teacherId))) return send(res, 400, {
-    error: 'حدد مدرسًا نشطًا أو مديرة المدرسة'
+    error: 'حدد مدرسًا نشطًا أو المُدرِّسة'
   });
   await run('INSERT INTO courses(id,title,description,subject,level,price,duration_minutes,capacity,teacher_id,status,created_at) VALUES(?,?,?,?,?,?,?,?,?,?,?)', id, values.title, values.description, values.subject, values.level, values.price, values.duration_minutes, values.capacity, teacherId, 'published', now());
   res.status(201).json({
@@ -529,7 +529,7 @@ app.patch('/api/courses/:id', auth, role('teacher', 'admin'), async (req, res) =
   if(Number(course.price)===0&&values.price>0&&Number(enrolled)>0)return send(res,409,{error:'لا يمكن تحويل دورة مجانية بها طلاب مقبولون إلى اشتراك مدفوع؛ أنشئي دورة مدفوعة جديدة للحفاظ على حقوق الطلاب'});
   const teacherId = req.user.role === 'admin' && req.body?.teacher_id !== undefined ? req.body.teacher_id : course.teacher_id;
   if (!(await get("SELECT id FROM users WHERE id=? AND role IN ('teacher','admin') AND status='active'", teacherId))) return send(res, 400, {
-    error: 'حدد مدرسًا نشطًا أو مديرة المدرسة'
+    error: 'حدد مدرسًا نشطًا أو المُدرِّسة'
   });
   await run('UPDATE courses SET title=?,description=?,subject=?,level=?,price=?,duration_minutes=?,capacity=?,teacher_id=? WHERE id=?', values.title, values.description, values.subject, values.level, values.price, values.duration_minutes, values.capacity, teacherId, course.id);
   res.json({
@@ -578,7 +578,7 @@ app.patch('/api/lessons/:id', auth, role('teacher', 'admin'), async (req, res) =
   if (!values) return send(res, 400, {
     error: 'حدد عنوانًا وموعدًا قادمًا ومدة صحيحة'
   });
-  if(req.body?.meet_url)return send(res,400,{error:'لا يلزم رابط Google Meet؛ البث متاح داخل موقع المدرسة'});
+  if(req.body?.meet_url)return send(res,400,{error:'لا يلزم رابط Google Meet؛ البث متاح داخل موقع المُدرِّسة'});
   await run('UPDATE lessons SET title=?,starts_at=?,duration_minutes=?,meet_url=? WHERE id=?', values.title, values.starts_at, values.duration_minutes,null,lesson.id);
   res.json({
     ok: true,
@@ -959,11 +959,11 @@ app.use((err, req, res, next) => {
 const bindHost = process.env.NODE_ENV === 'production' ? '0.0.0.0' : '127.0.0.1';
 await checkConnection();
 app.listen(PORT, bindHost, () => {
- console.log('Mrs Sofia server listening on ' + bindHost + ':' + PORT);
+ console.log('Miss Sofia server listening on ' + bindHost + ':' + PORT);
  if(process.env.NODE_ENV==='production'){
   // Logs contain boolean-only readiness; no secret, wallet number or user data.
   void readSchoolDiagnostics().then(result=>{
-   console.log('Mrs Sofia operations audit',JSON.stringify({
+   console.log('Miss Sofia operations audit',JSON.stringify({
     db:result.databaseConnected,livekit:result.livekitApiVerified,
     privateProofBucket:result.receiptBucketPrivateVerified,
     proofStorageConfigured:result.privateReceiptStorageConfigured,
@@ -973,6 +973,6 @@ app.listen(PORT, bindHost, () => {
     walletConfigured:result.walletConfigured,
     mailProviderConfigured:result.mailProviderConfigured
    }));
-  }).catch(()=>console.warn('Mrs Sofia operations audit unavailable'));
+  }).catch(()=>console.warn('Miss Sofia operations audit unavailable'));
  }
 });

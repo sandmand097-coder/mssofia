@@ -19,7 +19,7 @@ export default function AdminRenewals(){
  useEffect(()=>{load().catch(e=>{setReady(true);setError(e.message)})},[]);
  const decide=async(item,decision)=>{
   setError('');
-  if(decision==='approved'&&verified[item.id]!==true){setError('يجب تأكيد وصول التحويل الفعلي على هاتف المدرسة');return}
+  if(decision==='approved'&&verified[item.id]!==true){setError('يجب تأكيد وصول التحويل الفعلي على هاتف المُدرِّسة');return}
   if(decision==='rejected'&&String(reasons[item.id]||'').trim().length<5){setError('اكتب سبب الرفض أولًا');return}
   setBusy(item.id);
   try{
@@ -83,7 +83,7 @@ export default function AdminRenewals(){
    <p>هاتف التحويل: <strong dir="ltr">{p.sender_phone}</strong></p>
    {p.transfer_reference?.startsWith('MANUAL-')?<small>تم الاعتماد يدويًا دون صورة إيصال</small>:<a href={'/api/admin/renewals/'+p.id+'/proof'} target="_blank" rel="noopener noreferrer">عرض إيصال التجديد الخاص للإدارة</a>}
    <div className="sofia-payment-review-actions">
-    <label className="sofia-payment-check"><input type="checkbox" checked={verified[p.id]===true} onChange={e=>setVerified(v=>({...v,[p.id]:e.target.checked}))}/> راجعت وصول المبلغ فعليًا إلى حساب Vodafone Cash للمدرسة.</label>
+    <label className="sofia-payment-check"><input type="checkbox" checked={verified[p.id]===true} onChange={e=>setVerified(v=>({...v,[p.id]:e.target.checked}))}/> راجعت وصول المبلغ فعليًا إلى حساب Vodafone Cash للمُدرِّسة.</label>
     <button className="portal-primary-btn" disabled={busy===p.id||verified[p.id]!==true} onClick={()=>decide(p,'approved')}><CheckCircle2 size={16}/> اعتماد التجديد 30 يومًا</button>
     <label>سبب الرفض<input type="text" maxLength={500} value={reasons[p.id]||''} onChange={e=>setReasons(v=>({...v,[p.id]:e.target.value}))} placeholder="مثال: التحويل غير موجود على المحفظة"/></label>
     <button className="portal-soft-btn danger" disabled={busy===p.id} onClick={()=>decide(p,'rejected')}><AlertTriangle size={16}/> رفض الطلب</button>

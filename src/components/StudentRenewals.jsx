@@ -62,7 +62,7 @@ export default function StudentRenewals({bookings=[],refresh}){
     {pending?<p className="sofia-payment-wait">إيصال تجديدك قيد المراجعة؛ لا تحوّل مرة ثانية.</p>:
      !wallet?.enabled?<p>الدفع متوقف لحين التحقق من خصوصية الإيصالات.</p>:
      <>
-      <div className="sofia-payment-number"><span>رقم محفظة المدرسة المعتمد</span><strong dir="ltr">{wallet.number}</strong></div>
+      <div className="sofia-payment-number"><span>رقم محفظة المُدرِّسة المعتمد</span><strong dir="ltr">{wallet.number}</strong></div>
       <div className="sofia-payment-fields">
        <label>هاتف المرسل<input type="tel" dir="ltr" inputMode="numeric" maxLength={11} value={phone[b.id]||''} onChange={e=>setPhone(v=>({...v,[b.id]:e.target.value}))} placeholder="01012345678"/></label>
        <label>إيصال التجديد<input type="file" accept="image/png,image/jpeg,image/webp" onChange={e=>setProof(v=>({...v,[b.id]:e.target.files?.[0]}))}/></label>

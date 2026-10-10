@@ -1,4 +1,4 @@
-# Mrs Sofia — Student registration, manual payment and live classroom
+# Miss Sofia — Student registration, manual payment and live classroom
 
 ## Currently deployed
 The production website is https://mssofia.pages.dev and the protected backend is
@@ -10,7 +10,7 @@ the school has approved the privacy/guardian policies and confirmed the required
 external service settings.** There is no workaround that makes unverified children
 accounts or real money transfers safe.
 
-## How Mrs Sofia creates a course and begins a class
+## How Miss Sofia creates a course and begins a class
 1. Log in as the preapproved director via https://mssofia.pages.dev/login using Google.
 2. Open **لوحة الإدارة** > **دليل التشغيل** to review the launch checklist and workflow.
 3. Open **الدورات** > **دورة جديدة**. Enter the science subject, school stage,

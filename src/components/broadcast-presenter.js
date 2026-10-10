@@ -1,4 +1,4 @@
-// The classroom may be scheduled against a teacher account while Mrs Sofia's
+// The classroom may be scheduled against a teacher account while Miss Sofia's
 // administrator is the actual broadcaster. Select the connected director's
 // media first; fall back to the scheduled instructor for older session tokens.
 // Role metadata is written by the authenticated token endpoint, not by the UI.
