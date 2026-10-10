@@ -1,5 +1,6 @@
-// Inspects an actual publishing instructor in LiveKit without a schema change.
-// The result is for ENROLLED students only; their paid access is checked first.
+// Checks whether an authenticated, authorized teacher/director has entered the LiveKit room
+// and separately whether their camera, microphone or screen is actually broadcasting.
+// Call only after enrollment/payment checks. Ignore editable participant metadata.
 // Per-process short caching and in-flight deduplication prevent thundering herds.
 const mediaSources=new Set([1,2,3,4,'CAMERA','MICROPHONE','SCREEN_SHARE','SCREEN_SHARE_AUDIO']);
 export function isPublishingTrack(track){
@@ -12,7 +13,7 @@ export function createEarlyLiveInspector({
  const cache=new Map();
  const limit=256;
  async function inspect(lesson){
-  if(!roomService||!lesson?.id||!lesson.room_key||typeof lookupUser!=='function')return false;
+  if(!roomService||!lesson?.id||!lesson.room_key||typeof lookupUser!=='function')return {connected:false,publishing:false};
   const key=lesson.id+':'+lesson.room_key;
   const moment=clock();
   const existing=cache.get(key);
@@ -20,14 +21,17 @@ export function createEarlyLiveInspector({
   if(existing?.pending)return existing.pending;
   const evaluate=async()=>{
    const participants=await roomService.listParticipants(lesson.room_key);
+   const state={connected:false,publishing:false};
    for(const person of participants||[]){
-    if(!person?.identity||!Array.isArray(person.tracks)||!person.tracks.some(isPublishingTrack))continue;
-    // Never trust editable room metadata as proof of instructor authority.
+    if(!person?.identity)continue;
+    // Never trust editable LiveKit metadata. A student may imitate the school.
     const account=await lookupUser(person.identity);
-    if(account?.status!=='active')continue;
-    if(account.role==='admin'||account.role==='teacher'&&person.identity===lesson.teacher_id)return true;
+    if(account?.status!=='active'||!(account.role==='admin'||account.role==='teacher'&&person.identity===lesson.teacher_id))continue;
+    state.connected=true; // Merely opening the studio unlocks the private, non-media lobby.
+    if(Array.isArray(person.tracks)&&person.tracks.some(isPublishingTrack))state.publishing=true;
+    if(state.publishing)break;
    }
-   return false;
+   return state;
   };
   let timer;
   const pending=Promise.race([
@@ -44,5 +48,10 @@ export function createEarlyLiveInspector({
   if(cache.size>limit)cache.delete(cache.keys().next().value);
   return pending;
  }
- return{isBroadcasting:inspect,clear:()=>cache.clear()};
+ return{
+  getStatus:inspect,
+  isHostConnected:async lesson=>(await inspect(lesson)).connected,
+  isBroadcasting:async lesson=>(await inspect(lesson)).publishing,
+  clear:()=>cache.clear()
+ };
 }
