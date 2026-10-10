@@ -33,6 +33,7 @@ try{
     const reply=(status,data)=>route.fulfill({status,contentType:'application/json',body:JSON.stringify(data)});
     if(pathname==='/api/health')return reply(200,{ok:true,mode:role==='admin'?'admin':'full',registrationAvailable:false});
     if(pathname==='/api/auth/me')return reply(200,{user:{id:role==='admin'?'director':'approved-student',name:role==='admin'?'Mrs Sofia':'Science learner',role,status:'active',email:role+'@example.test'}});
+    if(pathname==='/api/lessons/future-lesson/token'&&route.request().method()==='POST')return reply(503,{error:'تعذر الاتصال التجريبي بخدمة البث'});
     if(pathname==='/api/lessons/fixture-lesson'||pathname==='/api/lessons/future-lesson')return reply(200,{lesson:{
      id:pathname.endsWith('future-lesson')?'future-lesson':'fixture-lesson',title:'حصة علوم تجريبية',course_title:'كورس علوم',
      starts_at:new Date(Date.now()+(pathname.endsWith('future-lesson')?40:8)*60000).toISOString(),duration_minutes:60,
@@ -65,8 +66,14 @@ try{
    await page.goto(origin+'/lesson/future-lesson',{waitUntil:'domcontentloaded',timeout:30000});
    const locked=page.getByRole('button',{name:role==='admin'?'فتح استوديو البث':'الدخول لمشاهدة الحصة'});
    await locked.waitFor({timeout:15000});
-   assert.equal(await locked.isDisabled(),true,'no broadcasting or student viewing before the session window');
-   await page.getByText(/تفتح غرفة البث قبل الموعد/).waitFor();
+   assert.equal(await locked.isDisabled(),role==='student','teachers can prepare early while students remain locked out');
+   if(role==='admin'){
+    await page.getByText(/الاستوديو متاح لكِ الآن للتحضير/).waitFor();
+    await locked.click();
+    await page.locator('.video-warning').filter({hasText:/تعذر الاتصال التجريبي/}).waitFor();
+   }else{
+    await page.getByText(/يُفتح دخول الطلاب قبل موعد الحصة/).waitFor();
+   }
    assert.deepEqual(errors,[],'page errors: '+errors.join('; ').slice(0,250));
    console.log('PASS '+role+' live classroom entry and director-only controls ('+width+'px)');
    await context.close();

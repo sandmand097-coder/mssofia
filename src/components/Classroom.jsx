@@ -152,9 +152,9 @@ export function MeetingStudio({connection,onDisconnected}){
 export function ClassroomPreview({isHost=false}){
  return <div className="sofia-class-preview" dir="rtl"><div className="sofia-class-preview-top"><span><span className="sofia-live-led"/> معاينة التصميم — البث غير مفعل</span><strong>Mrs Sofia • الفصل الافتراضي</strong></div><div className="sofia-class-preview-body"><div className="sofia-class-preview-stage"><span><Video size={52}/></span><h3>شاشة شرح المعلمة</h3><p>ستُعرض هنا كاميرا المعلمة أو الشاشة التي تشاركها مع الطلاب.</p></div><aside><h3>{isHost?'لوحة تحكم المعلمة':'مساحة الطالب'}</h3><p>{isHost?'رفع اليد • السماح بالصوت • قفل الجميع • استبعاد الطالب • إنهاء الحصة':'استمع للشرح، وشاهد الفيديو، وارفع يدك لطلب الكلام.'}</p><div><MicOff size={20}/><Users size={20}/><Hand size={20}/></div></aside></div></div>;
 }
-export default function Classroom({connection,onDisconnected}){
+export default function Classroom({connection,onDisconnected,onConnectionError}){
  return <div className="live-frame sofia-classroom-live">
-  <LiveKitRoom token={connection.token} serverUrl={connection.serverUrl} connect audio={false} video={false} options={{adaptiveStream:true,dynacast:true}} onDisconnected={onDisconnected} onError={e=>console.error('Classroom connection:',e?.message)} data-lk-theme="default">
+  <LiveKitRoom token={connection.token} serverUrl={connection.serverUrl} connect audio={false} video={false} options={{adaptiveStream:true,dynacast:true}} onDisconnected={onDisconnected} onError={e=>{console.error('Classroom connection:',e?.message);onConnectionError?.('تعذر الاتصال بغرفة البث. تحققي من الإنترنت ثم اضغطي «فتح استوديو البث» للمحاولة مرة أخرى.')}} data-lk-theme="default">
    <MeetingStudio connection={connection} onDisconnected={onDisconnected}/>
   </LiveKitRoom>
  </div>;

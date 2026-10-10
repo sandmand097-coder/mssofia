@@ -881,8 +881,11 @@ app.post('/api/lessons/:id/token', auth, asyncRoute(async (req, res) => {
   });
   const starts = Date.parse(l.starts_at),
     ends = starts + l.duration_minutes * 60000;
-  if (Date.now() < starts - 15 * 60000 || Date.now() > ends + 30 * 60000) return send(res, 403, {
-    error: 'غرفة البث متاحة من 15 دقيقة قبل الدرس وحتى 30 دقيقة بعد انتهائه'
+  const host = admin || teacher;
+  // The host can enter early for device rehearsal; students are still blocked
+  // until 15 minutes before the scheduled lesson. An ended room stays closed.
+  if (!Number.isFinite(starts) || Date.now() > ends + 30 * 60000 || (!host && Date.now() < starts - 15 * 60000)) return send(res, 403, {
+    error: host ? 'انتهى وقت الاستوديو لهذه الحصة' : 'دخول الطلاب متاح من 15 دقيقة قبل الدرس وحتى 30 دقيقة بعد انتهائه'
   });
   if (!process.env.LIVEKIT_URL || !process.env.LIVEKIT_API_KEY || !process.env.LIVEKIT_API_SECRET) return send(res, 503, {
     error: 'لم يتم إعداد مزود البث LiveKit بعد'
