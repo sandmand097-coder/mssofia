@@ -8,6 +8,7 @@ import path from 'node:path';
 import net from 'node:net';
 import http from 'node:http';
 import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
 import {fileURLToPath} from 'node:url';
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const temp=fs.mkdtempSync(path.join(os.tmpdir(),'sofia-early-live-'));
@@ -31,11 +32,20 @@ run('INSERT INTO bookings(id,student_id,course_id,status,created_at) VALUES(?,?,
 run('INSERT INTO bookings(id,student_id,course_id,status,created_at) VALUES(?,?,?,?,?)',uid(),unpaid.id,course,'approved',now());
 run('INSERT INTO payment_submissions(id,booking_id,student_id,course_id,amount_egp,transfer_reference,proof_key,status,submitted_at,reviewed_at,confirmed_on_phone) VALUES(?,?,?,?,?,?,?,?,?,?,?)',
  uid(),paidBooking,student.id,course,100,'VERIFIED-TEST-PAYMENT','test/receipt/not-a-real-file','approved',now(),now(),1);
+// Additional authorized children exist only inside this disposable database.
+const synthetic50=Array.from({length:49},()=>newUser('student'));
+for(const learner of synthetic50){
+ const bookingId=uid();
+ run('INSERT INTO bookings(id,student_id,course_id,status,created_at) VALUES(?,?,?,?,?)',bookingId,learner.id,course,'approved',now());
+ run('INSERT INTO payment_submissions(id,booking_id,student_id,course_id,amount_egp,transfer_reference,proof_key,status,submitted_at,reviewed_at,confirmed_on_phone) VALUES(?,?,?,?,?,?,?,?,?,?,?)',
+  uid(),bookingId,learner.id,course,100,'SURGE-'+uid(),'test/surge/'+uid(),'approved',now(),now(),1);
+}
 db.close();
-let published=false,connected=true;
+let listCalls=0,published=false,connected=true;
 const fake=http.createServer(async(req,res)=>{
  if(req.url!=='/twirp/livekit.RoomService/ListParticipants'){res.writeHead(404);res.end('{}');return}
  const body=[];for await(const x of req)body.push(x);
+ listCalls++;
  const data=JSON.parse(Buffer.concat(body).toString()||'{}');
  const ok=data.room===room;
  const participants=ok&&connected?[{identity:teacher.id,tracks:published?[{source:2,muted:false}]:[]}]:[];
@@ -47,10 +57,11 @@ const port=await new Promise((resolve,reject)=>{
  const s=net.createServer().once('error',reject);
  s.listen(0,'127.0.0.1',()=>{const n=s.address().port;s.close(()=>resolve(n))});
 });
+const testSecret=randomBytes(54).toString('hex');
 const app=spawn(process.execPath,['server/index.js'],{
  cwd:root,windowsHide:true,
  env:{...process.env,NODE_ENV:'test',PORT:String(port),
-  JWT_SECRET:randomBytes(54).toString('hex'),
+  JWT_SECRET:testSecret,
   LIVEKIT_URL:'ws://127.0.0.1:'+fakePort,
   LIVEKIT_API_KEY:'FAKE_SERVER_ONLY',LIVEKIT_API_SECRET:randomBytes(38).toString('hex')}
 });
@@ -96,6 +107,11 @@ try{
  ok((await call(path+'/token','POST',{},signed.teacher)).status===200,'teacher can rehearse without published media');
  ok((await call(path+'/token','POST',{},signed.admin)).status===200,'admin can control older teacher room');
  const wait=ms=>new Promise(r=>setTimeout(r,ms));
+ const cookies=synthetic50.map(learner=>'session='+jwt.sign({sub:learner.id,role:'student',version:0},testSecret,{algorithm:'HS256',expiresIn:'10m'}));
+ const before=listCalls;
+ const flood=await Promise.all(cookies.map(cookie=>call(path,'GET',null,cookie)));
+ ok(flood.every(r=>r.status===200&&r.data.studentRoomOpen&&r.data.hostPublishing===false),'49 additional paying students can enter no-media lobby during large arrival wave');
+ ok(listCalls-before<=1,'50-player lobby wave coalesces LiveKit host-presence requests');
  published=true;
  await wait(5400);
  const broadcasting=await call(path,'GET',null,signed.student);
