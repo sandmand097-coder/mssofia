@@ -143,7 +143,7 @@ try{
  ok((await call('/bookings/'+manualBooking,'PATCH',{status:'rejected'},a)).status===409,'reconciled payment cannot be revoked by stale booking reject');
  ok((await call('/bookings/'+uid(),'PATCH',{status:'approved'},a)).status===404,'invalid booking identifier has no impact');
  ok((await call('/bookings/'+manualBooking,'PATCH',{status:['approved']},a)).status===400,'array-typed status injection is rejected');
- ok((await call('/bookings/'+manualBooking,'PATCH',{status:'approved',price:0,confirmedOnPhone:true},s)).status===403,'forged body cannot promote student's booking privileges');
+ ok((await call('/bookings/'+manualBooking,'PATCH',{status:'approved',price:0,confirmedOnPhone:true},s)).status===403,'forged body cannot promote student booking privileges');
  ok((await call('/bookings/'+encodeURIComponent("anything' OR 1=1 --"),'PATCH',{status:'approved'},a)).status===404,'SQL injection string cannot match a booking');
  const csrf=await fetch(base+'/bookings/'+manualBooking,{method:'PATCH',headers:{Cookie:a,Origin:'https://attacker.example','Content-Type':'application/json'},body:JSON.stringify({status:'rejected'})});
  ok(csrf.status===403,'cross-site origin cannot send authenticated booking mutations');
