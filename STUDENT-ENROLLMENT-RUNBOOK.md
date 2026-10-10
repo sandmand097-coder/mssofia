@@ -70,7 +70,7 @@ one parent requires a deliberately planned database schema extension.
   sender in Resend/SMTP, configure RESEND_API_KEY or SMTP_HOST and MAIL_FROM,
   and verify outbound delivery and reset links.
 - For real Vodafone Cash: configure a verified VODAFONE_CASH_NUMBER, the restricted
-  private storage bucket and service credentials on Render. Verify storage upload,
+  private storage bucket and SUPABASE_SECRET_KEY on Render (use a new sb_secret_ API key, never share it in chat). Verify storage upload,
   review, private visibility and deletion; never expose service-role keys to Pages.
 - For live classes: verify room creation, teacher/student streaming across two
   separate browsers/devices, moderator permissions, and webhook attendance.

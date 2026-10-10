@@ -32,5 +32,7 @@ status=schoolReadiness({...env,GOOGLE_ADMIN_LOGIN_ENABLED:'false',GOOGLE_STUDENT
 assert.equal(status.adminGoogleEnabled,false);
 assert.equal(status.studentGoogleEnabled,false);
 assert.equal(status.paymentUploadConfigured,false);
+status=schoolReadiness({...env,SUPABASE_SERVICE_ROLE_KEY:'',SUPABASE_SECRET_KEY:'sb_secret_mock-secret'});
+assert.equal(status.privateReceiptStorageConfigured,true,'modern server secret keys supported');
 assert.ok(!Object.keys(status).some(key=>/secret|apiKey|token|serviceRole|databaseUrl|connectionString/i.test(key)),'no secrets or contact details leaked in readiness output');
 console.log('PASS administrator deployment readiness flags and no-secret responses');

@@ -10,7 +10,7 @@ export function schoolReadiness(env=process.env){
  const senderConfigured=Boolean(env.MAIL_FROM&&(env.RESEND_API_KEY||env.SMTP_HOST));
  const walletNumberConfigured=/^01[0125]\d{8}$/.test(env.VODAFONE_CASH_NUMBER||'');
  const receiptStorageConfigured=Boolean(
-  /^https:\/\/[^/]+\.supabase\.co\/?$/.test(env.SUPABASE_URL||'')&&env.SUPABASE_SERVICE_ROLE_KEY
+  /^https:\/\/[^/]+\.supabase\.co\/?$/.test(env.SUPABASE_URL||'')&&(env.SUPABASE_SECRET_KEY||env.SUPABASE_SERVICE_ROLE_KEY)
  );
  const livestreamConfigured=Boolean(
   /^wss:\/\/[^/]+\.livekit\.cloud\/?$/i.test(env.LIVEKIT_URL||'')

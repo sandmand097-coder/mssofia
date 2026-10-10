@@ -47,6 +47,12 @@ assert.ok(!JSON.stringify(healthy).includes('01012345678'));
 assert.ok(!JSON.stringify(healthy).includes('director@example.com'));
 const wrongProject=await verifyPrivateStorage({...env,SUPABASE_URL:'https://jtluslevdmcpxxkngomj.supabase.co'},()=>{throw Error('Wrong project should be denied before fetching')});
 assert.equal(wrongProject,false);
+const modern=await verifyPrivateStorage({...env,SUPABASE_SECRET_KEY:'sb_secret_local-test-not-real',SUPABASE_SERVICE_ROLE_KEY:''},async(url,{headers})=>{
+ assert.equal(headers.apikey,'sb_secret_local-test-not-real');
+ assert.equal(Object.hasOwn(headers,'Authorization'),false,'new Supabase secret API keys must use apikey, not Bearer');
+ return{ok:true,json:async()=>({id:'mrsofia-payment-proofs',name:'mrsofia-payment-proofs',public:false})};
+});
+assert.equal(modern,true,'new secret API keys authenticate the private bucket correctly');
 const publicBucket=await verifyPrivateStorage(env,async()=>({ok:true,json:async()=>({id:'mrsofia-payment-proofs',name:'mrsofia-payment-proofs',public:true})}));
 assert.equal(publicBucket,false,'a public receipt bucket never passes');
 const missing=await testProductionConnections({

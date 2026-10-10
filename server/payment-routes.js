@@ -20,7 +20,12 @@ const receiptUpload=multer({storage:multer.memoryStorage(),limits:{fileSize:uplo
 const json=(res,status,data)=>res.status(status).json(data);
 const isScience=s=>/(علوم|فيزياء|أحياء|كيمياء|science|physics|biology|chemistry)/i.test(s||'');
 const requiredAmount=c=>Number(c.price)<=0?0:isScience(c.subject)?FIRST_MONTH_EGP:Number(c.price);
-const prodStorage=()=>Boolean(process.env.SUPABASE_URL&&process.env.SUPABASE_SERVICE_ROLE_KEY);
+const storageKey=()=>process.env.SUPABASE_SECRET_KEY||process.env.SUPABASE_SERVICE_ROLE_KEY;
+const storageAuthHeaders=()=>{
+ const key=storageKey();
+ return key?.startsWith('sb_secret_')?{apikey:key}:{apikey:key,Authorization:'Bearer '+key};
+};
+const prodStorage=()=>Boolean(process.env.SUPABASE_URL&&storageKey());
 const devStorage=()=>process.env.NODE_ENV!=='production'&&!!process.env.TEST_PAYMENT_UPLOAD_DIR;
 const enabled=()=>Boolean(/^01[0125]\d{8}$/.test(process.env.VODAFONE_CASH_NUMBER||'')&&(prodStorage()||devStorage()));
 const storageReady=createPaymentStorageGate({configured:enabled,development:devStorage,verify:()=>verifyPrivateStorage(process.env)});
@@ -29,21 +34,21 @@ const storageBase=()=>process.env.SUPABASE_URL.replace(/\/$/,'');
 async function saveProof(key,bytes){
  if(devStorage()){const dest=path.join(process.env.TEST_PAYMENT_UPLOAD_DIR,key+'.webp');await mkdir(path.dirname(dest),{recursive:true});await writeFile(dest,bytes,{flag:'wx',mode:0o600});return}
  const url=storageBase()+'/storage/v1/object/'+BUCKET+'/'+key+'.webp';
- const response=await fetch(url,{method:'POST',headers:{apikey:process.env.SUPABASE_SERVICE_ROLE_KEY,Authorization:'Bearer '+process.env.SUPABASE_SERVICE_ROLE_KEY,'Content-Type':'image/webp','x-upsert':'false'},body:bytes});
+ const response=await fetch(url,{method:'POST',headers:{...storageAuthHeaders(),'Content-Type':'image/webp','x-upsert':'false'},body:bytes});
  if(!response.ok)throw Error('Private image storage failed: '+response.status);
 }
 async function loadProof(key){
  if(!/^[a-f0-9-]{36}\/[a-f0-9-]{36}$/.test(key))throw Error('Invalid storage key');
  if(devStorage())return await readFile(path.join(process.env.TEST_PAYMENT_UPLOAD_DIR,key+'.webp'));
  const url=storageBase()+'/storage/v1/object/'+BUCKET+'/'+key+'.webp';
- const response=await fetch(url,{headers:{apikey:process.env.SUPABASE_SERVICE_ROLE_KEY,Authorization:'Bearer '+process.env.SUPABASE_SERVICE_ROLE_KEY}});
+ const response=await fetch(url,{headers:storageAuthHeaders()});
  if(!response.ok)throw Error('Private image read failed: '+response.status);
  return Buffer.from(await response.arrayBuffer());
 }
 async function removeProof(key){
  if(devStorage())return unlink(path.join(process.env.TEST_PAYMENT_UPLOAD_DIR,key+'.webp')).catch(()=>{});
  if(!prodStorage())return;
- await fetch(storageBase()+'/storage/v1/object/'+BUCKET+'/'+key+'.webp',{method:'DELETE',headers:{apikey:process.env.SUPABASE_SERVICE_ROLE_KEY,Authorization:'Bearer '+process.env.SUPABASE_SERVICE_ROLE_KEY}}).catch(()=>{});
+ await fetch(storageBase()+'/storage/v1/object/'+BUCKET+'/'+key+'.webp',{method:'DELETE',headers:storageAuthHeaders()}).catch(()=>{});
 }
 export function attachPaymentRoutes(app,{auth,role,get,all,run,uid,now}){
  const onlyStudent=role('student'),onlyAdmin=role('admin');

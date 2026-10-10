@@ -14,7 +14,8 @@ function withTimeout(promise,ms=9000){
 }
 
 export async function verifyPrivateStorage(env=process.env,request=fetch){
- if(!env.SUPABASE_SERVICE_ROLE_KEY||!env.SUPABASE_URL)return false;
+ const key=env.SUPABASE_SECRET_KEY||env.SUPABASE_SERVICE_ROLE_KEY;
+ if(!key||!env.SUPABASE_URL)return false;
  let origin;
  try{
   const u=new URL(env.SUPABASE_URL);
@@ -24,7 +25,7 @@ export async function verifyPrivateStorage(env=process.env,request=fetch){
  try{
   const response=await request(origin+'/storage/v1/bucket/'+PRIVATE_BUCKET,{
    method:'GET',
-   headers:{apikey:env.SUPABASE_SERVICE_ROLE_KEY,Authorization:'Bearer '+env.SUPABASE_SERVICE_ROLE_KEY},
+   headers:key.startsWith('sb_secret_')?{apikey:key}:{apikey:key,Authorization:'Bearer '+key},
    signal:AbortSignal.timeout(8000)
   });
   if(!response.ok)return false;
