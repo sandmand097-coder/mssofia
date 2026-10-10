@@ -10,16 +10,16 @@ export const formatDateTime=d=>new Intl.DateTimeFormat('ar-EG',{day:'numeric',mo
 export const dashboardPath=user=>user?.role==='admin'?'/admin':user?.role==='teacher'?'/teacher':'/student';
 
 export function BrandLogo({light=false}){
- return <Link className={'sofia-logo '+(light?'sofia-logo-light':'')} to="/" aria-label="Mrs Sofia - مدرسة العلوم - الرئيسية">
+ return <Link className={'sofia-logo '+(light?'sofia-logo-light':'')} to="/" aria-label="مس صوفيا للعلوم — الرئيسية">
   <span className="sofia-logo-symbol"><FlaskConical size={25} strokeWidth={2.3}/><i/></span>
-  <span className="sofia-logo-copy"><b>mrs<span>sofia</span><em>.</em></b><small>مدرسة العلوم</small></span>
+  <span className="sofia-logo-copy"><b>mrs<span>sofia</span><em>.</em></b><small>مس صوفيا للعلوم</small></span>
  </Link>;
 }
 
 export function BrandHeader({user,logout,previewMode=false,adminOnly=false}){
  const [open,setOpen]=useState(false),location=useLocation();
  useEffect(()=>setOpen(false),[location.pathname,location.hash]);
- const links=[{to:'/',label:'الرئيسية',end:true},{to:'/courses',label:'الكورسات'},{to:'/#method',label:'طريقة التعلم',anchor:true},{to:'/#about',label:'عن Mrs Sofia',anchor:true}];
+ const links=[{to:'/',label:'الرئيسية',end:true},{to:'/courses',label:'الكورسات'},{to:'/#method',label:'طريقة التعلم',anchor:true},{to:'/#about',label:'عن مس صوفيا',anchor:true}];
  return <header className="sofia-header"><div className="sofia-container sofia-nav">
   <BrandLogo/>
   <nav className={'sofia-nav-links '+(open?'is-open':'')} aria-label="القائمة الرئيسية">
@@ -36,12 +36,12 @@ export function BrandHeader({user,logout,previewMode=false,adminOnly=false}){
 export function BrandFooter({previewMode=false}){
  return <footer className="sofia-footer"><div className="sofia-container">
   <div className="sofia-footer-main">
-   <div className="sofia-footer-about"><BrandLogo light/><p>العلوم أسهل لما نفهمها. مكان واحد للتعلّم، التجربة، وتنظيم رحلتك مع مدرسة العلوم Mrs Sofia.</p></div>
+   <div className="sofia-footer-about"><BrandLogo light/><p>العلوم أسهل لما نفهمها. مكان واحد للتعلّم، التجربة، وتنظيم رحلتك مع مس صوفيا للعلوم.</p></div>
    <div><h4>استكشف</h4><Link to="/">الرئيسية</Link><Link to="/courses">الكورسات المتاحة</Link><a href="/#method">طريقة التعلم</a><Link to="/privacy">الخصوصية وحماية الطلاب</Link><Link to="/terms">شروط الاشتراك</Link></div>
    <div><h4>{previewMode?'الإطلاق التعريفي':'حسابك'}</h4>{previewMode?<><a href="/#offer">عرض الشهر الأول</a><Link to="/courses">المواد والدورات</Link><small>فتح حسابات الطلاب قريبًا</small></>:<><Link to="/login">تسجيل الدخول</Link><Link to="/register">إنشاء حساب</Link><Link to="/dashboard">لوحة التحكم</Link></>}</div>
    <div className="sofia-footer-note"><span className="sofia-footer-mini"><Atom size={20}/></span><b>التواصل مع إدارة مدرسة العلوم</b><a href="tel:01027661546" dir="ltr" style={{fontWeight:900,fontSize:20,color:'#d9f7ed',display:'inline-block',margin:'8px 0'}}>01027661546</a><small>رقم التواصل والاستفسارات. لا ترسل أي تحويل مالي قبل ظهور طريقة دفع مفعّلة وآمنة داخل حساب الطالب؛ قبول الاشتراك بقرار الإدارة فقط.</small></div>
   </div>
-  <div className="sofia-footer-bottom"><span>© {new Date().getFullYear()} Mrs Sofia — مدرسة العلوم. جميع الحقوق محفوظة.</span><span>Made for curious minds <span aria-hidden="true">✦</span></span></div>
+  <div className="sofia-footer-bottom"><span>© {new Date().getFullYear()} مس صوفيا للعلوم | Mrs Sofia. جميع الحقوق محفوظة.</span><span>Made for curious minds <span aria-hidden="true">✦</span></span></div>
  </div></footer>;
 }
 
