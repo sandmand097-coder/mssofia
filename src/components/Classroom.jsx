@@ -1,4 +1,5 @@
-import React,{useEffect,useMemo,useState} from 'react';
+import React,{useCallback,useEffect,useMemo,useRef,useState} from 'react';
+import {videoPresentation} from './video-presentation.js';
 import {
  LiveKitRoom,RoomAudioRenderer,StartAudio,VideoTrack,useTracks,
  useParticipants,useRoomContext,useLocalParticipant,useLocalParticipantPermissions,useChat
@@ -21,8 +22,32 @@ const api=async(path,opts={})=>{
  return data;
 };
 const modes={microphone:'مسموح بالصوت',camera:'مسموح بالصوت والكاميرا'};
-function VideoSurface({refTrack,emptyText,icon:Icon=Video,small=false}){
- return <div className={'sofia-video-surface '+(small?'small':'')}>
+function VideoSurface({refTrack,emptyText,icon:Icon=Video,small=false,onDimensions}){
+ const element=useRef(null);
+ useEffect(()=>{
+  if(!refTrack||!onDimensions||!element.current)return;
+  const container=element.current;
+  let current=null;
+  const update=()=>{
+   const width=current?.videoWidth,height=current?.videoHeight;
+   if(width>0&&height>0)onDimensions({width,height});
+  };
+  const sync=()=>{
+   const video=container.querySelector('video');
+   if(video===current)return;
+   if(current){current.removeEventListener('loadedmetadata',update);current.removeEventListener('resize',update);}
+   current=video;
+   if(current){current.addEventListener('loadedmetadata',update);current.addEventListener('resize',update);update();}
+  };
+  const observer=new MutationObserver(sync);
+  observer.observe(container,{childList:true,subtree:true});
+  sync();
+  return()=>{
+   observer.disconnect();
+   if(current){current.removeEventListener('loadedmetadata',update);current.removeEventListener('resize',update);}
+  };
+ },[refTrack?.publication?.trackSid,refTrack?.source,onDimensions]);
+ return <div ref={element} className={'sofia-video-surface '+(small?'small':'')}>
   {refTrack?<VideoTrack trackRef={refTrack} manageSubscription={false}/>:<div className="sofia-video-idle"><span><Icon size={small?22:51} strokeWidth={1.5}/></span><strong>{emptyText}</strong>{!small&&<small>الصوت والفيديو هيظهروا هنا وقت الشرح</small>}</div>}
  </div>;
 }
@@ -42,6 +67,14 @@ export function MeetingStudio({connection,onDisconnected}){
  const camera=videoTracks.find(t=>t.participant.identity===hostId&&t.source===Track.Source.Camera);
  const screen=videoTracks.find(t=>t.participant.identity===hostId&&t.source===Track.Source.ScreenShare);
  const stage=screen||camera;
+ const [stageDimensions,setStageDimensions]=useState(null);
+ const [pictureDimensions,setPictureDimensions]=useState(null);
+ const stageLayout=useMemo(()=>videoPresentation(stageDimensions?.width,stageDimensions?.height),[stageDimensions]);
+ const pictureLayout=useMemo(()=>videoPresentation(pictureDimensions?.width,pictureDimensions?.height),[pictureDimensions]);
+ const setVideoDimensions=useCallback(dimensions=>setStageDimensions(previous=>previous?.width===dimensions.width&&previous?.height===dimensions.height?previous:dimensions),[]);
+ const setPictureVideoDimensions=useCallback(dimensions=>setPictureDimensions(previous=>previous?.width===dimensions.width&&previous?.height===dimensions.height?previous:dimensions),[]);
+ useEffect(()=>setStageDimensions(null),[stage?.publication?.trackSid,stage?.source]);
+ useEffect(()=>setPictureDimensions(null),[camera?.publication?.trackSid]);
  const audioStreaming=audioTracks.some(t=>t.participant.identity===hostId&&!t.publication?.isMuted);
  const liveNow=host?(isMicrophoneEnabled||isCameraEnabled||isScreenShareEnabled):(Boolean(stage)||audioStreaming);
  const [roomInfo,setRoomInfo]=useState(null),[busy,setBusy]=useState(false),[error,setError]=useState(''),[tab,setTab]=useState('participants'),[query,setQuery]=useState(''),[listLimit,setListLimit]=useState(40),[announcement,setAnnouncement]=useState(''),[onlineCount,setOnlineCount]=useState(1),[expanded,setExpanded]=useState(false);
@@ -109,11 +142,11 @@ export function MeetingStudio({connection,onDisconnected}){
  const announcements=chatMessages.filter(m=>m.from?.identity===hostId).slice(-35);
  const view=(
   <div className="sofia-meeting-layout">
-   <section className="sofia-meeting-main">
+   <section className={"sofia-meeting-main "+(stage?"has-video":"")}>
     <div className="sofia-meeting-info"><div className="sofia-meeting-live"><span className="sofia-live-led"/> {liveNow?'البث مباشر • Mrs Sofia':host?'استوديو المعلمة جاهز':'في انتظار بدء بث المعلمة'}</div><div className="sofia-meeting-count"><Users size={16}/> {onlineCount.toLocaleString('ar-EG')} مشارك</div></div>
-    <div className="sofia-meeting-stage">
-     <VideoSurface refTrack={stage} emptyText={host?'شغّلي الكاميرا أو مشاركة الشاشة للشرح':audioStreaming?'صوت المعلمة مباشر — في انتظار الفيديو':'في انتظار بث المعلمة'} icon={host?Camera:BookOpen}/>
-     {screen&&camera&&<div className="sofia-meeting-picture"><VideoSurface refTrack={camera} small emptyText="المعلمة"/></div>}
+    <div className={'sofia-meeting-stage '+(stage?'has-video is-'+stageLayout.orientation:'')} style={stage?{'--sofia-source-aspect':stageLayout.ratio}:undefined}>
+     <VideoSurface refTrack={stage} onDimensions={setVideoDimensions} emptyText={host?'شغّلي الكاميرا أو مشاركة الشاشة للشرح':audioStreaming?'صوت المعلمة مباشر — في انتظار الفيديو':'في انتظار بث المعلمة'} icon={host?Camera:BookOpen}/>
+     {screen&&camera&&<div className="sofia-meeting-picture" style={{'--sofia-pip-aspect':pictureLayout.ratio}}><VideoSurface refTrack={camera} onDimensions={setPictureVideoDimensions} small emptyText="المعلمة"/></div>}
      <div className="sofia-meeting-stage-bottom"><span><Radio size={15}/> {screen?'مشاركة شاشة المعلمة':camera?'فيديو المعلمة':'جاهز للدرس'}</span><span>{connection.isHost?'أنتِ تديرين الفصل':'تستمع إلى درس Mrs Sofia'}</span></div>
     </div>
     {host&&<div className="sofia-director-broadcast" role="status"><div><strong>{liveNow?'البث قيد التشغيل':'أنتِ المعلمة المسؤولة عن البث'}</strong><small>{liveNow?'يمكنك تغيير الكاميرا أو الصوت أو مشاركة الشاشة، والطلاب يشاهدون ما تنشرينه فقط.':'اضغطي «بدء البث» لتشغيل الكاميرا والميكروفون بموافقتك. ويمكنك استخدام مشاركة الشاشة بدل الكاميرا.'}</small></div>{!liveNow&&<button type="button" className="sofia-director-start" onClick={startTeaching} disabled={busy}><Radio size={17}/>{busy?'جارٍ تشغيل الأجهزة...':'ابدئي البث الآن'}</button>}</div>}
