@@ -398,6 +398,26 @@ app.get('/api/courses/:id', async (req, res) => {
     lessons: await all('SELECT id,course_id,title,starts_at,duration_minutes,status FROM lessons WHERE course_id=? ORDER BY starts_at', c.id)
   });
 });
+app.get('/api/admin/subscriptions',auth,role('admin'),asyncRoute(async(req,res)=>{
+ const rows=await all(`SELECT b.id,b.student_id,b.course_id,b.status AS booking_status,
+  u.name AS student_name,u.email AS student_email,c.title AS course_title,c.price AS course_price,
+  p.status AS payment_status,p.reviewed_at AS payment_reviewed_at,p.confirmed_on_phone,
+  ${renewalEndSelect('b')}
+  FROM bookings b JOIN users u ON u.id=b.student_id
+  JOIN courses c ON c.id=b.course_id
+  LEFT JOIN payment_submissions p ON p.booking_id=b.id
+  WHERE b.status='approved' ORDER BY b.created_at DESC LIMIT 1000`);
+ const memberships=rows.map(row=>({...row,...accessView(row)}));
+ const counts={active:0,expiringSoon:0,expired:0,unpaid:0};
+ for(const m of memberships){
+  if(m.live_access_active){
+   counts.active++;
+   if(Number.isFinite(m.live_access_days_remaining)&&m.live_access_days_remaining<=5)counts.expiringSoon++;
+  }else if(m.live_access_status==='expired')counts.expired++;
+  else counts.unpaid++;
+ }
+ res.set('Cache-Control','no-store, private').json({memberships,counts});
+}));
 app.get('/api/student/dashboard', auth, role('student'), async (req, res) => {
   const id = req.user.id,
     asOf = now();
