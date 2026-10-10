@@ -245,10 +245,13 @@ export function MeetingStudio({connection,onDisconnected}){
     {host&&<div className="sofia-meeting-professional">
       <div className="sofia-meeting-settings-head">
        <strong><SlidersHorizontal size={18}/> إعدادات الاستوديو</strong>
-       <button type="button" className="sofia-meeting-sound-toggle" onClick={()=>{setJoinSound(v=>!v);if(!joinSound)void playArrivalSound();}}>
-        {joinSound?<Bell size={15}/>:<BellOff size={15}/>}
-        {joinSound?'نغمة دخول الطلاب: مفعلة':'نغمة دخول الطلاب: صامتة'}
-       </button>
+       <div className="sofia-meeting-alert-tools">
+        <button type="button" className="sofia-meeting-sound-toggle" onClick={()=>setJoinSound(v=>!v)}>
+         {joinSound?<Bell size={15}/>:<BellOff size={15}/>}
+         {joinSound?'تنبيه الدخول: مفعّل':'تنبيه الدخول: صامت'}
+        </button>
+        <button type="button" className="sofia-meeting-sound-toggle" onClick={()=>void playArrivalSound()}><Volume1 size={15}/> تجربة النغمة</button>
+       </div>
       </div>
       <form className="sofia-meeting-duration" onSubmit={updateDuration}>
        <label htmlFor="lesson-live-duration"><TimerReset size={17}/> مدة الحصة (دقيقة)</label>
