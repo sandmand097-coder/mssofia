@@ -958,17 +958,18 @@ app.post('/api/lessons/:id/token',auth,classroomJoinLimiter,admission.middleware
   const starts = Date.parse(l.starts_at),
     ends = starts + l.duration_minutes * 60000;
   const host = admin || teacher;
-  // Opening the instructor studio is enough to admit verified learners;
-  // the browser holds them in a no-media waiting lobby until publication.
-  // A hostile client cannot bypass this server-side check or paid membership.
+  // Opening the instructor's studio exposes only a website waiting lobby.
+  // To protect the free media allowance, early WebRTC tokens are minted ONLY
+  // after the authorized presenter publishes media, never while merely idle.
+  // Payment/subscription and room bans were verified by roomPermitted above.
   const timestamp=Date.now();
   const needsEarlyCheck=!host&&Number.isFinite(starts)&&timestamp<starts-15*60000;
-  const hostInRoom=needsEarlyCheck&&timestamp<=ends+30*60000
-   ?await earlyLiveInspector.isHostConnected(l):false;
+  const liveMedia=needsEarlyCheck&&timestamp<=ends+30*60000
+   ?await earlyLiveInspector.isBroadcasting(l):false;
   if (!Number.isFinite(starts) || timestamp > ends + 30 * 60000
-    || (needsEarlyCheck&&!hostInRoom)) return send(res, 403, {
-    code:needsEarlyCheck?'LESSON_NOT_OPEN_YET':'LESSON_WINDOW_CLOSED',
-    error:host?'انتهى وقت الاستوديو لهذه الحصة':'قاعة الحصة لم تُفتح بعد. يُفتح الدخول عند دخول المعلمة للاستوديو أو قبل موعد الحصة بـ15 دقيقة.'
+    || (needsEarlyCheck&&!liveMedia)) return send(res, 403, {
+    code:needsEarlyCheck?'LESSON_NOT_BROADCASTING':'LESSON_WINDOW_CLOSED',
+    error:host?'انتهى وقت الاستوديو لهذه الحصة':'أنت في قاعة الانتظار؛ يبدأ اتصال الفيديو فور بدء صوت أو كاميرا المعلمة.'
   });
   if (!process.env.LIVEKIT_URL || !process.env.LIVEKIT_API_KEY || !process.env.LIVEKIT_API_SECRET) return send(res, 503, {
     error: 'لم يتم إعداد مزود البث LiveKit بعد'
