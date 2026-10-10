@@ -8,6 +8,7 @@ import sharp from 'sharp';
 import {withTransaction,isCloudDatabase} from './db-adapter.js';
 import {verifyPrivateStorage} from './deployment-diagnostics.js';
 import {createPaymentStorageGate} from './payment-storage-gate.js';
+import {countCurrentMembers} from './monthly-access.js';
 
 export const FIRST_MONTH_EGP=100;
 export const REGULAR_MONTH_EGP=170;
@@ -126,7 +127,7 @@ export function attachPaymentRoutes(app,{auth,role,get,all,run,uid,now}){
     if(!['approved','rejected'].includes(decision))return{http:400,error:'حدد الموافقة أو الرفض'};
     if(decision==='approved'){
      if(req.body?.confirmedOnPhone!==true)return{http:400,error:'يجب التأكيد بأن المبلغ وصل فعليًا إلى تطبيق فودافون كاش على هاتف المدرسة'};
-     const used=(await tx.get("SELECT COUNT(*) AS n FROM bookings WHERE course_id=? AND status='approved'",row.course_id)).n;
+     const used=await countCurrentMembers(tx.all,row.course_id);
      if(Number(used)>=Number(row.capacity))return{http:409,error:'المقاعد اكتملت؛ تواصل مع ولي الأمر قبل الموافقة'};
      const evidence=await tx.run("UPDATE payment_submissions SET status='approved',confirmed_on_phone=TRUE,reviewed_by=?,reviewed_at=?,review_note=? WHERE id=? AND status='pending'",req.user.id,now(),'تم التأكد من وصول المبلغ إلى هاتف المدرسة',row.id);
      if(!evidence.changes)throw Error('Concurrent payment review conflict');

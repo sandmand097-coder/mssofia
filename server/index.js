@@ -15,6 +15,7 @@ import {schoolReadiness} from './release-readiness.js';
 import {createDiagnosticReader} from './deployment-diagnostics.js';
 import {attachAdminOnlyGuard} from './admin-only.js';
 import {attachPaymentRoutes} from './payment-routes.js';
+import {evaluateMonthlyAccess,accessView,countCurrentMembers} from './monthly-access.js';
 import { get, all, run, uid, now, publicUser, checkConnection } from './db-adapter.js';
 const app = express(),
   PORT = Number(process.env.PORT || 4010);
@@ -51,7 +52,7 @@ app.post('/api/webhooks/livekit', express.raw({
     if (event.event === 'participant_joined' && event.room?.name && event.participant?.identity) {
       const l = await get('SELECT l.id,l.course_id,c.teacher_id FROM lessons l JOIN courses c ON c.id=l.course_id WHERE l.room_key=?', event.room.name);
       const user = await get('SELECT id,role,status FROM users WHERE id=?', event.participant.identity);
-      const permitted = l && user && user.status === 'active' && (user.role === 'admin' || user.role === 'teacher' && l.teacher_id === user.id || user.role === 'student' && (await get("SELECT id FROM bookings WHERE course_id=? AND student_id=? AND status='approved'", l.course_id, user.id)));
+      const permitted = l && user && user.status === 'active' && (user.role === 'admin' || user.role === 'teacher' && l.teacher_id === user.id || user.role === 'student' && (await studentCanStream(l.course_id,user.id)));
       if (permitted) await run('INSERT OR IGNORE INTO attendance(id,lesson_id,user_id,joined_at) VALUES(?,?,?,?)', uid(), l.id, user.id, now());
     }
     return res.json({
@@ -139,7 +140,7 @@ const parseCourse = input => {
     duration_minutes: Number(input.duration_minutes)
   };
 };
-const validMeetLink=url=>!url||/^https:\/\/meet\.google\.com\/[a-z]{3}-[a-z]{4}-[a-z]{3}\/?$/i.test(url);
+
 const parseLesson = input => {
   if (!input || !valid(input.title, 160) || typeof input.starts_at !== 'string' || !Number.isFinite(Date.parse(input.starts_at)) || Date.parse(input.starts_at) < Date.now() - 60000 || !intRange(input.duration_minutes, 15, 240)) return null;
   return {
@@ -149,6 +150,11 @@ const parseLesson = input => {
   };
 };
 const courseQuery = `SELECT c.*,u.name AS teacher_name,u.specialty AS teacher_specialty,(SELECT COUNT(*) FROM bookings b WHERE b.course_id=c.id AND b.status='approved') AS enrolled,(SELECT MIN(starts_at) FROM lessons l WHERE l.course_id=c.id AND datetime(l.starts_at)>=datetime('now')) AS next_date FROM courses c JOIN users u ON u.id=c.teacher_id`;
+const studentAccessRows=studentId=>all(`SELECT b.course_id,b.status AS booking_status,c.price AS course_price,p.status AS payment_status,p.reviewed_at AS payment_reviewed_at,p.confirmed_on_phone AS confirmed_on_phone FROM bookings b JOIN courses c ON c.id=b.course_id LEFT JOIN payment_submissions p ON p.booking_id=b.id WHERE b.student_id=?`,studentId);
+const studentCanStream=async(courseId,studentId)=>{
+ const row=await get(`SELECT b.status AS booking_status,c.price AS course_price,p.status AS payment_status,p.reviewed_at AS payment_reviewed_at,p.confirmed_on_phone AS confirmed_on_phone FROM bookings b JOIN courses c ON c.id=b.course_id LEFT JOIN payment_submissions p ON p.booking_id=b.id WHERE b.course_id=? AND b.student_id=?`,courseId,studentId);
+ return evaluateMonthlyAccess(row).active;
+};
 app.get('/api/health', (req, res) => res.json({
   ok: true,
   mode:adminOnly?'admin':'full',
@@ -378,9 +384,8 @@ app.get('/api/courses', async (req, res) => {
     sql += ' AND c.subject=?';
     p.push(subject);
   }
-  res.json({
-    courses: await all(sql + ' ORDER BY c.created_at DESC', ...p)
-  });
+  const listing=await all(sql + ' ORDER BY c.created_at DESC', ...p);
+  res.json({courses:await Promise.all(listing.map(async c=>({...c,enrolled:await countCurrentMembers(all,c.id)})))});
 });
 app.get('/api/courses/:id', async (req, res) => {
   const c = await get(courseQuery + ' WHERE c.id=?', req.params.id);
@@ -388,20 +393,22 @@ app.get('/api/courses/:id', async (req, res) => {
     error: 'الدورة غير موجودة'
   });
   res.json({
-    course: c,
+    course:{...c,enrolled:await countCurrentMembers(all,c.id)},
     lessons: await all('SELECT id,course_id,title,starts_at,duration_minutes,status FROM lessons WHERE course_id=? ORDER BY starts_at', c.id)
   });
 });
 app.get('/api/student/dashboard', auth, role('student'), async (req, res) => {
   const id = req.user.id,
     asOf = now();
-  const learning = await all(`SELECT c.id,c.title,c.subject,c.level,c.teacher_id,u.name AS teacher_name,
+  const learningRows = await all(`SELECT c.id,c.title,c.subject,c.level,c.teacher_id,u.name AS teacher_name,
  (SELECT COUNT(*) FROM lessons l WHERE l.course_id=c.id) AS total_lessons,
  (SELECT COUNT(*) FROM lessons l WHERE l.course_id=c.id AND l.starts_at<?) AS started_lessons,
  (SELECT COUNT(*) FROM attendance a JOIN lessons l ON l.id=a.lesson_id WHERE l.course_id=c.id AND a.user_id=?) AS attended_lessons,
  (SELECT MIN(l.starts_at) FROM lessons l WHERE l.course_id=c.id AND l.starts_at>=?) AS next_lesson_at
  FROM bookings b JOIN courses c ON c.id=b.course_id JOIN users u ON u.id=c.teacher_id
  WHERE b.student_id=? AND b.status='approved' ORDER BY b.created_at DESC`, asOf, id, asOf, id);
+  const allowedIds=new Set((await studentAccessRows(id)).filter(row=>evaluateMonthlyAccess(row).active).map(row=>row.course_id));
+  const learning=learningRows.filter(row=>allowedIds.has(row.id));
   const attendance = (await all('SELECT lesson_id FROM attendance WHERE user_id=?', id)).map(row => row.lesson_id);
   res.json({
     learning,
@@ -413,8 +420,10 @@ app.get('/api/my/overview', auth, async (req, res) => {
   let courses,
     bookings = [];
   if (u.role === 'student') {
-    bookings = await all(`SELECT b.*,(SELECT p.status FROM payment_submissions p WHERE p.booking_id=b.id) AS payment_status,(SELECT p.amount_egp FROM payment_submissions p WHERE p.booking_id=b.id) AS payment_amount,(SELECT p.review_note FROM payment_submissions p WHERE p.booking_id=b.id) AS payment_note,c.price,c.title AS course_title,c.subject,c.teacher_id,u.name AS teacher_name FROM bookings b JOIN courses c ON c.id=b.course_id JOIN users u ON u.id=c.teacher_id WHERE b.student_id=? ORDER BY b.created_at DESC`, u.id);
-    courses = await all(courseQuery + ` WHERE c.id IN (SELECT course_id FROM bookings WHERE student_id=? AND status='approved')`, u.id);
+    bookings = await all(`SELECT b.*,(SELECT p.status FROM payment_submissions p WHERE p.booking_id=b.id) AS payment_status,(SELECT p.amount_egp FROM payment_submissions p WHERE p.booking_id=b.id) AS payment_amount,(SELECT p.review_note FROM payment_submissions p WHERE p.booking_id=b.id) AS payment_note,(SELECT p.reviewed_at FROM payment_submissions p WHERE p.booking_id=b.id) AS payment_reviewed_at,(SELECT p.confirmed_on_phone FROM payment_submissions p WHERE p.booking_id=b.id) AS confirmed_on_phone,c.price,c.title AS course_title,c.subject,c.teacher_id,u.name AS teacher_name FROM bookings b JOIN courses c ON c.id=b.course_id JOIN users u ON u.id=c.teacher_id WHERE b.student_id=? ORDER BY b.created_at DESC`, u.id);
+    const allowedIds=new Set(bookings.filter(b=>evaluateMonthlyAccess(b).active).map(b=>b.course_id));
+    bookings=bookings.map(b=>({...b,...accessView(b)}));
+    courses = (await all(courseQuery + ` WHERE c.id IN (SELECT course_id FROM bookings WHERE student_id=? AND status='approved')`, u.id)).filter(c=>allowedIds.has(c.id));
   } else if (u.role === 'teacher') {
     courses = await all(courseQuery + ' WHERE c.teacher_id=?', u.id);
     bookings = await all(`SELECT b.*,c.title AS course_title,u.name AS student_name,u.email AS student_email FROM bookings b JOIN courses c ON c.id=b.course_id JOIN users u ON u.id=b.student_id WHERE c.teacher_id=? ORDER BY b.created_at DESC`, u.id);
@@ -422,15 +431,18 @@ app.get('/api/my/overview', auth, async (req, res) => {
     courses = await all(courseQuery);
     bookings = await all(`SELECT b.*,c.title AS course_title,c.price AS course_price,(SELECT p.status FROM payment_submissions p WHERE p.booking_id=b.id) AS payment_status,u.name AS student_name FROM bookings b JOIN courses c ON c.id=b.course_id JOIN users u ON u.id=b.student_id ORDER BY b.created_at DESC`);
   }
+  courses=await Promise.all(courses.map(async c=>({...c,enrolled:await countCurrentMembers(all,c.id)})));
   const lessons = await all(`SELECT l.id,l.title,l.course_id,l.starts_at,l.duration_minutes,l.status,l.meet_url,c.title AS course_title FROM lessons l JOIN courses c ON c.id=l.course_id WHERE ${u.role === 'student' ? "c.id IN (SELECT course_id FROM bookings WHERE student_id=? AND status='approved')" : u.role === 'teacher' ? 'c.teacher_id=?' : '1=1'} ORDER BY l.starts_at ASC LIMIT 120`, ...(u.role === 'admin' ? [] : [u.id]));
+  const visibleLessons=u.role==='student'?(await studentAccessRows(u.id)).reduce((ids,row)=>{if(evaluateMonthlyAccess(row).active)ids.add(row.course_id);return ids},new Set()):null;
+  const accessibleLessons=visibleLessons?lessons.filter(l=>visibleLessons.has(l.course_id)):lessons;
   res.json({
     courses,
     bookings,
-    lessons,
+    lessons:accessibleLessons,
     stats: {
       courses: courses.length,
       bookings: bookings.length,
-      upcoming: lessons.filter(x => x.status !== 'ended' && Date.parse(x.starts_at) > Date.now()).length
+      upcoming: accessibleLessons.filter(x => x.status !== 'ended' && Date.parse(x.starts_at) > Date.now()).length
     }
   });
 });
@@ -442,7 +454,7 @@ app.post('/api/courses/:id/book', auth, role('student'), async (req, res) => {
   if (await get('SELECT id FROM bookings WHERE student_id=? AND course_id=?', req.user.id, c.id)) return send(res, 409, {
     error: 'قدمت طلبًا للدورة بالفعل'
   });
-  const count = (await get("SELECT COUNT(*) AS n FROM bookings WHERE course_id=? AND status='approved'", c.id)).n;
+  const count=await countCurrentMembers(all,c.id);
   if (count >= c.capacity) return send(res, 409, {
     error: 'لا توجد أماكن متاحة'
   });
@@ -489,10 +501,11 @@ app.patch('/api/courses/:id', auth, role('teacher', 'admin'), async (req, res) =
   if (!values) return send(res, 400, {
     error: 'بيانات الدورة غير صحيحة'
   });
-  const enrolled = (await get("SELECT COUNT(*) AS total FROM bookings WHERE course_id=? AND status='approved'", course.id)).total;
+  const enrolled=await countCurrentMembers(all,course.id);
   if (values.capacity < enrolled) return send(res, 409, {
     error: 'عدد المقاعد لا يمكن أن يقل عن الطلاب المقبولين'
   });
+  if(Number(course.price)===0&&values.price>0&&Number(enrolled)>0)return send(res,409,{error:'لا يمكن تحويل دورة مجانية بها طلاب مقبولون إلى اشتراك مدفوع؛ أنشئي دورة مدفوعة جديدة للحفاظ على حقوق الطلاب'});
   const teacherId = req.user.role === 'admin' && req.body?.teacher_id !== undefined ? req.body.teacher_id : course.teacher_id;
   if (!(await get("SELECT id FROM users WHERE id=? AND role IN ('teacher','admin') AND status='active'", teacherId))) return send(res, 400, {
     error: 'حدد مدرسًا نشطًا أو مديرة المدرسة'
@@ -520,9 +533,8 @@ app.post('/api/courses/:id/lessons', auth, role('teacher', 'admin'), async (req,
     error: 'حدد عنوانًا وموعدًا قادمًا ومدة صحيحة'
   });
   const id = uid();
-  const meetUrl=String(req.body?.meet_url||'').trim();
-  if(!validMeetLink(meetUrl))return send(res,400,{error:'رابط Google Meet غير صالح'});
-  await run('INSERT INTO lessons(id,course_id,title,starts_at,duration_minutes,status,room_key,created_at,meet_url) VALUES(?,?,?,?,?,?,?,?,?)', id, c.id, title, new Date(starts_at).toISOString(), +duration_minutes, 'scheduled', uid(), now(),meetUrl||null);
+  if(req.body?.meet_url)return send(res,400,{error:'الحصص المباشرة داخل الموقع عبر LiveKit؛ لا تضعي رابط Google Meet'});
+  await run('INSERT INTO lessons(id,course_id,title,starts_at,duration_minutes,status,room_key,created_at,meet_url) VALUES(?,?,?,?,?,?,?,?,?)', id, c.id, title, new Date(starts_at).toISOString(), +duration_minutes, 'scheduled', uid(), now(),null);
   res.status(201).json({
     id
   });
@@ -545,9 +557,8 @@ app.patch('/api/lessons/:id', auth, role('teacher', 'admin'), async (req, res) =
   if (!values) return send(res, 400, {
     error: 'حدد عنوانًا وموعدًا قادمًا ومدة صحيحة'
   });
-  const meetUrl=req.body?.meet_url===undefined?lesson.meet_url:String(req.body.meet_url||'').trim();
-  if(!validMeetLink(meetUrl))return send(res,400,{error:'رابط Google Meet غير صالح'});
-  await run('UPDATE lessons SET title=?,starts_at=?,duration_minutes=?,meet_url=? WHERE id=?', values.title, values.starts_at, values.duration_minutes, meetUrl||null,lesson.id);
+  if(req.body?.meet_url)return send(res,400,{error:'لا يلزم رابط Google Meet؛ البث متاح داخل موقع المدرسة'});
+  await run('UPDATE lessons SET title=?,starts_at=?,duration_minutes=?,meet_url=? WHERE id=?', values.title, values.starts_at, values.duration_minutes,null,lesson.id);
   res.json({
     ok: true,
     id: lesson.id
@@ -570,7 +581,7 @@ app.patch('/api/bookings/:id', auth, role('teacher', 'admin'), async (req, res) 
       const payment=await get('SELECT status FROM payment_submissions WHERE booking_id=?',b.id);
       if(payment?.status!=='approved')return send(res,409,{error:'لا يمكن قبول الحجز المدفوع قبل تأكيد فودافون كاش من لوحة المديرة'});
     }
-    const count = (await get("SELECT COUNT(*) AS n FROM bookings WHERE course_id=? AND status='approved'", b.course_id)).n;
+    const count=await countCurrentMembers(all,b.course_id);
     if (count >= b.capacity) return send(res, 409, {
       error: 'اكتمل عدد المقاعد'
     });
@@ -661,10 +672,13 @@ app.patch('/api/admin/users/:id', auth, role('admin'), async (req, res) => {
 // The LiveKit SFU handles video and audio. This API controls room access and consent-based participation.
 const roomLesson = async id => await get('SELECT l.*,c.teacher_id,c.capacity,c.title AS course_title FROM lessons l JOIN courses c ON c.id=l.course_id WHERE l.id=?', id);
 const isLessonHost = (l, u) => u.role === 'admin' || u.role === 'teacher' && l.teacher_id === u.id;
-const canStudentAttend = async (l, u) => u.role === 'student' && !!(await get("SELECT id FROM bookings WHERE course_id=? AND student_id=? AND status='approved'", l.course_id, u.id));
+const canStudentAttend = async (l,u)=>u.role==='student'&&(await studentCanStream(l.course_id,u.id));
 const isBanned = async (l, userId) => !!(await get('SELECT student_id FROM lesson_bans WHERE lesson_id=? AND student_id=?', l.id, userId));
 const roomPermitted = async (l, user) => isLessonHost(l, user) || (await canStudentAttend(l, user)) && !(await isBanned(l, user.id));
-const selectedStudent = async (l, id) => await get("SELECT u.id,u.name FROM users u JOIN bookings b ON b.student_id=u.id AND b.course_id=? WHERE u.id=? AND u.role='student' AND u.status='active' AND b.status='approved'", l.course_id, id);
+const selectedStudent = async(l,id)=>{
+ const student=await get("SELECT u.id,u.name FROM users u WHERE u.id=? AND u.role='student' AND u.status='active'",id);
+ return student&&(await studentCanStream(l.course_id,id))?student:null;
+};
 app.get('/api/lessons/:id/classroom', auth, async (req, res) => {
   const l = await roomLesson(req.params.id);
   if (!l) return send(res, 404, {
@@ -676,7 +690,8 @@ app.get('/api/lessons/:id/classroom', auth, async (req, res) => {
   const host = isLessonHost(l, req.user);
   const raised = host ? false : !!(await get('SELECT student_id FROM lesson_hands WHERE lesson_id=? AND student_id=?', l.id, req.user.id));
   const mode = host ? 'host' : (await get('SELECT mode FROM lesson_speakers WHERE lesson_id=? AND student_id=?', l.id, req.user.id))?.mode || '';
-  const hands = host ? await all("SELECT h.student_id,h.raised_at,u.name FROM lesson_hands h JOIN users u ON u.id=h.student_id JOIN bookings b ON b.student_id=u.id AND b.course_id=? AND b.status='approved' WHERE h.lesson_id=? AND u.status='active' ORDER BY h.raised_at LIMIT 100", l.course_id, l.id) : [];
+  const raisedHands=host?await all("SELECT h.student_id,h.raised_at,u.name FROM lesson_hands h JOIN users u ON u.id=h.student_id JOIN bookings b ON b.student_id=u.id AND b.course_id=? AND b.status='approved' WHERE h.lesson_id=? AND u.status='active' ORDER BY h.raised_at LIMIT 100",l.course_id,l.id):[];
+  const hands=host?(await Promise.all(raisedHands.map(async hand=>(await studentCanStream(l.course_id,hand.student_id))?hand:null))).filter(Boolean):[];
   const speakers = host ? await all('SELECT s.student_id,s.mode,s.approved_at,u.name FROM lesson_speakers s JOIN users u ON u.id=s.student_id WHERE s.lesson_id=? ORDER BY s.approved_at', l.id) : [];
   res.json({
     isHost: host,

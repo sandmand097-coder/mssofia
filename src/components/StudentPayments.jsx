@@ -26,7 +26,8 @@ export default function StudentPayments({bookings,refresh}){
   paid.map(b=><div className="sofia-payment-item" key={b.id}>
    <h3>{b.course_title}</h3>
    <p>المطلوب لأول شهر: <strong>{money(/(علوم|فيزياء|أحياء|كيمياء|science)/i.test(b.subject||'')?100:b.price)}</strong></p>
-   {b.payment_status==='approved'?<span className="sofia-payment-success"><ShieldCheck size={16}/> التحويل مؤكد، وتمت مراجعة الحجز</span>:
+   {b.live_access_status==='expired'?<span className="portal-alert" role="status">انتهت مدة الـ30 يومًا المرتبطة بآخر دفعة معتمدة. تواصل مع إدارة المدرسة لتجديد الاشتراك، ولا ترسل تحويلًا جديدًا إلا عند إتاحة وسيلة التجديد المعتمدة.</span>:
+   b.payment_status==='approved'?<span className="sofia-payment-success"><ShieldCheck size={16}/> الاشتراك مدفوع ويشمل مشاهدة البث المباشر حتى {b.live_access_expires_at?new Intl.DateTimeFormat('ar-EG',{dateStyle:'medium',timeZone:'Africa/Cairo'}).format(new Date(b.live_access_expires_at)):'نهاية مدته'}</span>:
     b.payment_status==='pending'?<span className="sofia-payment-wait"><AlertCircle size={16}/> الإيصال قيد المراجعة — لا تحول المبلغ مرة ثانية</span>:
     b.status==='approved'?<span className="sofia-payment-success"><CheckCircle2 size={16}/> حجزك معتمد</span>:
     !config?.enabled?<p>رفع الإيصالات غير متاح الآن.</p>:

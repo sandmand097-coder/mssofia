@@ -523,3 +523,14 @@ body{color:var(--sf-ink)}
 .sofia-director-device-check{display:grid;justify-items:center;gap:9px;margin:14px 0 0}
 .sofia-director-device-check .portal-soft-btn{max-width:100%;min-height:43px}
 .sofia-director-device-check small{max-width:540px;font-size:12px;line-height:1.9;color:#267866}
+
+/* Director scheduling: unambiguous 24-hour Cairo time instead of native AM/PM segments. */
+.sofia-lesson-time-fields{display:grid;gap:13px;margin-block:12px}
+.sofia-lesson-time-fields>label,.sofia-lesson-time-fields .portal-form-grid>label{display:grid;gap:7px;min-width:0}
+.sofia-lesson-time-fields input[type=date],.sofia-lesson-time-fields select{direction:ltr;text-align:center;min-height:46px;border:1px solid #dce7e9;border-radius:11px;background:white;color:#214047;padding:9px 12px;font:700 13px Cairo,Tahoma,Arial,sans-serif;width:100%}
+.sofia-lesson-time-fields .portal-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.sofia-lesson-time-fields select{cursor:pointer}
+.sofia-lesson-time-fields :is(select,input):focus-visible{outline:3px solid #63aeae;outline-offset:2px}
+.sofia-classroom-notice{display:flex;align-items:flex-start;gap:9px;background:#eef8f3;color:#225d52;border:1px solid #c5e6d6;border-radius:12px;padding:12px 13px;font:700 12px Cairo,Tahoma,Arial,sans-serif;line-height:2;margin:0}
+.sofia-classroom-notice svg{flex-shrink:0;margin-top:3px}
+@media(max-width:520px){.sofia-lesson-time-fields .portal-form-grid{gap:8px}}
