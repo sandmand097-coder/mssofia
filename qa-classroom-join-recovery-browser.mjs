@@ -47,7 +47,7 @@ try{
   await page.getByRole('button',{name:'الدخول لمشاهدة الحصة'}).click();
   if(scenario==='overload'){
    await page.getByText(/خادم الحصة مشغول مؤقتًا/).waitFor({timeout:5000});
-   await page.waitForFunction(()=>document.querySelector('.sofia-classroom-live')!==null,{timeout:12000}).catch(()=>{});
+   for(let i=0;i<90&&tokenCalls<2;i++)await wait(100);
   }else{
    await page.getByText('انتهى الاشتراك').waitFor({timeout:6000});
   }
