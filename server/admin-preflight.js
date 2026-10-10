@@ -1,10 +1,12 @@
 import {Pool} from 'pg';
+import {readFileSync} from 'node:fs';
 
 // Backend-only readiness gate. Diagnostics are intentionally non-sensitive.
-const PROJECT_REF='jtluslevdmcpxxkngomj';
+const PROJECT_REF='wnkewiulyobbjftckfqb';
+const SUPABASE_CA=readFileSync(new URL('../certs/supabase-prod-ca-2021.crt',import.meta.url),'utf8');
 const DATABASE_ROLE='mssofia_backend';
 const CLIENT_ID_PATTERN=/^[a-zA-Z0-9._-]+\.apps\.googleusercontent\.com$/;
-const HOST_PATTERN=/^aws-[0-9]+-eu-central-1\.pooler\.supabase\.com$/;
+const HOST_PATTERN=/^aws-[0-9]+-eu-west-1\.pooler\.supabase\.com$/;
 
 export function adminConfigurationStatus(env) {
  if(env.PUBLIC_LAUNCH_MODE!=='admin')return 'MODE_NOT_ADMIN';
@@ -35,7 +37,7 @@ export async function adminProductionStatus(env,createPool=opts=>new Pool(opts))
  let pool;
  try{
   pool=createPool({
-   connectionString:env.DATABASE_URL,ssl:{rejectUnauthorized:true},
+   connectionString:env.DATABASE_URL,ssl:{rejectUnauthorized:true,ca:SUPABASE_CA},
    max:1,connectionTimeoutMillis:6000,statement_timeout:5000
   });
   const response=await pool.query(

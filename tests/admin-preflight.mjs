@@ -8,7 +8,7 @@ const env={
  GOOGLE_OAUTH_CLIENT_ID:'12345-test.apps.googleusercontent.com',
  GOOGLE_ADMIN_EMAIL:'sandmand097@gmail.com',APP_ORIGIN:'https://mssofia.pages.dev',
  JWT_SECRET:'e'.repeat(96),
- DATABASE_URL:'postgresql://mssofia_backend.jtluslevdmcpxxkngomj:demo-password@aws-0-eu-central-1.pooler.supabase.com:5432/postgres'
+ DATABASE_URL:'postgresql://mssofia_backend.wnkewiulyobbjftckfqb:demo-password@aws-0-eu-west-1.pooler.supabase.com:5432/postgres'
 };
 const fake=(login='mssofia_backend',approved=true)=>()=>({
  query:async (sql,params)=>{
@@ -25,10 +25,10 @@ assert.equal(await adminProductionReady(env,fake()),true);
 assert.equal((await adminProductionStatus(env,fake('postgres'))).code,'DATABASE_ROLE_MISMATCH');
 assert.equal((await adminProductionStatus(env,fake('mssofia_backend',false))).code,'DIRECTOR_ACCOUNT_NOT_APPROVED');
 const negatives=[
- [{DATABASE_URL:'postgresql://mssofia_backend.wrong:abc@aws-0-eu-central-1.pooler.supabase.com:5432/postgres'},'DATABASE_URL_WRONG_PROJECT_OR_POOLER'],
- [{DATABASE_URL:'postgresql://mssofia_backend.jtluslevdmcpxxkngomj:abc@localhost:5432/postgres'},'DATABASE_URL_WRONG_PROJECT_OR_POOLER'],
- [{DATABASE_URL:'postgresql://mssofia_backend.jtluslevdmcpxxkngomj:abc@aws-0-eu-central-1.pooler.supabase.com:5432/postgres?sslmode=disable'},'DATABASE_TLS_DISABLED'],
- [{DATABASE_URL:'postgresql://mssofia_backend.jtluslevdmcpxxkngomj:YOUR_RANDOM_PASSWORD@aws-0-eu-central-1.pooler.supabase.com:5432/postgres'},'DATABASE_PASSWORD_MISSING'],
+ [{DATABASE_URL:'postgresql://mssofia_backend.wrong:abc@aws-0-eu-west-1.pooler.supabase.com:5432/postgres'},'DATABASE_URL_WRONG_PROJECT_OR_POOLER'],
+ [{DATABASE_URL:'postgresql://mssofia_backend.wnkewiulyobbjftckfqb:abc@localhost:5432/postgres'},'DATABASE_URL_WRONG_PROJECT_OR_POOLER'],
+ [{DATABASE_URL:'postgresql://mssofia_backend.wnkewiulyobbjftckfqb:abc@aws-0-eu-west-1.pooler.supabase.com:5432/postgres?sslmode=disable'},'DATABASE_TLS_DISABLED'],
+ [{DATABASE_URL:'postgresql://mssofia_backend.wnkewiulyobbjftckfqb:YOUR_RANDOM_PASSWORD@aws-0-eu-west-1.pooler.supabase.com:5432/postgres'},'DATABASE_PASSWORD_MISSING'],
  [{JWT_SECRET:'ANOTHER_RANDOM_SECRET_AT_LEAST_48_CHARACTERS'},'JWT_SECRET_NOT_STRONG_RANDOM_HEX'],
  [{PUBLIC_LAUNCH_MODE:'full'},'MODE_NOT_ADMIN'],
  [{REGISTRATION_ENABLED:'true'},'PUBLIC_REGISTRATION_NOT_LOCKED'],

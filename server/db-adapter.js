@@ -2,12 +2,14 @@
 // DATABASE_URL selects a persistent PostgreSQL instance (Supabase Session/Transaction Pooler).
 import {Pool} from 'pg';
 import {randomUUID} from 'node:crypto';
+import {readFileSync} from 'node:fs';
+const SUPABASE_CA=process.env.DATABASE_URL?readFileSync(new URL('../certs/supabase-prod-ca-2021.crt',import.meta.url),'utf8'):null;
 const sqlite=process.env.DATABASE_URL?null:await import('./db.js');
 
 export const isCloudDatabase=Boolean(process.env.DATABASE_URL);
 const pool=isCloudDatabase?new Pool({
  connectionString:process.env.DATABASE_URL,
- ssl:process.env.PGSSL==='disable'?false:{rejectUnauthorized:true},
+ ssl:process.env.PGSSL==='disable'&&process.env.NODE_ENV!=='production'?false:{rejectUnauthorized:true,ca:SUPABASE_CA},
  max:Number(process.env.PG_POOL_MAX||6),
  idleTimeoutMillis:30000,
  connectionTimeoutMillis:12000,

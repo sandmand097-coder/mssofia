@@ -14,7 +14,7 @@ const port=await freePort();
 const env={
  ...process.env,
  PORT:String(port),NODE_ENV:'production',PUBLIC_LAUNCH_MODE:'admin',
- DATABASE_URL:'postgresql://mssofia_backend.jtluslevdmcpxxkngomj:YOUR_RANDOM_PASSWORD@aws-0-eu-central-1.pooler.supabase.com:5432/postgres',
+ DATABASE_URL:'postgresql://mssofia_backend.wnkewiulyobbjftckfqb:YOUR_RANDOM_PASSWORD@aws-0-eu-west-1.pooler.supabase.com:5432/postgres',
  JWT_SECRET:'a'.repeat(96),GOOGLE_ADMIN_LOGIN_ENABLED:'true',
  GOOGLE_OAUTH_CLIENT_ID:'12345-test.apps.googleusercontent.com',
  GOOGLE_ADMIN_EMAIL:'sandmand097@gmail.com',APP_ORIGIN:'https://mssofia.pages.dev',
