@@ -895,7 +895,7 @@ app.post('/api/lessons/:id/moderate', auth, role('teacher', 'admin'), asyncRoute
   }
 }));
 app.get('/api/lessons/:id', auth, async (req, res) => {
-  const l = await get('SELECT l.id,l.title,l.course_id,l.starts_at,l.duration_minutes,l.status,l.meet_url,c.title AS course_title,c.teacher_id FROM lessons l JOIN courses c ON c.id=l.course_id WHERE l.id=?', req.params.id);
+  const l = await get('SELECT l.id,l.title,l.course_id,l.starts_at,l.duration_minutes,l.status,l.meet_url,l.room_key,c.title AS course_title,c.teacher_id FROM lessons l JOIN courses c ON c.id=l.course_id WHERE l.id=?', req.params.id);
   if (!l) return send(res, 404, {
     error: 'الحصة غير موجودة'
   });
@@ -913,7 +913,7 @@ app.get('/api/lessons/:id', auth, async (req, res) => {
    ?await earlyLiveInspector.isBroadcasting(l):false;
   if(req.user.role==='student'&&!liveWindow&&!studentEarlyLive)l.meet_url=null;
   res.set('Cache-Control','no-store, private').json({
-    lesson:l,studentEarlyLive,
+    lesson:(()=>{const {room_key,...safeLesson}=l;return safeLesson})(),studentEarlyLive,
     videoConfigured: !!(process.env.LIVEKIT_URL && process.env.LIVEKIT_API_KEY && process.env.LIVEKIT_API_SECRET),
     videoLocalOnly: localVideo
   });
