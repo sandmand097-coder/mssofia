@@ -148,6 +148,9 @@ export function attachPaymentRoutes(app,{auth,role,get,all,run,uid,now}){
     if(due!==amount)return{status:409,error:'المبلغ المستلم لا يطابق قيمة الاشتراك المستحقة: '+due+' جنيه'};
     const previous=await tx.get('SELECT status FROM payment_submissions WHERE booking_id=?',booking.id);
     if(previous)return{status:409,error:'يوجد إيصال أو قرار دفع سابق لهذا الحجز، راجعيه من قائمة تحويلات فودافون كاش'};
+    const transfer='MANUAL-'+reference;
+    if(await tx.get('SELECT id FROM subscription_renewals WHERE transfer_reference=?',transfer))
+     return{status:409,error:'رقم هذا التحويل مُسجّل بالفعل لتجديد اشتراك آخر'};
     const used=await countCurrentMembers(tx.all,booking.course_id);
     if(Number(used)>=Number(booking.capacity))return{status:409,error:'لا يمكن تفعيل الاشتراك بعد اكتمال المقاعد'};
     const paidAt=now();
