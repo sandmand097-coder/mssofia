@@ -14,10 +14,10 @@ process.env.MADRASATI_DB_PATH=path.join(temp,'payment.sqlite');
 const {db,run,get,uid,now}=await import('../server/db.js');
 const pass=randomBytes(17).toString('hex'),hash=bcrypt.hashSync(pass,10);
 const add=(role)=>{const id=uid(),email=role+id.slice(0,7)+'@test.local';run('INSERT INTO users(id,name,email,password_hash,role,status,created_at,email_verified_at) VALUES(?,?,?,?,?,?,?,?)',id,role,email,hash,role,'active',now(),now());return {id,email}};
-const admin=add('admin'),student=add('student'),other=add('student');
-const course=uid(),booking=uid(),otherBooking=uid();
+const admin=add('admin'),student=add('student'),other=add('student'),manualStudent=add('student'),duplicateStudent=add('student');
+const course=uid(),booking=uid(),otherBooking=uid(),manualBooking=uid(),duplicateBooking=uid();
 run('INSERT INTO courses(id,title,description,subject,level,price,duration_minutes,capacity,teacher_id,status,created_at) VALUES(?,?,?,?,?,?,?,?,?,?,?)',course,'علوم شهر أول','شرح مباشر','علوم','الابتدائي',170,60,5,admin.id,'published',now());
-for(const [id,studentId] of [[booking,student.id],[otherBooking,other.id]])run('INSERT INTO bookings(id,course_id,student_id,status,created_at) VALUES(?,?,?,?,?)',id,course,studentId,'pending',now());
+for(const [id,studentId] of [[booking,student.id],[otherBooking,other.id],[manualBooking,manualStudent.id],[duplicateBooking,duplicateStudent.id]])run('INSERT INTO bookings(id,course_id,student_id,status,created_at) VALUES(?,?,?,?,?)',id,course,studentId,'pending',now());
 db.close();
 const port=await new Promise((resolve,reject)=>{const s=net.createServer();s.once('error',reject);s.listen(0,'127.0.0.1',()=>{const p=s.address().port;s.close(()=>resolve(p))})});
 const base='http://127.0.0.1:'+port+'/api';
@@ -34,7 +34,7 @@ let checks=0;function ok(cond,msg){assert.ok(cond,msg);checks++;console.log('PAS
 try{
  let ready=false;for(let i=0;i<80;i++){await wait(130);try{const r=await fetch(base+'/health');if(r.ok){ready=true;break}}catch{}if(app.exitCode!==null)break}
  ok(ready,'payment API starts on temporary database');
- const s=await login(student),a=await login(admin),o=await login(other);
+ const s=await login(student),a=await login(admin),o=await login(other),m=await login(manualStudent),d=await login(duplicateStudent);
  ok((await call('/payments/config')).status===401,'guest cannot view payment number');
  const settings=await call('/payments/config','GET',undefined,s);
  ok(settings.status===200&&settings.data.enabled&&settings.data.number==='01027661546','student sees payment number when configured');
@@ -97,6 +97,23 @@ try{
  const snapshot=await call('/my/overview','GET',undefined,o);
  const status=snapshot.data.bookings.find(x=>x.id===otherBooking);
  ok(status.payment_status==='approved'?status.status==='approved':status.payment_status==='rejected'&&status.status==='pending','booking never activates without approved payment, including concurrent reviews');
+ const noProof=(await call('/admin/payments/without-proof','GET',undefined,a));
+ ok(noProof.status===200&&noProof.data.bookings.some(b=>b.booking_id===manualBooking&&b.amount_egp===100),'director can view unpaid bookings that have no receipt');
+ ok((await call('/admin/payments/without-proof','GET',undefined,m)).status===403,'student cannot view payment-free booking queue');
+ const body={sender_phone:'01012345678',transfer_reference:'VFCASH-FIRST-9001',amount_egp:100,confirmedOnPhone:true};
+ ok((await call('/admin/bookings/'+manualBooking+'/manual-payment','POST',body,m)).status===403,'student cannot self approve a payment without a receipt');
+ ok((await call('/admin/bookings/'+manualBooking+'/manual-payment','POST',{...body,confirmedOnPhone:false},a)).status===400,'admin must confirm incoming wallet transfer explicitly');
+ ok((await call('/admin/bookings/'+manualBooking+'/manual-payment','POST',{...body,amount_egp:170},a)).status===409,'wrong amount cannot unlock student access');
+ ok((await call('/admin/bookings/'+manualBooking+'/manual-payment','POST',{...body,sender_phone:'00000000000'},a)).status===400,'invalid sender cannot be accepted');
+ const manually=await call('/admin/bookings/'+manualBooking+'/manual-payment','POST',body,a);
+ ok(manually.status===201&&manually.data.amount_egp===100,'director approves verified first month without screenshot');
+ ok((await call('/admin/bookings/'+manualBooking+'/manual-payment','POST',body,a)).status===409,'same booking cannot be approved twice');
+ ok((await call('/admin/bookings/'+duplicateBooking+'/manual-payment','POST',body,a)).status===409,'same wallet transaction reference cannot be reused by another student');
+ const manualRecord=(await call('/admin/payments','GET',undefined,a)).data.payments.find(p=>p.booking_id===manualBooking);
+ ok(manualRecord?.status==='approved'&&manualRecord?.transfer_reference==='MANUAL-VFCASH-FIRST-9001','manual approval is preserved in auditable payment ledger');
+ ok((await call('/admin/payments/'+manualRecord.id+'/proof','GET',undefined,a)).status===404,'no fabricated screenshot for manually verified payment');
+ const manualAccess=(await call('/my/overview','GET',undefined,m)).data.bookings.find(b=>b.id===manualBooking);
+ ok(manualAccess?.live_access_active===true&&manualAccess?.live_access_days_remaining>=29,'student obtains 30-day entitlement after manual director approval');
  console.log('RESULT '+checks+' payment workflow checks passed');
 }finally{
  app.kill();await Promise.race([new Promise(r=>app.once('exit',r)),wait(3000)]);
