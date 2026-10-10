@@ -24,6 +24,7 @@ try{
  for(const width of [390,1366]){
   const page=await browser.newPage({viewport:{width,height:850},locale:'ar-EG'});
   const errors=[];
+  let paidApproved=false,legacyMismatch=false;
   page.on('pageerror',e=>errors.push(e.message));
   await page.route('**/api/**',route=>{
    const pathname=new URL(route.request().url()).pathname;
@@ -31,13 +32,14 @@ try{
    if(pathname==='/api/health')return reply(200,{ok:true,mode:'admin',registrationAvailable:false});
    if(pathname==='/api/auth/me')return reply(200,{user:{id:'admin-1',name:'Miss Sofia',email:'admin@example.com',role:'admin',status:'active'}});
    if(pathname==='/api/admin/dashboard')return reply(200,{statistics:{students:0,teachers:0,courses:0,pendingBookings:0},latestUsers:[],upcomingLessons:[],pendingBookings:[],registrationTrend:[]});
-   if(pathname==='/api/my/overview')return reply(200,{courses:[],bookings:[{id:'paid-1',status:'pending',student_name:'طالب حجز مدفوع',course_title:'علوم مدفوعة',course_price:170,payment_status:'pending'},{id:'free-1',status:'pending',student_name:'طالب حجز مجاني',course_title:'حصة مجانية',course_price:0}],lessons:[],stats:{courses:0,bookings:2,upcoming:0}});
+   if(pathname==='/api/my/overview')return reply(200,{courses:[],bookings:[{id:'paid-1',status:paidApproved&&!legacyMismatch?'approved':'pending',student_name:'طالب حجز مدفوع',course_title:'علوم مدفوعة',course_price:170,payment_status:paidApproved?'approved':'pending',confirmed_on_phone:paidApproved?true:false},{id:'free-1',status:'pending',student_name:'طالب حجز مجاني',course_title:'حصة مجانية',course_price:0}],lessons:[],stats:{courses:0,bookings:2,upcoming:0}});
    if(pathname==='/api/admin/users')return reply(200,{users:[]});
-   if(pathname==='/api/admin/payments')return reply(200,{payments:[]});
-   if(pathname==='/api/admin/payments/without-proof')return reply(200,{bookings:[{booking_id:'paid-1',student_name:'طالب حجز مدفوع',course_title:'علوم مدفوعة',amount_egp:100}]});
+   if(pathname==='/api/admin/payments')return reply(200,{payments:paidApproved?[{id:'pay-1',booking_id:'paid-1',student_name:'طالب حجز مدفوع',course_title:'علوم مدفوعة',status:'approved',confirmed_on_phone:true,booking_status:legacyMismatch?'pending':'approved',amount_egp:100,transfer_reference:'MANUAL-TEST-BROWSER-101',sender_phone:'01012345678',submitted_at:new Date().toISOString()}]:[]});
+   if(pathname==='/api/admin/payments/without-proof')return reply(200,{bookings:paidApproved?[]:[{booking_id:'paid-1',student_name:'طالب حجز مدفوع',course_title:'علوم مدفوعة',amount_egp:100}]});
    if(pathname==='/api/admin/renewals')return reply(200,{enabled:true,renewals:[]});
    if(pathname==='/api/admin/renewals/without-proof')return reply(200,{enabled:true,bookings:[]});
-   if(pathname==='/api/admin/bookings/paid-1/manual-payment'&&route.request().method()==='POST')return reply(201,{ok:true,amount_egp:100});
+   if(pathname==='/api/admin/bookings/paid-1/manual-payment'&&route.request().method()==='POST'){paidApproved=true;return reply(201,{ok:true,amount_egp:100})}
+   if(pathname==='/api/bookings/paid-1'&&route.request().method()==='PATCH'){if(!paidApproved)return reply(409,{error:'no payment'});legacyMismatch=false;return reply(200,{ok:true,status:'approved'})}
    if(pathname==='/api/admin/dependencies')return reply(200,{checkedAt:new Date().toISOString(),databaseConnected:true,livekitApiVerified:true,receiptBucketPrivateVerified:false,mailDeliveryTested:false});
    if(pathname==='/api/admin/setup-status')return reply(200,{
     launchMode:'admin',adminGoogleEnabled:true,studentGoogleEnabled:false,studentGoogleRegistrationEnabled:false,
@@ -75,6 +77,16 @@ try{
   assert.equal(await submit.isEnabled(),true,'director can approve only after completing all fields');
   await submit.click();
   await page.getByText(/تم اعتماد تحويل طالب حجز مدفوع/).waitFor();
+  await page.getByRole('button',{name:'الحجوزات',exact:true}).click();
+  await paid.getByText('مقبول',{exact:true}).waitFor({timeout:7000});
+  assert.equal(await paid.getByRole('button',{name:'مراجعة التحويل أولًا'}).count(),0,'bookings state refreshed automatically after payment');
+  legacyMismatch=true; // Artificial inconsistent legacy state in isolated browser mock.
+  await page.getByRole('button',{name:'نظرة عامة',exact:true}).click();
+  await page.getByRole('button',{name:'الحجوزات',exact:true}).click();
+  await paid.getByRole('button',{name:'استكمال تفعيل الحجز المدفوع'}).waitFor({timeout:7000});
+  assert.equal(await paid.getByRole('button',{name:'رفض'}).count(),0,'cannot reject a confirmed payment from stale booking list');
+  await paid.getByRole('button',{name:'استكمال تفعيل الحجز المدفوع'}).click();
+  await paid.getByText('مقبول',{exact:true}).waitFor({timeout:7000});
   const pixel=await page.evaluate(()=>({view:window.innerWidth,scroll:document.documentElement.scrollWidth}));
   assert.ok(pixel.scroll<=pixel.view+2,'horizontal overflow in admin operations '+width);
   assert.deepEqual(errors,[],'no browser errors in admin operations');
