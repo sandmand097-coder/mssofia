@@ -450,7 +450,7 @@ app.get('/api/my/overview', auth, async (req, res) => {
     bookings = await all(`SELECT b.*,c.title AS course_title,u.name AS student_name,u.email AS student_email FROM bookings b JOIN courses c ON c.id=b.course_id JOIN users u ON u.id=b.student_id WHERE c.teacher_id=? ORDER BY b.created_at DESC`, u.id);
   } else {
     courses = await all(courseQuery);
-    bookings = await all(`SELECT b.*,c.title AS course_title,c.price AS course_price,(SELECT p.status FROM payment_submissions p WHERE p.booking_id=b.id) AS payment_status,u.name AS student_name FROM bookings b JOIN courses c ON c.id=b.course_id JOIN users u ON u.id=b.student_id ORDER BY b.created_at DESC`);
+    bookings = await all(`SELECT b.*,c.title AS course_title,c.price AS course_price,(SELECT p.status FROM payment_submissions p WHERE p.booking_id=b.id) AS payment_status,(SELECT p.confirmed_on_phone FROM payment_submissions p WHERE p.booking_id=b.id) AS confirmed_on_phone,u.name AS student_name FROM bookings b JOIN courses c ON c.id=b.course_id JOIN users u ON u.id=b.student_id ORDER BY b.created_at DESC`);
   }
   courses=await Promise.all(courses.map(async c=>({...c,enrolled:await countCurrentMembers(all,c.id)})));
   const lessons = await all(`SELECT l.id,l.title,l.course_id,l.starts_at,l.duration_minutes,l.status,l.meet_url,c.title AS course_title FROM lessons l JOIN courses c ON c.id=l.course_id WHERE ${u.role === 'student' ? "c.id IN (SELECT course_id FROM bookings WHERE student_id=? AND status='approved')" : u.role === 'teacher' ? 'c.teacher_id=?' : '1=1'} ORDER BY l.starts_at ASC LIMIT 120`, ...(u.role === 'admin' ? [] : [u.id]));
@@ -605,32 +605,38 @@ app.patch('/api/lessons/:id/duration', auth, role('teacher', 'admin'), async (re
   ends_at:new Date(start+value*60000).toISOString(),
   note:'تم تحديث موعد نهاية الحصة. لإنهاء اتصال الطلاب الحاليين فورًا استخدمي زر إنهاء الحصة للجميع.'});
 });
-app.patch('/api/bookings/:id', auth, role('teacher', 'admin'), async (req, res) => {
-  const b = await get('SELECT b.*,c.teacher_id,c.capacity,c.price FROM bookings b JOIN courses c ON c.id=b.course_id WHERE b.id=?', req.params.id);
-  if (!b) return send(res, 404, {
-    error: 'الحجز غير موجود'
-  });
-  if (!owns(b, req.user)) return send(res, 403, {
-    error: 'ليس لديك صلاحية'
-  });
-  const status = req.body?.status;
-  if (!['approved', 'rejected'].includes(status)) return send(res, 400, {
-    error: 'الحالة غير صحيحة'
-  });
-  if (status === 'approved' && b.status !== 'approved') {
-    if(Number(b.price)>0){
-      const payment=await get('SELECT status FROM payment_submissions WHERE booking_id=?',b.id);
-      if(payment?.status!=='approved')return send(res,409,{error:'لا يمكن قبول الحجز المدفوع قبل تأكيد فودافون كاش من لوحة المديرة'});
-    }
-    const count=await countCurrentMembers(all,b.course_id);
-    if (count >= b.capacity) return send(res, 409, {
-      error: 'اكتمل عدد المقاعد'
-    });
+// Paid bookings are settled exclusively by a verified payment decision.
+// The generic booking action may RECONCILE an already confirmed payment but
+// may never revoke an approved booking or approve an unconfirmed transfer.
+// Each decision is atomic and locks the course row to serialize seat checks.
+app.patch('/api/bookings/:id',auth,role('teacher','admin'),async(req,res)=>{
+ const status=req.body?.status;
+ if(!['approved','rejected'].includes(status))return send(res,400,{error:'الحالة غير صحيحة'});
+ const outcome=await withTransaction(async tx=>{
+  const lock=isCloudDatabase?' FOR UPDATE OF b,c':'';
+  const booking=await tx.get('SELECT b.*,c.teacher_id,c.capacity,c.price FROM bookings b JOIN courses c ON c.id=b.course_id WHERE b.id=?'+lock,req.params.id);
+  if(!booking)return{http:404,error:'الحجز غير موجود'};
+  if(!owns(booking,req.user))return{http:403,error:'ليس لديك صلاحية لهذا الحجز'};
+  if(booking.status!=='pending')return{http:409,error:'الحجز حُسم بالفعل؛ لا يمكن إعادة قبوله أو رفضه من القائمة'};
+  if(Number(booking.price)>0){
+   const payment=await tx.get('SELECT status,confirmed_on_phone FROM payment_submissions WHERE booking_id=?'+(isCloudDatabase?' FOR UPDATE':''),booking.id);
+   if(status==='approved'){
+    if(req.user.role!=='admin')return{http:403,error:'استكمال حجز مدفوع يتطلب صلاحية المديرة'};
+    const verified=payment?.confirmed_on_phone===true||payment?.confirmed_on_phone===1;
+    if(payment?.status!=='approved'||!verified)return{http:409,error:'الحجز المدفوع لا يتفعّل إلا إذا كان تحويله معتمدًا ومؤكد الوصول'};
+   }else if(payment?.status==='approved'||payment?.status==='pending'){
+    return{http:409,error:'لا يمكن رفض حجز له تحويل معتمد أو قيد الفحص؛ افتحي سجل المدفوعات أولًا'};
+   }
   }
-  await run('UPDATE bookings SET status=?,reviewed_at=? WHERE id=?', status, now(), b.id);
-  res.json({
-    ok: true
-  });
+  if(status==='approved'){
+   const occupied=await countCurrentMembers(tx.all,booking.course_id);
+   if(Number(occupied)>=Number(booking.capacity))return{http:409,error:'اكتمل عدد المقاعد؛ لم يتغيّر الحجز'};
+  }
+  const updated=await tx.run("UPDATE bookings SET status=?,reviewed_at=? WHERE id=? AND status='pending'",status,now(),booking.id);
+  if(!updated.changes)throw Error('Concurrent booking moderation conflict');
+  return{http:200,ok:true,status};
+ });
+ return send(res,outcome.http,outcome.error?{error:outcome.error}:{ok:true,status:outcome.status});
 });
 app.get('/api/courses/:id/attendance', auth, role('teacher', 'admin'), async (req, res) => {
   const c = await get('SELECT id,title,teacher_id FROM courses WHERE id=?', req.params.id);
