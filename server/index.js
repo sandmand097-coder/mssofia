@@ -15,6 +15,7 @@ import {schoolReadiness} from './release-readiness.js';
 import {createDiagnosticReader} from './deployment-diagnostics.js';
 import {attachAdminOnlyGuard} from './admin-only.js';
 import {attachPaymentRoutes} from './payment-routes.js';
+import {createLiveAdmission} from './live-admission.js';
 import {attachClassroomQuestions,classroomQuestionsEnabled} from './classroom-questions.js';
 import {evaluateMonthlyAccess,accessView,countCurrentMembers,renewalEndSelect} from './monthly-access.js';
 import { get, all, run, uid, now, publicUser, checkConnection, withTransaction, isCloudDatabase } from './db-adapter.js';
@@ -36,6 +37,7 @@ app.use(helmet({
   contentSecurityPolicy: false
 }));
 const roomService = getRoomService();
+const admission=createLiveAdmission({studentLimit:Number(process.env.LIVE_JOIN_STUDENT_INFLIGHT||14),totalLimit:Number(process.env.LIVE_JOIN_TOTAL_INFLIGHT||20)});
 const webhookReceiver = process.env.LIVEKIT_API_KEY && process.env.LIVEKIT_API_SECRET ? new WebhookReceiver(process.env.LIVEKIT_API_KEY, process.env.LIVEKIT_API_SECRET) : null;
 // LiveKit sends a signed raw body. Never mark a student present when merely requesting a token.
 app.post('/api/webhooks/livekit', express.raw({
@@ -123,6 +125,7 @@ const readSchoolDiagnostics=createDiagnosticReader({
  }
 });
 const diagnosticLimiter=rateLimit({windowMs:60000,limit:12,standardHeaders:'draft-8',legacyHeaders:false});
+app.get('/api/admin/live/admission',auth,role('admin'),(req,res)=>res.set('Cache-Control','no-store, private').json({admission:admission.snapshot(),providerLimitVerified:false}));
 app.get('/api/admin/dependencies',auth,role('admin'),diagnosticLimiter,asyncRoute(async(req,res)=>{
  res.set('Cache-Control','no-store, private').json(await readSchoolDiagnostics());
 }));
@@ -895,7 +898,14 @@ app.get('/api/lessons/:id', auth, async (req, res) => {
     videoLocalOnly: localVideo
   });
 });
-app.post('/api/lessons/:id/token', auth, asyncRoute(async (req, res) => {
+const classroomJoinLimiter=rateLimit({
+ windowMs:60000,
+ limit:req=>req.user.role==='student'?30:80,
+ keyGenerator:req=>req.user.id,
+ standardHeaders:'draft-8',legacyHeaders:false,
+ message:{code:'JOIN_RATE_LIMITED',error:'طلبات دخول كثيرة لهذا الحساب. انتظر قليلًا قبل إعادة المحاولة.'}
+});
+app.post('/api/lessons/:id/token',auth,classroomJoinLimiter,admission.middleware,asyncRoute(async(req,res)=>{
   const l = await get('SELECT l.*,c.teacher_id FROM lessons l JOIN courses c ON c.id=l.course_id WHERE l.id=?', req.params.id);
   if (!l) return send(res, 404, {
     error: 'الحصة غير موجودة'
@@ -935,7 +945,7 @@ app.post('/api/lessons/:id/token', auth, asyncRoute(async (req, res) => {
     room: l.room_key,
     ...grant
   });
-  res.json({
+  res.set('Cache-Control','no-store, private').json({
     token: await token.toJwt(),
     serverUrl: process.env.LIVEKIT_URL,
     teacherId: l.teacher_id,
