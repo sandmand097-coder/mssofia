@@ -91,7 +91,7 @@ try{
  check((await change('allow_audio',student.id)).status===200,'teacher can restore microphone permission');
  check((await change('mute_all')).status===200,'teacher can mute all with room service');
  check((await request('/lessons/'+lesson+'/classroom','GET',null,a.teacher)).data.speakers.length===0,'all speaker grants removed persistently');
- check(seen.some(x=>x.action==='ListParticipants'),'mock SFU provided active participant list');
+ check(!seen.some(x=>x.action==='ListParticipants'),'speaker mute does not require listing the entire room');
  check((await change('remove',student.id)).status===200,'teacher can remove enrolled student');
  check((await request('/lessons/'+lesson+'/token','POST',{},a.student)).status===403,'removed child cannot receive new room token');
  check((await change('end_room')).status===200,'teacher can end room for everyone');
