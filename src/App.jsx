@@ -141,8 +141,14 @@ function LessonRoom(){
    return;
   }
   if(joining||autoAttemptRef.current)return;
-  autoAttemptRef.current=true;
-  void join(true);
+  // Spread 40-50 students over a short randomized window so their browser
+  // requests do not all hit the single Render worker at the same instant.
+  const timeout=setTimeout(()=>{
+   if(autoAttemptRef.current||requestRef.current)return;
+   autoAttemptRef.current=true;
+   void join(true);
+  },Math.floor(Math.random()*1700));
+  return()=>clearTimeout(timeout);
  },[waitingRoom,isHost,Boolean(connection),Boolean(data?.hostPublishing),joining]);
  const recover=()=>{
   setConnection(null);
