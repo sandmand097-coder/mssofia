@@ -27,6 +27,7 @@ try{
   for(const role of ['admin','student']){
    const context=await browser.newContext({viewport:{width,height:850},locale:'ar-EG',permissions:['camera','microphone']});
    const page=await context.newPage(),errors=[];
+   let teacherPublishing=false,earlyTokenCalls=0;
    page.on('pageerror',error=>errors.push(error.message));
    await page.route('**/api/**',async route=>{
     const pathname=new URL(route.request().url()).pathname;
@@ -34,11 +35,18 @@ try{
     if(pathname==='/api/health')return reply(200,{ok:true,mode:role==='admin'?'admin':'full',registrationAvailable:false});
     if(pathname==='/api/auth/me')return reply(200,{user:{id:role==='admin'?'director':'approved-student',name:role==='admin'?'Miss Sofia':'Science learner',role,status:'active',email:role+'@example.test'}});
     if(pathname==='/api/lessons/future-lesson/token'&&route.request().method()==='POST')return reply(503,{error:'تعذر الاتصال التجريبي بخدمة البث'});
+    if(pathname==='/api/lessons/early-live-lesson/token'&&route.request().method()==='POST'){
+     earlyTokenCalls++;return reply(403,{error:'هذا رفض مقصود في اختبار الاتصال التجريبي'});
+    }
     if(['/api/lessons/fixture-lesson','/api/lessons/future-lesson','/api/lessons/early-live-lesson'].includes(pathname))return reply(200,{lesson:{
      id:pathname.endsWith('future-lesson')?'future-lesson':pathname.endsWith('early-live-lesson')?'early-live-lesson':'fixture-lesson',title:'حصة علوم تجريبية',course_title:'كورس علوم',
      starts_at:new Date(Date.now()+(pathname.endsWith('fixture-lesson')?8:40)*60000).toISOString(),duration_minutes:60,
      status:'scheduled',teacher_id:'different-original-instructor',meet_url:null
-    },studentEarlyLive:pathname.endsWith('early-live-lesson')&&role==='student',videoConfigured:true,videoLocalOnly:false});
+    },studentRoomOpen:pathname.endsWith('early-live-lesson')&&role==='student',
+      hostConnected:pathname.endsWith('early-live-lesson')&&role==='student',
+      hostPublishing:pathname.endsWith('early-live-lesson')&&role==='student'&&teacherPublishing,
+      studentEarlyLive:pathname.endsWith('early-live-lesson')&&role==='student'&&teacherPublishing,
+      videoConfigured:true,videoLocalOnly:false});
     return reply(403,{error:'API disabled in isolated classroom test'});
    });
    await page.goto(origin+'/lesson/fixture-lesson',{waitUntil:'domcontentloaded',timeout:30000});
@@ -77,7 +85,15 @@ try{
     const earlyJoin=page.getByRole('button',{name:'الدخول لمشاهدة الحصة'});
     await earlyJoin.waitFor({timeout:16000});
     assert.equal(await earlyJoin.isDisabled(),false,'paid student joins 40 minutes ahead when teacher already live');
-    await page.getByText(/المعلمة بدأت البث المباشر الآن/).waitFor({timeout:6500});
+    await earlyJoin.click();
+    await page.getByRole('heading',{name:'أنت الآن في قاعة انتظار الحصة'}).waitFor({timeout:6500});
+    assert.equal(earlyTokenCalls,0,'student waiting in website has not spent any LiveKit connection minutes');
+    teacherPublishing=true;
+    for(let i=0;i<105&&earlyTokenCalls<1;i++)await wait(130);
+    assert.equal(earlyTokenCalls,1,'first published teacher media triggers a single automatic viewer token request');
+    await page.getByText(/هذا رفض مقصود في اختبار الاتصال التجريبي/).first().waitFor({timeout:7000});
+    await wait(1200);
+    assert.equal(earlyTokenCalls,1,'permanent denial never loops or retries automatically');
 
    }
    assert.deepEqual(errors,[],'page errors: '+errors.join('; ').slice(0,250));
