@@ -4,11 +4,11 @@ import {
  LiveKitRoom,RoomAudioRenderer,StartAudio,VideoTrack,useTracks,
  useParticipants,useRoomContext,useLocalParticipant,useLocalParticipantPermissions,useChat
 } from '@livekit/components-react';
-import {Track} from 'livekit-client';
+import {Track,RoomEvent} from 'livekit-client';
 import {
  Video,VideoOff,Mic,MicOff,MonitorUp,Hand,Users,ShieldCheck,Radio,
  Volume2,LogOut,UserX,CheckCircle2,RefreshCw,LockKeyhole,MessageCircle,
- Send,Camera,CameraOff,AlertTriangle,Expand,BookOpen,Wifi,Clock3
+ Send,Camera,CameraOff,AlertTriangle,Expand,BookOpen,Wifi,Clock3,Bell,BellOff,SlidersHorizontal,Sun,TimerReset,Volume1
 } from 'lucide-react';
 import '@livekit/components-styles';
 import './ClassroomStudio.css';
@@ -22,6 +22,24 @@ const api=async(path,opts={})=>{
  return data;
 };
 const modes={microphone:'مسموح بالصوت',camera:'مسموح بالصوت والكاميرا'};
+const CAMERA_PRESETS={
+ balanced:{label:'متوازنة HD',resolution:{width:1280,height:720},frameRate:24},
+ high:{label:'عالية Full HD',resolution:{width:1920,height:1080},frameRate:30},
+ economical:{label:'اقتصادية',resolution:{width:640,height:360},frameRate:20}
+};
+function gentleArrivalChime(context){
+ const at=context.currentTime+.015;
+ for(const [frequency,offset] of [[660,0],[880,.13]]){
+  const oscillator=context.createOscillator(),gain=context.createGain();
+  oscillator.type='sine';oscillator.frequency.value=frequency;
+  gain.gain.setValueAtTime(.0001,at+offset);
+  gain.gain.exponentialRampToValueAtTime(.035,at+offset+.016);
+  gain.gain.exponentialRampToValueAtTime(.0001,at+offset+.13);
+  oscillator.connect(gain);gain.connect(context.destination);
+  oscillator.start(at+offset);oscillator.stop(at+offset+.15);
+ }
+}
+
 function VideoSurface({refTrack,emptyText,icon:Icon=Video,small=false,onDimensions}){
  const element=useRef(null);
  useEffect(()=>{
@@ -63,6 +81,10 @@ export function MeetingStudio({connection,onDisconnected}){
  const audioTracks=useTracks([Track.Source.Microphone,Track.Source.ScreenShareAudio],{onlySubscribed:true});
  const {chatMessages,send,isSending}=useChat();
  const host=connection.isHost;
+ const soundContext=useRef(null);
+ const [joinSound,setJoinSound]=useState(true),[arrivalNotice,setArrivalNotice]=useState('');
+ const [durationDraft,setDurationDraft]=useState(''),[cameraQuality,setCameraQuality]=useState('balanced');
+ const [exposureRange,setExposureRange]=useState(null),[exposureValue,setExposureValue]=useState(0);
  const hostId=host?localParticipant.identity:broadcasterIdentity(peers,connection.teacherId);
  const camera=videoTracks.find(t=>t.participant.identity===hostId&&t.source===Track.Source.Camera);
  const screen=videoTracks.find(t=>t.participant.identity===hostId&&t.source===Track.Source.ScreenShare);
@@ -78,6 +100,75 @@ export function MeetingStudio({connection,onDisconnected}){
  const audioStreaming=audioTracks.some(t=>t.participant.identity===hostId&&!t.publication?.isMuted);
  const liveNow=host?(isMicrophoneEnabled||isCameraEnabled||isScreenShareEnabled):(Boolean(stage)||audioStreaming);
  const [roomInfo,setRoomInfo]=useState(null),[busy,setBusy]=useState(false),[error,setError]=useState(''),[tab,setTab]=useState('participants'),[query,setQuery]=useState(''),[listLimit,setListLimit]=useState(40),[announcement,setAnnouncement]=useState(''),[onlineCount,setOnlineCount]=useState(1),[expanded,setExpanded]=useState(false);
+ const cameraOptions=CAMERA_PRESETS[cameraQuality];
+ const getCameraTrack=()=>localParticipant.getTrackPublication(Track.Source.Camera)?.track?.mediaStreamTrack;
+ const playArrivalSound=async()=>{
+  const Ctor=window.AudioContext||window.webkitAudioContext;
+  if(!Ctor)return;
+  try{
+   const audio=soundContext.current||new Ctor();
+   soundContext.current=audio;
+   if(audio.state==='suspended')await audio.resume();
+   if(audio.state==='running')gentleArrivalChime(audio);
+  }catch{/* Visual notification stays available if autoplay policy blocks audio. */}
+ };
+ useEffect(()=>{
+  if(!host)return;
+  const onArrival=participant=>{
+   let role='';
+   try{role=JSON.parse(participant.metadata||'{}').mrsSofiaRole}catch{}
+   if(role!=='viewer')return;
+   setArrivalNotice((participant.name||'طالب')+' انضم إلى الحصة');
+   if(joinSound)void playArrivalSound();
+  };
+  room.on(RoomEvent.ParticipantConnected,onArrival);
+  return()=>room.off(RoomEvent.ParticipantConnected,onArrival);
+ },[room,host,joinSound]);
+ useEffect(()=>{
+  if(!arrivalNotice)return;
+  const timer=setTimeout(()=>setArrivalNotice(''),6500);
+  return()=>clearTimeout(timer);
+ },[arrivalNotice]);
+ useEffect(()=>()=>{const audio=soundContext.current;soundContext.current=null;if(audio)void audio.close().catch(()=>{});},[]);
+ useEffect(()=>{
+  if(!host||!isCameraEnabled){setExposureRange(null);return}
+  const track=getCameraTrack();
+  const range=track?.getCapabilities?.()?.exposureCompensation;
+  setExposureRange(Number.isFinite(range?.min)&&Number.isFinite(range?.max)&&range.max>range.min?range:null);
+ },[host,isCameraEnabled,localParticipant]);
+ const setQuality=async(next)=>{
+  if(!host||!CAMERA_PRESETS[next]||busy)return;
+  setCameraQuality(next);
+  if(!isCameraEnabled)return;
+  setBusy(true);setError('');
+  try{
+   await localParticipant.setCameraEnabled(false);
+   await localParticipant.setCameraEnabled(true,{resolution:CAMERA_PRESETS[next].resolution,frameRate:CAMERA_PRESETS[next].frameRate});
+  }catch(e){setError('تعذّر تغيير الجودة. يمكنك تجربة المستوى المتوازن: '+(e.message||''))}
+  finally{setBusy(false)}
+ };
+ const changeExposure=async(next)=>{
+  const value=Number(next);setExposureValue(value);
+  const track=getCameraTrack();if(!exposureRange||!track)return;
+  try{
+   const capabilities=track.getCapabilities?.();
+   const constraint={exposureCompensation:Math.max(exposureRange.min,Math.min(exposureRange.max,value))};
+   if(capabilities?.exposureMode?.includes('manual'))constraint.exposureMode='manual';
+   await track.applyConstraints({advanced:[constraint]});
+  }catch{setError('الكاميرا لا تدعم تغيير التعريض من المتصفح. استخدمي إضاءة أمامية مناسبة.')}
+ };
+ const updateDuration=async(e)=>{
+  e.preventDefault();if(!host||busy)return;
+  const minutes=Number(durationDraft||roomInfo?.duration_minutes);
+  if(!Number.isInteger(minutes)||minutes<15||minutes>240){setError('حددي مدة من 15 إلى 240 دقيقة');return}
+  setBusy(true);setError('');
+  try{
+   const result=await api('/lessons/'+roomId+'/duration',{method:'PATCH',body:JSON.stringify({duration_minutes:minutes})});
+   setRoomInfo(old=>({...old,...result}));
+   setDurationDraft('');
+  }catch(e){setError(e.message)}
+  finally{setBusy(false)}
+ };
  const micAllowed=host||Boolean(permission?.canPublish&&(permission.canPublishSources?.length===0||permission.canPublishSources?.includes(2)));
  const cameraAllowed=host||Boolean(permission?.canPublish&&(permission.canPublishSources?.length===0||permission.canPublishSources?.includes(1)));
  const students=peers.filter(p=>p.identity!==hostId&&!p.isLocal);
@@ -93,7 +184,7 @@ export function MeetingStudio({connection,onDisconnected}){
   setBusy(true);setError('');
   try{
    if(type==='mic')await localParticipant.setMicrophoneEnabled(!isMicrophoneEnabled);
-   if(type==='camera')await localParticipant.setCameraEnabled(!isCameraEnabled);
+   if(type==='camera')await localParticipant.setCameraEnabled(!isCameraEnabled,isCameraEnabled?undefined:{resolution:cameraOptions.resolution,frameRate:cameraOptions.frameRate});
    if(type==='share')await localParticipant.setScreenShareEnabled(!isScreenShareEnabled,{audio:true});
   }catch(e){setError('تعذر تشغيل الجهاز: '+(e.message||'تحقق من الأذونات'))}finally{setBusy(false)}
  };
@@ -104,7 +195,7 @@ export function MeetingStudio({connection,onDisconnected}){
   // own browser; students' devices can never be switched on remotely.
   const results=await Promise.allSettled([
    localParticipant.setMicrophoneEnabled(true),
-   localParticipant.setCameraEnabled(true)
+   localParticipant.setCameraEnabled(true,{resolution:cameraOptions.resolution,frameRate:cameraOptions.frameRate})
   ]);
   if(results.every(r=>r.status==='rejected'))
    setError('تعذر تشغيل الميكروفون والكاميرا؛ تحققي من أذونات المتصفح أو استخدمي مشاركة الشاشة.');
@@ -143,6 +234,7 @@ export function MeetingStudio({connection,onDisconnected}){
  const view=(
   <div className="sofia-meeting-layout">
    <section className={"sofia-meeting-main "+(stage?"has-video":"")}>
+    {host&&arrivalNotice&&<div className="sofia-meeting-arrival" role="status" aria-live="polite"><Bell size={17}/>{arrivalNotice}</div>}
     <div className="sofia-meeting-info"><div className="sofia-meeting-live"><span className="sofia-live-led"/> {liveNow?'البث مباشر • Mrs Sofia':host?'استوديو المعلمة جاهز':'في انتظار بدء بث المعلمة'}</div><div className="sofia-meeting-count"><Users size={16}/> {onlineCount.toLocaleString('ar-EG')} مشارك</div></div>
     <div className={'sofia-meeting-stage '+(stage?'has-video is-'+stageLayout.orientation:'')} style={stage?{'--sofia-source-aspect':stageLayout.ratio}:undefined}>
      <VideoSurface refTrack={stage} onDimensions={setVideoDimensions} emptyText={host?'شغّلي الكاميرا أو مشاركة الشاشة للشرح':audioStreaming?'صوت المعلمة مباشر — في انتظار الفيديو':'في انتظار بث المعلمة'} icon={host?Camera:BookOpen}/>
@@ -150,6 +242,36 @@ export function MeetingStudio({connection,onDisconnected}){
      <div className="sofia-meeting-stage-bottom"><span><Radio size={15}/> {screen?'مشاركة شاشة المعلمة':camera?'فيديو المعلمة':'جاهز للدرس'}</span><span>{connection.isHost?'أنتِ تديرين الفصل':'تستمع إلى درس Mrs Sofia'}</span></div>
     </div>
     {host&&<div className="sofia-director-broadcast" role="status"><div><strong>{liveNow?'البث قيد التشغيل':'أنتِ المعلمة المسؤولة عن البث'}</strong><small>{liveNow?'يمكنك تغيير الكاميرا أو الصوت أو مشاركة الشاشة، والطلاب يشاهدون ما تنشرينه فقط.':'اضغطي «بدء البث» لتشغيل الكاميرا والميكروفون بموافقتك. ويمكنك استخدام مشاركة الشاشة بدل الكاميرا.'}</small></div>{!liveNow&&<button type="button" className="sofia-director-start" onClick={startTeaching} disabled={busy}><Radio size={17}/>{busy?'جارٍ تشغيل الأجهزة...':'ابدئي البث الآن'}</button>}</div>}
+    {host&&<div className="sofia-meeting-professional">
+      <div className="sofia-meeting-settings-head">
+       <strong><SlidersHorizontal size={18}/> إعدادات الاستوديو</strong>
+       <button type="button" className="sofia-meeting-sound-toggle" onClick={()=>{setJoinSound(v=>!v);if(!joinSound)void playArrivalSound();}}>
+        {joinSound?<Bell size={15}/>:<BellOff size={15}/>}
+        {joinSound?'نغمة دخول الطلاب: مفعلة':'نغمة دخول الطلاب: صامتة'}
+       </button>
+      </div>
+      <form className="sofia-meeting-duration" onSubmit={updateDuration}>
+       <label htmlFor="lesson-live-duration"><TimerReset size={17}/> مدة الحصة (دقيقة)</label>
+       <input id="lesson-live-duration" type="number" min="15" max="240" step="1"
+        value={durationDraft!==''?durationDraft:roomInfo?.duration_minutes??60}
+        onChange={e=>setDurationDraft(e.target.value)} inputMode="numeric"/>
+       <button type="submit" disabled={busy||!roomInfo||Number(durationDraft||roomInfo.duration_minutes)===Number(roomInfo.duration_minutes)}>حفظ المدة</button>
+       {roomInfo?.ends_at&&<small>النهاية المجدولة: {new Intl.DateTimeFormat('ar-EG',{hour:'numeric',minute:'2-digit',timeZone:'Africa/Cairo'}).format(new Date(roomInfo.ends_at))} بتوقيت القاهرة</small>}
+      </form>
+      <div className="sofia-meeting-camera-controls">
+       <label htmlFor="sofia-camera-quality">جودة الكاميرا</label>
+       <select id="sofia-camera-quality" value={cameraQuality} disabled={busy} onChange={e=>void setQuality(e.target.value)}>
+        {Object.entries(CAMERA_PRESETS).map(([value,item])=><option value={value} key={value}>{item.label}</option>)}
+       </select>
+       <small>تتكيف الجودة الفعلية مع سرعة الاتصال وقدرة الكاميرا؛ تغيير المستوى أثناء البث قد يوقف الصورة لحظة.</small>
+      </div>
+      {isCameraEnabled&&exposureRange?
+       <label className="sofia-meeting-exposure"><Sun size={16}/> تحسين التعريض المدعوم بالكاميرا
+        <input type="range" min={exposureRange.min} max={exposureRange.max} step={exposureRange.step||.1} value={exposureValue} onChange={e=>void changeExposure(e.target.value)}/>
+       </label>:
+       <small className="sofia-meeting-light-tip"><Sun size={15}/> لأفضل إضاءة: ضعي مصدر الضوء أمام وجهك، وابتعدي عن النافذة خلفك. التحكم الإلكتروني في التعريض يظهر فقط إذا دعمته الكاميرا.</small>}
+      <small className="sofia-meeting-duration-note">تغيير المدة يحدّث نهاية الحصة؛ ولإنهائها فورًا افصلي الجميع من لوحة الطلاب.</small>
+     </div>}
     <div className="sofia-meeting-tools"><div className="sofia-meeting-tool-group">
      {host&&<ClassButton icon={isMicrophoneEnabled?Mic:MicOff} onClick={()=>toggle('mic')} active={isMicrophoneEnabled} disabled={busy}>{isMicrophoneEnabled?'إيقاف صوتي':'تشغيل صوتي'}</ClassButton>}
      {!host&&micAllowed&&<ClassButton icon={isMicrophoneEnabled?Mic:MicOff} onClick={()=>toggle('mic')} active={isMicrophoneEnabled} disabled={busy}>{isMicrophoneEnabled?'إغلاق ميكروفوني':'تشغيل ميكروفوني'}</ClassButton>}
