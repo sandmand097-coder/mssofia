@@ -11,7 +11,7 @@ Other enrolled students ──────────────────�
                                                      ▲
                                  WebRTC publish audio, video, screen
                                                      │
-                                             Mrs Sofia / Teacher
+                                             Miss Sofia / Teacher
                                                      │
              REST moderation + hand raise ────────────┤
                                                      ▼

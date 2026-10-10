@@ -30,7 +30,7 @@ export default function AdminPayments(){
   if(!/^01[0125]\d{8}$/.test(manualPhone.trim())){setError('اكتبي رقم الهاتف الذي ظهر في التحويل الوارد، 11 رقمًا');return}
   if(!/^[A-Za-z0-9][A-Za-z0-9./_-]{4,63}$/.test(manualReference.trim())){setError('اكتبي رقم عملية التحويل الحقيقي كما ظهر في محفظتك');return}
   if(Number(manualAmount)!==Number(chosen.amount_egp)){setError('المبلغ الذي تم تأكيده يجب أن يطابق المبلغ المطلوب للحجز');return}
-  if(!manualConfirmed){setError('أكّدي وصول المبلغ بنفسك إلى رقم فودافون كاش للمدرسة');return}
+  if(!manualConfirmed){setError('أكّدي وصول المبلغ بنفسك إلى رقم فودافون كاش للمُدرِّسة');return}
   setError('');setManualMessage('');setBusy('manual');
   try{
    const response=await fetch('/api/admin/bookings/'+encodeURIComponent(chosen.booking_id)+'/manual-payment',{

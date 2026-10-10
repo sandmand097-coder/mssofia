@@ -4,7 +4,7 @@
 
 ## تم تشغيل بث مباشر محلي حقيقي
 
-- اسم البرنامج: **mrsofia | Mrs Sofia — مدرسة العلوم**.
+- اسم البرنامج: **mrsofia | Miss Sofia — مُدرِّسة العلوم**.
 - LiveKit Server v1.13.9 الرسمي لنظام Windows مثبت في المجلد المجاور: `..\mrssofia-local-tools\livekit\livekit-server.exe`.
 - تنزيل الملف من إصدار GitHub الرسمي، والتحقق من مطابقة بصمة SHA-256 المنشورة قبل فك الضغط.
 - اضغط على الملف **`START-MRSOFIA-WITH-VIDEO.cmd`** لتشغيل LiveKit والموقع على الكمبيوتر دون كتابة أوامر.

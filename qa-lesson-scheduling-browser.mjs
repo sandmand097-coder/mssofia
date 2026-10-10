@@ -16,7 +16,7 @@ try{
  let ready=false;for(let i=0;i<75;i++){try{if((await fetch(origin)).ok){ready=true;break}}catch{}await wait(140)}
  assert.ok(ready,'Vite preview started');
  browser=await chromium.launch({headless:true,executablePath:'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe'});
- const course={id:'mock-course',title:'علوم للمرحلة الابتدائية',teacher_name:'Mrs Sofia',enrolled:0,capacity:30,price:170,subject:'علوم',level:'الابتدائي',duration_minutes:60,teacher_id:'director-1'};
+ const course={id:'mock-course',title:'علوم للمرحلة الابتدائية',teacher_name:'Miss Sofia',enrolled:0,capacity:30,price:170,subject:'علوم',level:'الابتدائي',duration_minutes:60,teacher_id:'director-1'};
  const date=cairoParts(Date.now()+5*86400000).date,expected=cairoLocalToISO(date,'16','30');
  for(const width of [390,1366]){
   const page=await browser.newPage({viewport:{width,height:920},locale:'ar-EG'}),errors=[],saved=[];
@@ -25,10 +25,10 @@ try{
    const url=new URL(route.request().url()).pathname,method=route.request().method();
    const reply=(status,data)=>route.fulfill({status,contentType:'application/json',body:JSON.stringify(data)});
    if(url==='/api/health')return reply(200,{ok:true,mode:'full'});
-   if(url==='/api/auth/me')return reply(200,{user:{id:'director-1',name:'Mrs Sofia',role:'admin',status:'active',email:'admin@example.test'}});
+   if(url==='/api/auth/me')return reply(200,{user:{id:'director-1',name:'Miss Sofia',role:'admin',status:'active',email:'admin@example.test'}});
    if(url==='/api/admin/dashboard')return reply(200,{statistics:{students:0,teachers:0,courses:1,pendingBookings:0},latestUsers:[],upcomingLessons:[],pendingBookings:[],registrationTrend:[]});
    if(url==='/api/my/overview')return reply(200,{courses:[course],bookings:[],lessons:[],stats:{courses:1,bookings:0,upcoming:0}});
-   if(url==='/api/admin/users')return reply(200,{users:[{id:'director-1',role:'admin',name:'Mrs Sofia',status:'active',email:'admin@example.test'}]});
+   if(url==='/api/admin/users')return reply(200,{users:[{id:'director-1',role:'admin',name:'Miss Sofia',status:'active',email:'admin@example.test'}]});
    if(url==='/api/admin/dependencies')return reply(200,{checkedAt:new Date().toISOString(),databaseConnected:true,livekitApiVerified:true,receiptBucketPrivateVerified:false});
    if(url==='/api/admin/setup-status')return reply(200,{launchMode:'full',livekitCredentialsConfigured:true});
    if(url==='/api/courses/mock-course/lessons'&&method==='POST'){saved.push(route.request().postDataJSON());return reply(201,{id:'lesson-1'})}
@@ -58,7 +58,7 @@ try{
   console.log('PASS internal LiveKit lesson creation, unambiguous Cairo scheduling '+width+'px');
   await page.close();
  }
- console.log('PASS new live course lessons remain within Mrs Sofia, never redirect to Meet');
+ console.log('PASS new live course lessons remain within Miss Sofia, never redirect to Meet');
 }finally{
  if(browser)await browser.close();
  vite.kill();await Promise.race([new Promise(r=>vite.once('exit',r)),wait(1200)]);

@@ -1,4 +1,4 @@
-# Mrs Sofia - Administrator Launch Verification
+# Miss Sofia - Administrator Launch Verification
 Status: ADMIN-ONLY LIVE (2026-10-10). Public student enrollment and payments remain CLOSED.
 
 ## Production endpoints

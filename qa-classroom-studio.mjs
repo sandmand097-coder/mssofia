@@ -23,7 +23,7 @@ async function loggedIn(role,width){
 try{
  const t=await loggedIn('TEACHER',1440);
  const room=t.locator('#mrsofia-room-smoke');
- await room.getByText('فصل مباشر • Mrs Sofia').waitFor();
+ await room.getByText('فصل مباشر • Miss Sofia').waitFor();
  await room.getByRole('button',{name:'مشاركة الشاشة'}).waitFor();
  await room.getByRole('button',{name:'قفل كل ميكروفونات الطلاب'}).waitFor();
  await room.getByRole('button',{name:'إنهاء الحصة للجميع'}).waitFor();

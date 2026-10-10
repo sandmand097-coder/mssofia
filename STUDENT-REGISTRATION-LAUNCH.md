@@ -1,4 +1,4 @@
-# Mrs Sofia — Google guardian registration launch
+# Miss Sofia — Google guardian registration launch
 
 ## Scope
 Public registration may create **one student profile per verified guardian Google account**.

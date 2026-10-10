@@ -9,7 +9,7 @@ if(process.env.NODE_ENV==='production'&&process.env.PUBLIC_LAUNCH_MODE==='previe
  if(result.ready){
   await import('./index.js');
  }else{
-  console.warn('Mrs Sofia admin setup pending ('+result.code+'); preserving secure public preview.');
+  console.warn('Miss Sofia admin setup pending ('+result.code+'); preserving secure public preview.');
   await import('./public-preview.js');
  }
 }else{

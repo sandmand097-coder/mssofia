@@ -1,6 +1,6 @@
 @echo off
 setlocal
-title mrsofia - Mrs Sofia Science School
+title mrsofia - Miss Sofia Science School
 cd /d "%~dp0"
 if not exist ".env" (
   echo Environment file missing. Read README.md before first use.
@@ -18,10 +18,10 @@ if not exist "node_modules\vite" (
 )
 curl.exe -sS -f "http://127.0.0.1:5173/" >nul 2>nul
 if errorlevel 1 (
-  echo Starting Mrs Sofia development server...
+  echo Starting Miss Sofia development server...
   start "mrsofia - Keep this window open" /D "%~dp0" cmd.exe /k "npm run dev"
   timeout /t 6 /nobreak >nul
 )
-echo Opening Mrs Sofia - http://127.0.0.1:5173
+echo Opening Miss Sofia - http://127.0.0.1:5173
 start "" "http://127.0.0.1:5173/"
 exit /b 0

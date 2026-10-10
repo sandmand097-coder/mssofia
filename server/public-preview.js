@@ -14,7 +14,7 @@ const cloudVideoPrepared=Boolean(/^wss:\/\/[^/]+\.livekit\.cloud\/?$/i.test(proc
 let cloudVideoVerified=false;
 async function verifyCloudVideoConnection(){
  if(!cloudVideoPrepared){
-  console.warn('Mrs Sofia LiveKit check: CLOUD_CONFIGURATION_MISSING');
+  console.warn('Miss Sofia LiveKit check: CLOUD_CONFIGURATION_MISSING');
   return;
  }
  try{
@@ -27,9 +27,9 @@ async function verifyCloudVideoConnection(){
    new Promise((_,reject)=>setTimeout(()=>reject(Error('timed out')),12000))
   ]);
   cloudVideoVerified=true;
-  console.log('Mrs Sofia LiveKit check: CLOUD_API_VERIFIED');
+  console.log('Miss Sofia LiveKit check: CLOUD_API_VERIFIED');
  }catch{
-  console.warn('Mrs Sofia LiveKit check: CLOUD_API_UNAVAILABLE');
+  console.warn('Miss Sofia LiveKit check: CLOUD_API_UNAVAILABLE');
  }
 }
 if(process.env.VERIFY_LIVEKIT_CLOUD==='true'){
@@ -43,4 +43,4 @@ app.get('/api/courses',(req,res)=>res.json({courses:[]}));
 app.use('/api',(req,res)=>res.status(503).json({error:'خدمة تسجيل الطلاب والحصص غير متاحة أثناء الإطلاق التعريفي. سيتم الإعلان عن موعد فتح التسجيل.'}));
 app.use(express.static(path.join(root,'dist'),{maxAge:'1h',immutable:false}));
 app.get('/{*splat}',(req,res)=>res.sendFile(path.join(root,'dist','index.html'),err=>{if(err&&!res.headersSent)res.status(404).end()}));
-app.listen(port,process.env.NODE_ENV==='production'?'0.0.0.0':'127.0.0.1',()=>console.log('Mrs Sofia public introduction is running safely on port '+port));
+app.listen(port,process.env.NODE_ENV==='production'?'0.0.0.0':'127.0.0.1',()=>console.log('Miss Sofia public introduction is running safely on port '+port));

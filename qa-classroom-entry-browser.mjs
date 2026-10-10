@@ -32,7 +32,7 @@ try{
     const pathname=new URL(route.request().url()).pathname;
     const reply=(status,data)=>route.fulfill({status,contentType:'application/json',body:JSON.stringify(data)});
     if(pathname==='/api/health')return reply(200,{ok:true,mode:role==='admin'?'admin':'full',registrationAvailable:false});
-    if(pathname==='/api/auth/me')return reply(200,{user:{id:role==='admin'?'director':'approved-student',name:role==='admin'?'Mrs Sofia':'Science learner',role,status:'active',email:role+'@example.test'}});
+    if(pathname==='/api/auth/me')return reply(200,{user:{id:role==='admin'?'director':'approved-student',name:role==='admin'?'Miss Sofia':'Science learner',role,status:'active',email:role+'@example.test'}});
     if(pathname==='/api/lessons/future-lesson/token'&&route.request().method()==='POST')return reply(503,{error:'تعذر الاتصال التجريبي بخدمة البث'});
     if(pathname==='/api/lessons/fixture-lesson'||pathname==='/api/lessons/future-lesson')return reply(200,{lesson:{
      id:pathname.endsWith('future-lesson')?'future-lesson':'fixture-lesson',title:'حصة علوم تجريبية',course_title:'كورس علوم',

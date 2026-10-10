@@ -1,4 +1,4 @@
-# Mrs Sofia — secure monthly renewals and moderated classroom chat
+# Miss Sofia — secure monthly renewals and moderated classroom chat
 
 ## Current release model
 - Every approved first payment grants one **30 × 24-hour period**, starting at the administrator-confirmed `payment_submissions.reviewed_at`.

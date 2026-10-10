@@ -1,4 +1,4 @@
-# Mrs Sofia — staged administrator-only launch
+# Miss Sofia — staged administrator-only launch
 
 This deployable mode lets a preapproved school director prepare courses and conduct LiveKit lessons. It **does not** enable public registration, email/password login, receipts, payments, or student access.
 
@@ -19,7 +19,7 @@ This deployable mode lets a preapproved school director prepare courses and cond
 2. Store `DATABASE_URL` and `JWT_SECRET` **only** in Render environment. `JWT_SECRET` must be at least 48 characters. Keep PostgreSQL TLS verification on. Confirm backend startup and a restricted query on the existing schema.
 3. Configure Render environment (merge; never replace other variables):
    - `APP_ORIGIN=https://mssofia.pages.dev`
-   - `GOOGLE_OAUTH_CLIENT_ID=<the existing Mrs Sofia web-client ID>`
+   - `GOOGLE_OAUTH_CLIENT_ID=<the existing Miss Sofia web-client ID>`
    - `GOOGLE_ADMIN_EMAIL=<email of existing active admin database row>`
    - `GOOGLE_ADMIN_LOGIN_ENABLED=true`
    - `REGISTRATION_ENABLED=false`

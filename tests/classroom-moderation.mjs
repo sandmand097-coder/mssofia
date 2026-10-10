@@ -16,7 +16,7 @@ process.env.MADRASATI_DB_PATH=path.join(tmp,'classroom.sqlite');
 const {run,uid,now,db}=await import('../server/db.js');
 const password=crypto.randomBytes(24).toString('hex'),passwordHash=bcrypt.hashSync(password,10);
 function user(role,name){const id=uid();run('INSERT INTO users(id,name,email,password_hash,role,status,created_at) VALUES(?,?,?,?,?,?,?)',id,name,role+id+'@test.local',passwordHash,role,'active',now());return{id,email:role+id+'@test.local'}}
-const teacher=user('teacher','Class teacher'),admin=user('admin','Mrs Sofia director'),student=user('student','Test child'),outsider=user('student','Another child'),teacherTwo=user('teacher','Other teacher');
+const teacher=user('teacher','Class teacher'),admin=user('admin','Miss Sofia director'),student=user('student','Test child'),outsider=user('student','Another child'),teacherTwo=user('teacher','Other teacher');
 const course=uid(),lesson=uid(),roomKey=uid();
 run('INSERT INTO courses(id,title,description,subject,level,price,duration_minutes,capacity,teacher_id,status,created_at) VALUES(?,?,?,?,?,?,?,?,?,?,?)',course,'علوم مباشرة','حصة آمنة','علوم','الابتدائي',0,90,40,teacher.id,'published',now());
 run('INSERT INTO lessons(id,course_id,title,starts_at,duration_minutes,status,room_key,created_at) VALUES(?,?,?,?,?,?,?,?)',lesson,course,'فصل تجريبي',new Date(Date.now()+60000).toISOString(),90,'scheduled',roomKey,now());

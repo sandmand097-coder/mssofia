@@ -13,7 +13,7 @@ try{
  await desktop.goto(root,{waitUntil:'networkidle'});
  await desktop.getByRole('heading',{level:1,name:/العلوم مش حفظ/}).waitFor();
  assert.match(await desktop.title(),/mrsofia/);
- assert.ok(await desktop.getByText('مدرسة العلوم').count()>0);
+ assert.ok(await desktop.getByText('مُدرِّسة العلوم').count()>0);
  await desktop.screenshot({path:'mrsofia-home-desktop.png',fullPage:true});
  await desktop.screenshot({path:'mrsofia-hero-desktop.png'});
  console.log('PASS desktop landing, brand and title');
@@ -45,7 +45,7 @@ try{
  await desktop.locator('input[type=password]').fill(env.DEMO_STUDENT_PASSWORD);
  await desktop.locator('button[type=submit]').click();
  await desktop.waitForURL('**/student');
- await desktop.locator('.portal-page-footer').getByText(/Mrs Sofia/).waitFor();
+ await desktop.locator('.portal-page-footer').getByText(/Miss Sofia/).waitFor();
  console.log('PASS student login and new brand dashboard');
  const admin=await session();attach(admin,'admin');
  await admin.goto(root+'/login',{waitUntil:'networkidle'});

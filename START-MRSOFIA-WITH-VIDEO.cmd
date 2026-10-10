@@ -1,6 +1,6 @@
 @echo off
 setlocal
-title Mrs Sofia - Local Video Classroom
+title Miss Sofia - Local Video Classroom
 cd /d "%~dp0"
 set "VIDEO_EXE=%~dp0..\mrssofia-local-tools\livekit\livekit-server.exe"
 
@@ -15,7 +15,7 @@ rem Local-only demo: not accessible to students on other networks.
 curl.exe -s --max-time 2 "http://127.0.0.1:7880/" >nul 2>nul
 if errorlevel 1 (
   echo Starting LiveKit locally on 127.0.0.1 only...
-  start "Mrs Sofia - LiveKit local" /MIN "%VIDEO_EXE%" --dev --bind 127.0.0.1 --node-ip 127.0.0.1
+  start "Miss Sofia - LiveKit local" /MIN "%VIDEO_EXE%" --dev --bind 127.0.0.1 --node-ip 127.0.0.1
   timeout /t 3 /nobreak >nul
 )
 

@@ -1,4 +1,4 @@
-# Mrs Sofia — GitHub and Render release workflow
+# Miss Sofia — GitHub and Render release workflow
 
 ## Confirmed GitHub repository
 
@@ -6,7 +6,7 @@
 - Repository: `mssofia`
 - URL: https://github.com/sandmand097-coder/mssofia
 - Repository visibility: Public at the time of verification. Keep secrets and pupil data outside Git.
-- School branding: **Mrs Sofia — مدرسة العلوم**.
+- School branding: **Miss Sofia — مُدرِّسة العلوم**.
 - The repository owner is the new GitHub account, not any older GitHub account.
 - This project must not modify unrelated Render or GitHub services.
 

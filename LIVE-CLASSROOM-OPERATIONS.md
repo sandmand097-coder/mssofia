@@ -1,4 +1,4 @@
-# Mrs Sofia — direct administrator broadcasting
+# Miss Sofia — direct administrator broadcasting
 
 Status: LIVE ADMIN STUDIO IMPLEMENTED; public student enrollment and payment
 release remain subject to school approvals and external live acceptance testing.

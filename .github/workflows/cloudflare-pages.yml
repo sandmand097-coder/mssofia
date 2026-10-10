@@ -1,4 +1,4 @@
-name: Deploy Mrs Sofia to Cloudflare Pages
+name: Deploy Miss Sofia to Cloudflare Pages
 
 on:
   push:

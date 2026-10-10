@@ -1,4 +1,4 @@
-# Mrs Sofia — Cloudflare Pages: fast public site and protected Node backend
+# Miss Sofia — Cloudflare Pages: fast public site and protected Node backend
 
 ## Why this architecture
 

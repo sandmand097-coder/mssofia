@@ -8,7 +8,7 @@ function AuthLayout({tag,title,description,children}){
  return <main className="sofia-site sofia-auth-bg"><div className="sofia-container sofia-auth-layout"><section className="sofia-auth-card">
   <div className="sofia-auth-icon"><FlaskConical size={29}/></div>
   <span className="sofia-kicker"><i/> {tag}</span><h1>{title}</h1><p>{description}</p>{children}
- </section><aside className="sofia-auth-visual"><div className="sofia-auth-visual-shape"><div><FlaskConical size={72}/></div><span>✦</span></div><span className="sofia-auth-subtitle">MRS SOFIA • SCIENCE SCHOOL</span><h2>هنا العلوم تجربة<br/>وحكاية بتتفهم.</h2><p>افهم • جرّب • اكتشف</p><div className="sofia-auth-bottom"><ShieldCheck size={18}/> حصص مباشرة تحت إشراف المعلمة</div></aside></div></main>;
+ </section><aside className="sofia-auth-visual"><div className="sofia-auth-visual-shape"><div><FlaskConical size={72}/></div><span>✦</span></div><span className="sofia-auth-subtitle">MISS SOFIA • SCIENCE SCHOOL</span><h2>هنا العلوم تجربة<br/>وحكاية بتتفهم.</h2><p>افهم • جرّب • اكتشف</p><div className="sofia-auth-bottom"><ShieldCheck size={18}/> حصص مباشرة تحت إشراف المعلمة</div></aside></div></main>;
 }
 function ErrorMessage({message}){return message?<div role="alert" className="sofia-alert">{message}</div>:null}
 function Notice({children}){return <div role="status" className="sofia-auth-notice"><MailCheck size={22}/><div>{children}</div></div>}
@@ -20,7 +20,7 @@ export function SignInPage({api,user,setUser,adminOnly=false}){
  const navigate=useNavigate(),[email,setEmail]=useState(''),[password,setPassword]=useState(''),[error,setError]=useState(''),[busy,setBusy]=useState(false);
  useEffect(()=>{if(user)navigate(dashboardPath(user),{replace:true})},[user,navigate]);
  const submit=async e=>{e.preventDefault();setBusy(true);setError('');try{const r=await api('/auth/login',{method:'POST',body:JSON.stringify({email,password})});setUser(r.user);navigate(dashboardPath(r.user),{replace:true})}catch(err){setError(err.message)}finally{setBusy(false)}};
- return <AuthLayout tag={adminOnly?'SCHOOL ADMINISTRATOR':'WELCOME TO MRS SOFIA'} title={adminOnly?'دخول مديرة مدرسة Mrs Sofia':'أهلاً بيك في مدرسة العلوم'} description={adminOnly?'تسجيل الدخول متاح لمديرة المدرسة بحساب Google المعتمد فقط. تسجيل الطلاب ما زال مغلقًا.':'سجّل بحساب Google الخاص بولي الأمر أو بالبريد الإلكتروني للوصول إلى مساحة الطالب، أما المديرة فتدخل بحسابها المعتمد.'}>
+ return <AuthLayout tag={adminOnly?'SCHOOL ADMINISTRATOR':'WELCOME TO MISS SOFIA'} title={adminOnly?'دخول المُدرِّسة Miss Sofia':'أهلاً بيك في مُدرِّسة العلوم'} description={adminOnly?'تسجيل الدخول متاح لالمُدرِّسة بحساب Google المعتمد فقط. تسجيل الطلاب ما زال مغلقًا.':'سجّل بحساب Google الخاص بولي الأمر أو بالبريد الإلكتروني للوصول إلى مساحة الطالب، أما المديرة فتدخل بحسابها المعتمد.'}>
   <ErrorMessage message={error}/>
   {!adminOnly&&<form className="sofia-auth-form" onSubmit={submit}>
    <label>البريد الإلكتروني<input type="email" autoComplete="email" required value={email} onChange={e=>setEmail(e.target.value)} placeholder="example@gmail.com"/></label>
@@ -58,7 +58,7 @@ export function RegisterPage({api,user,setUser}){
   try{await api('/auth/resend-verification',{method:'POST',body:JSON.stringify({email:form.email})});setDone(true)}
   catch(err){setError(err.message)}finally{setBusy(false)}
  };
- return <AuthLayout tag="GUARDIAN-MANAGED STUDENT ACCOUNT" title="ابدأ رحلة طفلك مع Mrs Sofia" description="حساب الطالب يُدار ببريد ولي الأمر. بعد تأكيد الحساب تختار الدورة، وترسل طلب الحجز، وتنتظر موافقة الإدارة على التحويل قبل دخول الحصص.">
+ return <AuthLayout tag="GUARDIAN-MANAGED STUDENT ACCOUNT" title="ابدأ رحلة طفلك مع Miss Sofia" description="حساب الطالب يُدار ببريد ولي الأمر. بعد تأكيد الحساب تختار الدورة، وترسل طلب الحجز، وتنتظر موافقة الإدارة على التحويل قبل دخول الحصص.">
   <ErrorMessage message={error}/>
   {done?<><Notice>تم إرسال رابط تفعيل حسابك إلى <strong dir="ltr">{form.email}</strong>. افتح البريد (وجرب مجلد Spam) واضغط رابط التفعيل؛ بعدها ارجع لتسجيل الدخول.</Notice>
    {mailMode==='local-preview'&&<p className="sofia-auth-hint">هذه نسخة محلية للاختبار فقط، وتوجد الرسالة في مجلد البريد التجريبي.</p>}

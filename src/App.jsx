@@ -92,7 +92,7 @@ function LessonRoom(){
  </div></main>;
 }
 function PublicUnavailable(){
- return <main className="sofia-site sofia-page-bg"><div className="sofia-container sofia-no-results"><LockKeyhole size={43}/><h1>التسجيل هيفتح قريبًا</h1><p>الموقع متاح حاليًا للتعرّف على مدرسة العلوم وعرض أول شهر. بنجهز تأمين حسابات الطلاب والبث المباشر قبل فتح الاشتراك.</p><Link className="sofia-cta" to="/">شوف عرض أول شهر <ArrowLeft size={17}/></Link></div></main>;
+ return <main className="sofia-site sofia-page-bg"><div className="sofia-container sofia-no-results"><LockKeyhole size={43}/><h1>التسجيل هيفتح قريبًا</h1><p>الموقع متاح حاليًا للتعرّف على مُدرِّسة العلوم وعرض أول شهر. بنجهز تأمين حسابات الطلاب والبث المباشر قبل فتح الاشتراك.</p><Link className="sofia-cta" to="/">شوف عرض أول شهر <ArrowLeft size={17}/></Link></div></main>;
 }
 function NotFound(){
  return <main className="sofia-site sofia-page-bg"><div className="sofia-container sofia-no-results"><h1>الصفحة دي مش موجودة</h1><p>يمكن الرابط اتغير، لكن تقدر ترجع تكتشف كورسات العلوم.</p><Link className="sofia-cta" to="/">الرجوع للرئيسية <ArrowLeft size={17}/></Link></div></main>;
@@ -101,8 +101,8 @@ function PageTitle(){
  const {pathname}=useLocation();
  useEffect(()=>{
   const path=pathname.endsWith('/')&&pathname!=='/'?pathname.slice(0,-1):pathname;
-  const label=path==='/privacy'?'الخصوصية':path==='/terms'?'شروط الاشتراك':path==='/courses'?'كورسات العلوم':path.startsWith('/courses/')?'تفاصيل كورس العلوم':path==='/login'?'تسجيل الدخول':path==='/register'?'إنشاء حساب':path==='/student'?'لوحة الطالب':path==='/admin'?'لوحة الإدارة':path==='/teacher'?'لوحة المعلم':path.startsWith('/lesson/')?'الفصل المباشر':'مدرسة العلوم أونلاين';
-  document.title=path==='/'?'مس صوفيا للعلوم | مدرسة العلوم أونلاين — Mrs Sofia':label+' | مس صوفيا للعلوم';
+  const label=path==='/privacy'?'الخصوصية':path==='/terms'?'شروط الاشتراك':path==='/courses'?'كورسات العلوم':path.startsWith('/courses/')?'تفاصيل كورس العلوم':path==='/login'?'تسجيل الدخول':path==='/register'?'إنشاء حساب':path==='/student'?'لوحة الطالب':path==='/admin'?'لوحة الإدارة':path==='/teacher'?'لوحة المعلم':path.startsWith('/lesson/')?'الفصل المباشر':'مُدرِّسة العلوم أونلاين';
+  document.title=path==='/'?'مس صوفيا للعلوم | مُدرِّسة العلوم أونلاين — Miss Sofia':label+' | مس صوفيا للعلوم';
   const publicPage=path==='/'||path==='/courses'||path==='/privacy'||path==='/terms'||path.startsWith('/courses/');
   const canonical=document.querySelector('link[rel="canonical"]');
   if(canonical)canonical.setAttribute('href','https://mssofia.pages.dev'+(publicPage?path:'/')+(publicPage&&path==='/'?'':''));
@@ -125,8 +125,8 @@ export default function App(){
  return <Context.Provider value={{user,setUser,show,logout}}>
   <PageTitle/>
   <BrandHeader user={user} logout={logout} previewMode={publicOnly} adminOnly={adminOnly}/>
-  {(publicOnly)&&<div className="sofia-public-preview-notice" role="status">موقع Mrs Sofia متاح للتعرّف على المدرسة والعروض. تسجيل الطلاب والبث المباشر هيفتحوا بعد اكتمال التجهيز الآمن.</div>}
-  {user===undefined?<div className="loading">جارٍ تجهيز مدرسة العلوم...</div>:
+  {(publicOnly)&&<div className="sofia-public-preview-notice" role="status">موقع Miss Sofia متاح للتعرّف على المُدرِّسة والعروض. تسجيل الطلاب والبث المباشر هيفتحوا بعد اكتمال التجهيز الآمن.</div>}
+  {user===undefined?<div className="loading">جارٍ تجهيز موقع Miss Sofia...</div>:
    <Suspense fallback={<div className="loading">جارٍ تحميل الصفحة...</div>}>
     <Routes>
      <Route path="/" element={<MrsHome api={api}/>}/>

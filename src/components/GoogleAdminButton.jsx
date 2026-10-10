@@ -66,15 +66,15 @@ export default function GoogleAdminButton({
  if(!config)return null;
  if(registration&&!studentSignupAvailable)return null;
  const label=registration?'تسجيل الطالب باستخدام حساب ولي الأمر Google'
-  :purpose==='admin'?'دخول إدارة المدرسة بحساب Google':'دخول ولي الأمر أو المديرة بحساب Google';
+  :purpose==='admin'?'دخول الإدارة بحساب Google':'دخول ولي الأمر أو المديرة بحساب Google';
  return <section className="sofia-google-admin-entry" aria-label={label}>
   <span className="sofia-google-divider">{label}</span>
   {!ready?<p className="sofia-auth-hint">أدخل اسم الطالب أولًا وحدد موافقة ولي الأمر أعلاه، ثم استخدم حساب Google الخاص بولي الأمر.</p>
    :<div ref={container} aria-busy={busy} className="sofia-google-signin-mount"/>}
   <small><ShieldCheck size={14}/>
    {registration?'يُنشأ ملف الطالب تحت بريد ولي الأمر المؤكد. الاشتراك في الكورس لا يتفعّل دون موافقة الإدارة على الحجز والدفع.'
-    :purpose==='admin'?'حساب مديرة المدرسة المعتمد فقط، ولا يُنشئ أي حساب إدارة جديد.'
-    :'Google يثبت ملكية بريد ولي الأمر. يُسمح بدخول الحصص بعد موافقة إدارة المدرسة.'}
+    :purpose==='admin'?'حساب المُدرِّسة المعتمد فقط، ولا يُنشئ أي حساب إدارة جديد.'
+    :'Google يثبت ملكية بريد ولي الأمر. يُسمح بدخول الحصص بعد موافقة الإدارة.'}
   </small>
   {error&&<div role="alert" className="sofia-alert">{error}</div>}
  </section>;
