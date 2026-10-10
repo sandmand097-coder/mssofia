@@ -1,4 +1,4 @@
-import React from 'react';
+import React,{useEffect,useState} from 'react';
 import {Link} from 'react-router-dom';
 import {BookOpen,CalendarDays,Video,Users,Smartphone,ShieldCheck,CheckCircle2,AlertCircle,ArrowLeft,MailCheck} from 'lucide-react';
 import {PanelHeading} from './PortalShell.jsx';
@@ -32,6 +32,21 @@ const readiness=[
  {key:'classroomQuestionsEnabled',label:'تفعيل الأسئلة المكتوبة الخاصة داخل الحصة'}
 ];
 export default function AdminOperations({setup,diagnostics,onRefresh,onNavigate}){
+ const [admission,setAdmission]=useState(null),[monitorError,setMonitorError]=useState('');
+ useEffect(()=>{
+  let active=true;
+  const refresh=async()=>{
+   try{
+    const res=await fetch('/api/admin/live/admission',{credentials:'same-origin'});
+    if(!res.ok)throw Error('unavailable');
+    const data=await res.json();
+    if(active){setAdmission(data.admission);setMonitorError('')}
+   }catch{if(active)setMonitorError('مراقبة ضغط الدخول غير متاحة مؤقتًا')}
+  };
+  void refresh();
+  const timer=setInterval(()=>{if(document.visibilityState==='visible')void refresh()},15000);
+  return()=>{active=false;clearInterval(timer)};
+ },[]);
  return <div className="sofia-operations" dir="rtl">
   <section className="portal-panel">
    <PanelHeading title="خريطة تشغيل مُدرِّسة Miss Sofia" description="خطوات الإدارة والطالب من أول إنشاء الدورة حتى قبول الاشتراك ودخول البث المباشر."/>
@@ -52,6 +67,20 @@ export default function AdminOperations({setup,diagnostics,onRefresh,onNavigate}
     </div>)}
    </div>
    {diagnostics?.checkedAt&&<p className="sofia-auth-hint">آخر فحص: {new Intl.DateTimeFormat('ar-EG',{dateStyle:'medium',timeStyle:'short',timeZone:'Africa/Cairo'}).format(new Date(diagnostics.checkedAt))}. لا يثبت الفحص وحده إرسال بريد تأكيد أو استلام تحويل مالي أو جودة بث بجهازين.</p>}
+  </section>
+  <section className="portal-panel" aria-label="مراقبة ازدحام الدخول">
+   <PanelHeading title="مراقبة دخول البث والتعافي" description="تعرض ضغط إصدار تصاريح الدخول في خادم Render الحالي فقط، وليس عدد المشاهدين داخل LiveKit أو رصيد الخطة."/>
+   {admission?<div className="portal-list">
+    <div className="portal-list-item"><span className="portal-list-icon"><Users size={20}/></span><div className="portal-list-copy">
+     <strong>طلبات قيد المعالجة: {admission.active} من {admission.totalLimit}</strong>
+     <small>طلبات الطلاب: {admission.activeStudents} من {admission.studentLimit}. يوجد احتياطي لاتصال المعلمة.</small>
+    </div></div>
+    <div className="portal-list-item"><span className="portal-list-icon"><ShieldCheck size={20}/></span><div className="portal-list-copy">
+     <strong>طلبات أُجّل قبولها وقت الازدحام: {admission.throttled}</strong>
+     <small>يُعاد طلب الدخول بعد فترة قصيرة بدل الضغط على الخادم، ولا تُتجاوز صلاحيات الاشتراك.</small>
+    </div></div>
+   </div>:<p className="sofia-auth-hint">{monitorError||'جارٍ قراءة مؤشرات ضغط دخول الحصص...'}</p>}
+   <p className="sofia-auth-hint">هذه مؤشرات نسخة الخادم الواحدة وليست مقياسًا للمشاهدين الفعليين أو حصة LiveKit. المراقبة المشتركة تحتاج بنية قابلة للتوسع عند الترقية.</p>
   </section>
   <section className="portal-panel">
    <PanelHeading title="التحقق من التجهيز للإطلاق العام" description="هذه حالات إعدادات الخادم؛ وجود المفتاح لا يعني وحده أن تحويل الأموال أو تسليم البريد اختُبر عمليًا."/>

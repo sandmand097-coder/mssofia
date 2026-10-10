@@ -4,7 +4,8 @@ import {
  LiveKitRoom,RoomAudioRenderer,StartAudio,VideoTrack,useTracks,
  useParticipants,useRoomContext,useLocalParticipant,useLocalParticipantPermissions,useChat
 } from '@livekit/components-react';
-import {Track,RoomEvent} from 'livekit-client';
+import {Track,RoomEvent,DisconnectReason,ConnectionQuality,VideoQuality} from 'livekit-client';
+import {shouldRecoverDisconnect} from './live-resilience.js';
 import {
  Video,VideoOff,Mic,MicOff,MonitorUp,Hand,Users,ShieldCheck,Radio,
  Volume2,LogOut,UserX,CheckCircle2,RefreshCw,LockKeyhole,MessageCircle,
@@ -83,6 +84,9 @@ export function MeetingStudio({connection,onDisconnected,onTimingChange}){
  const host=connection.isHost;
  const soundContext=useRef(null);
  const [joinSound,setJoinSound]=useState(true),[arrivalNotice,setArrivalNotice]=useState('');
+ const [networkState,setNetworkState]=useState('connected'),[networkQuality,setNetworkQuality]=useState('unknown');
+ const [viewerMode,setViewerMode]=useState('auto'),[mediaWarning,setMediaWarning]=useState('');
+ const videoChoiceManual=useRef(false),weakSamples=useRef(0),goodSamples=useRef(0);
  const [durationDraft,setDurationDraft]=useState(''),[cameraQuality,setCameraQuality]=useState('balanced');
  const [exposureRange,setExposureRange]=useState(null),[exposureValue,setExposureValue]=useState(0);
  const hostId=host?localParticipant.identity:broadcasterIdentity(peers,connection.teacherId);
@@ -100,6 +104,59 @@ export function MeetingStudio({connection,onDisconnected,onTimingChange}){
  const audioStreaming=audioTracks.some(t=>t.participant.identity===hostId&&!t.publication?.isMuted);
  const liveNow=host?(isMicrophoneEnabled||isCameraEnabled||isScreenShareEnabled):(Boolean(stage)||audioStreaming);
  const [roomInfo,setRoomInfo]=useState(null),[busy,setBusy]=useState(false),[error,setError]=useState(''),[tab,setTab]=useState('participants'),[query,setQuery]=useState(''),[listLimit,setListLimit]=useState(40),[announcement,setAnnouncement]=useState(''),[onlineCount,setOnlineCount]=useState(1),[expanded,setExpanded]=useState(false);
+ // LiveKit performs media and signalling reconnection internally first.
+ useEffect(()=>{
+  const reconnecting=()=>setNetworkState('reconnecting');
+  const reconnected=()=>{setNetworkState('restored');setMediaWarning('')};
+  const quality=(value,participant)=>{
+   if(participant?.identity!==localParticipant.identity)return;
+   setNetworkQuality(value);
+   if(host||videoChoiceManual.current)return;
+   if(value===ConnectionQuality.Poor||value===ConnectionQuality.Lost){
+    goodSamples.current=0;
+    if(++weakSamples.current>=2)setViewerMode('low');
+   }else if(value===ConnectionQuality.Good||value===ConnectionQuality.Excellent){
+    weakSamples.current=0;
+    if(++goodSamples.current>=3)setViewerMode('auto');
+   }
+  };
+  const subscriptionFailed=()=>setMediaWarning('تعذر استقبال إحدى قنوات الفيديو. يمكنك التحويل إلى وضع الصوت فقط مع بقاء الحصة متصلة.');
+  const deviceFailed=()=>{if(host)setMediaWarning('فُقد الاتصال بالكاميرا أو الميكروفون. جرّبي تشغيل الجهاز من أزرار الاستوديو.')};
+  room.on(RoomEvent.Reconnecting,reconnecting);
+  room.on(RoomEvent.Reconnected,reconnected);
+  room.on(RoomEvent.ConnectionQualityChanged,quality);
+  room.on(RoomEvent.TrackSubscriptionFailed,subscriptionFailed);
+  room.on(RoomEvent.MediaDevicesError,deviceFailed);
+  return()=>{
+   room.off(RoomEvent.Reconnecting,reconnecting);
+   room.off(RoomEvent.Reconnected,reconnected);
+   room.off(RoomEvent.ConnectionQualityChanged,quality);
+   room.off(RoomEvent.TrackSubscriptionFailed,subscriptionFailed);
+   room.off(RoomEvent.MediaDevicesError,deviceFailed);
+  };
+ },[room,host,localParticipant]);
+ useEffect(()=>{
+  if(networkState!=='restored')return;
+  const timeout=setTimeout(()=>setNetworkState('connected'),5200);
+  return()=>clearTimeout(timeout);
+ },[networkState]);
+ // Student-only audio-first fallback. No microphone/camera is enabled by this.
+ useEffect(()=>{
+  if(host)return;
+  const update=()=>{
+   for(const remote of room.remoteParticipants.values()){
+    for(const publication of remote.videoTrackPublications.values()){
+     publication.setEnabled(viewerMode!=='audio');
+     if(viewerMode==='low')publication.setVideoQuality(VideoQuality.LOW);
+     if(viewerMode==='auto')publication.setVideoQuality(VideoQuality.HIGH);
+    }
+   }
+  };
+  update();
+  room.on(RoomEvent.TrackPublished,update);
+  return()=>room.off(RoomEvent.TrackPublished,update);
+ },[room,host,viewerMode,peers.length]);
+ const selectViewerMode=mode=>{videoChoiceManual.current=true;setViewerMode(mode);setMediaWarning('')};
  const cameraOptions=CAMERA_PRESETS[cameraQuality];
  const getCameraTrack=()=>localParticipant.getTrackPublication(Track.Source.Camera)?.track?.mediaStreamTrack;
  const playArrivalSound=async()=>{
@@ -112,17 +169,34 @@ export function MeetingStudio({connection,onDisconnected,onTimingChange}){
    if(audio.state==='running')gentleArrivalChime(audio);
   }catch{/* Visual notification stays available if autoplay policy blocks audio. */}
  };
+ const arrivalBatch=useRef({count:0,timer:null,lastSoundAt:0});
  useEffect(()=>{
   if(!host)return;
   const onArrival=participant=>{
    let role='';
    try{role=JSON.parse(participant.metadata||'{}').mrsSofiaRole}catch{}
    if(role!=='viewer')return;
-   setArrivalNotice((participant.name||'طالب')+' انضم إلى الحصة');
-   if(joinSound)void playArrivalSound();
+   // Coalesce arrivals when a large class joins together. Avoid a chime and
+   // React state update for each of hundreds of incoming participants.
+   arrivalBatch.current.count++;
+   if(arrivalBatch.current.timer)return;
+   arrivalBatch.current.timer=setTimeout(()=>{
+    const batch=arrivalBatch.current;
+    const joined=batch.count;
+    batch.count=0;batch.timer=null;
+    setArrivalNotice(joined===1?'انضم طالب جديد إلى الحصة':'انضم '+joined+' طلاب إلى الحصة');
+    if(joinSound&&Date.now()-batch.lastSoundAt>6000){
+     batch.lastSoundAt=Date.now();
+     void playArrivalSound();
+    }
+   },950);
   };
   room.on(RoomEvent.ParticipantConnected,onArrival);
-  return()=>room.off(RoomEvent.ParticipantConnected,onArrival);
+  return()=>{
+   room.off(RoomEvent.ParticipantConnected,onArrival);
+   clearTimeout(arrivalBatch.current.timer);
+   arrivalBatch.current.timer=null;arrivalBatch.current.count=0;
+  };
  },[room,host,joinSound]);
  useEffect(()=>{
   if(!arrivalNotice)return;
@@ -235,6 +309,19 @@ export function MeetingStudio({connection,onDisconnected,onTimingChange}){
  const view=(
   <div className="sofia-meeting-layout">
    <section className={"sofia-meeting-main "+(stage?"has-video":"")}>
+    {networkState==='reconnecting'&&<div className="sofia-network-banner" role="status" aria-live="assertive"><Wifi size={16}/> جارٍ استعادة اتصال البث تلقائيًا؛ انتظر قليلًا ولا تُعد تحميل الصفحة.</div>}
+    {networkState==='restored'&&<div className="sofia-network-banner restored" role="status"><CheckCircle2 size={16}/> تمت استعادة البث دون مغادرة الحصة.</div>}
+    {(networkQuality==='poor'||networkQuality==='lost')&&networkState!=='reconnecting'&&
+     <div className="sofia-network-banner degraded" role="status"><Wifi size={16}/> الاتصال ضعيف. نخفض جودة الفيديو للمحافظة على صوت الشرح.</div>}
+    {mediaWarning&&<div className="sofia-network-banner degraded" role="status"><AlertTriangle size={16}/>{mediaWarning}</div>}
+    {!host&&<div className="sofia-viewer-recovery-tools">
+     <label htmlFor="sofia-viewer-mode">وضع المشاهدة</label>
+     <select id="sofia-viewer-mode" value={viewerMode} onChange={e=>selectViewerMode(e.target.value)}>
+      <option value="auto">تلقائي — الجودة تتكيف مع الإنترنت</option>
+      <option value="low">توفير الإنترنت — فيديو منخفض الجودة</option>
+      <option value="audio">الصوت فقط — عند ضعف الإنترنت جدًا</option>
+     </select>
+    </div>}
     {host&&arrivalNotice&&<div className="sofia-meeting-arrival" role="status" aria-live="polite"><Bell size={17}/>{arrivalNotice}</div>}
     <div className="sofia-meeting-info"><div className="sofia-meeting-live"><span className="sofia-live-led"/> {liveNow?'البث مباشر • Miss Sofia':host?'استوديو المعلمة جاهز':'في انتظار بدء بث المعلمة'}</div><div className="sofia-meeting-count"><Users size={16}/> {onlineCount.toLocaleString('ar-EG')} مشارك</div></div>
     <div className={'sofia-meeting-stage '+(stage?'has-video is-'+stageLayout.orientation:'')} style={stage?{'--sofia-source-aspect':stageLayout.ratio}:undefined}>
@@ -311,10 +398,25 @@ export function MeetingStudio({connection,onDisconnected,onTimingChange}){
 export function ClassroomPreview({isHost=false}){
  return <div className="sofia-class-preview" dir="rtl"><div className="sofia-class-preview-top"><span><span className="sofia-live-led"/> معاينة التصميم — البث غير مفعل</span><strong>Miss Sofia • الفصل الافتراضي</strong></div><div className="sofia-class-preview-body"><div className="sofia-class-preview-stage"><span><Video size={52}/></span><h3>شاشة شرح المعلمة</h3><p>ستُعرض هنا كاميرا المعلمة أو الشاشة التي تشاركها مع الطلاب.</p></div><aside><h3>{isHost?'لوحة تحكم المعلمة':'مساحة الطالب'}</h3><p>{isHost?'رفع اليد • السماح بالصوت • قفل الجميع • استبعاد الطالب • إنهاء الحصة':'استمع للشرح، وشاهد الفيديو، وارفع يدك لطلب الكلام.'}</p><div><MicOff size={20}/><Users size={20}/><Hand size={20}/></div></aside></div></div>;
 }
-export default function Classroom({connection,onDisconnected,onConnectionError,onTimingChange}){
+export default function Classroom({connection,onDisconnected,onConnectionError,onTimingChange,onRecover}){
+ const done=useRef(false);
+ const leave=()=>{if(done.current)return;done.current=true;onDisconnected?.()};
+ const disconnected=reason=>{
+  if(done.current)return;
+  done.current=true;
+  if(shouldRecoverDisconnect(reason,DisconnectReason))onRecover?.();
+  else onDisconnected?.();
+ };
+ const failed=error=>{
+  if(done.current)return;
+  done.current=true;
+  console.error('Classroom initial connection:',error?.message);
+  onConnectionError?.('تعذر بدء الاتصال بالغرفة. تحقق من الإنترنت أو حد LiveKit، ثم حاول مجددًا.');
+ };
  return <div className="live-frame sofia-classroom-live">
-  <LiveKitRoom token={connection.token} serverUrl={connection.serverUrl} connect audio={false} video={false} options={{adaptiveStream:true,dynacast:true}} onDisconnected={onDisconnected} onError={e=>{console.error('Classroom connection:',e?.message);onConnectionError?.('تعذر الاتصال بغرفة البث. تحققي من الإنترنت ثم اضغطي «فتح استوديو البث» للمحاولة مرة أخرى.')}} data-lk-theme="default">
-   <MeetingStudio connection={connection} onDisconnected={onDisconnected} onTimingChange={onTimingChange}/>
+  <LiveKitRoom token={connection.token} serverUrl={connection.serverUrl} connect audio={false} video={false}
+   options={{adaptiveStream:true,dynacast:true}} onDisconnected={disconnected} onError={failed} data-lk-theme="default">
+   <MeetingStudio connection={connection} onDisconnected={leave} onTimingChange={onTimingChange}/>
   </LiveKitRoom>
  </div>;
 }

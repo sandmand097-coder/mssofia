@@ -249,3 +249,29 @@
  .sofia-meeting-alert-tools{width:100%}
  .sofia-meeting-sound-toggle{flex:1 1 110px}
 }
+
+/* Recovery messages are informative, not an infinite overlay over the lesson. */
+.sofia-network-banner{
+ display:flex;gap:10px;align-items:center;
+ padding:11px 15px;margin:8px 0;
+ border-radius:11px;border:1px solid #edc782;
+ background:#fff4de;color:#7b5219;
+ font:800 12px Cairo,Tahoma,sans-serif;line-height:1.8;
+}
+.sofia-network-banner.restored{background:#e5f8ec;border-color:#8bd7aa;color:#176244}
+.sofia-network-banner.degraded{background:#fff8ec;color:#83551e}
+.sofia-network-banner svg{flex-shrink:0}
+.sofia-viewer-recovery-tools{
+ display:flex;flex-wrap:wrap;align-items:center;gap:12px;
+ padding:10px 13px;margin:7px 0;border:1px solid #426e69;
+ border-radius:12px;background:#174345;color:#e7fff4;
+ font:750 12px Cairo,Tahoma,sans-serif;
+}
+.sofia-viewer-recovery-tools select{
+ flex:1 1 230px;max-width:100%;min-width:0;
+ min-height:42px;border-radius:9px;border:1px solid #85b2a3;
+ padding:8px 10px;font:700 12px Cairo,Tahoma,sans-serif;
+ background:#f6fffa;color:#173e36;
+}
+.sofia-viewer-recovery-tools select:focus-visible{outline:3px solid #b6ead6;outline-offset:2px}
+@media(max-width:640px){.sofia-viewer-recovery-tools{align-items:stretch;flex-direction:column}.sofia-viewer-recovery-tools select{width:100%;flex-basis:auto}}

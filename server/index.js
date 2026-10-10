@@ -15,6 +15,7 @@ import {schoolReadiness} from './release-readiness.js';
 import {createDiagnosticReader} from './deployment-diagnostics.js';
 import {attachAdminOnlyGuard} from './admin-only.js';
 import {attachPaymentRoutes} from './payment-routes.js';
+import {createLiveAdmission} from './live-admission.js';
 import {attachClassroomQuestions,classroomQuestionsEnabled} from './classroom-questions.js';
 import {evaluateMonthlyAccess,accessView,countCurrentMembers,renewalEndSelect} from './monthly-access.js';
 import { get, all, run, uid, now, publicUser, checkConnection, withTransaction, isCloudDatabase } from './db-adapter.js';
@@ -36,6 +37,7 @@ app.use(helmet({
   contentSecurityPolicy: false
 }));
 const roomService = getRoomService();
+const admission=createLiveAdmission({studentLimit:Number(process.env.LIVE_JOIN_STUDENT_INFLIGHT||14),totalLimit:Number(process.env.LIVE_JOIN_TOTAL_INFLIGHT||20)});
 const webhookReceiver = process.env.LIVEKIT_API_KEY && process.env.LIVEKIT_API_SECRET ? new WebhookReceiver(process.env.LIVEKIT_API_KEY, process.env.LIVEKIT_API_SECRET) : null;
 // LiveKit sends a signed raw body. Never mark a student present when merely requesting a token.
 app.post('/api/webhooks/livekit', express.raw({
@@ -123,6 +125,7 @@ const readSchoolDiagnostics=createDiagnosticReader({
  }
 });
 const diagnosticLimiter=rateLimit({windowMs:60000,limit:12,standardHeaders:'draft-8',legacyHeaders:false});
+app.get('/api/admin/live/admission',auth,role('admin'),(req,res)=>res.set('Cache-Control','no-store, private').json({admission:admission.snapshot(),providerLimitVerified:false}));
 app.get('/api/admin/dependencies',auth,role('admin'),diagnosticLimiter,asyncRoute(async(req,res)=>{
  res.set('Cache-Control','no-store, private').json(await readSchoolDiagnostics());
 }));
@@ -738,8 +741,18 @@ app.get('/api/lessons/:id/classroom', auth, async (req, res) => {
   const host = isLessonHost(l, req.user);
   const raised = host ? false : !!(await get('SELECT student_id FROM lesson_hands WHERE lesson_id=? AND student_id=?', l.id, req.user.id));
   const mode = host ? 'host' : (await get('SELECT mode FROM lesson_speakers WHERE lesson_id=? AND student_id=?', l.id, req.user.id))?.mode || '';
-  const raisedHands=host?await all("SELECT h.student_id,h.raised_at,u.name FROM lesson_hands h JOIN users u ON u.id=h.student_id JOIN bookings b ON b.student_id=u.id AND b.course_id=? AND b.status='approved' WHERE h.lesson_id=? AND u.status='active' ORDER BY h.raised_at LIMIT 100",l.course_id,l.id):[];
-  const hands=host?(await Promise.all(raisedHands.map(async hand=>(await studentCanStream(l.course_id,hand.student_id))?hand:null))).filter(Boolean):[];
+  // Single entitlement query, not 100 one-by-one SQL reads per polling cycle.
+  const raisedHands=host?await all(`SELECT h.student_id,h.raised_at,u.name,b.status AS booking_status,
+    c.price AS course_price,p.status AS payment_status,p.reviewed_at AS payment_reviewed_at,
+    p.confirmed_on_phone,${renewalEndSelect('b')}
+    FROM lesson_hands h JOIN users u ON u.id=h.student_id
+    JOIN bookings b ON b.student_id=u.id AND b.course_id=? AND b.status='approved'
+    JOIN courses c ON c.id=b.course_id
+    LEFT JOIN payment_submissions p ON p.booking_id=b.id
+    WHERE h.lesson_id=? AND u.status='active'
+    ORDER BY h.raised_at LIMIT 100`,l.course_id,l.id):[];
+  const hands=raisedHands.filter(row=>evaluateMonthlyAccess(row).active)
+    .map(row=>({student_id:row.student_id,name:row.name,raised_at:row.raised_at}));
   const speakers = host ? await all('SELECT s.student_id,s.mode,s.approved_at,u.name FROM lesson_speakers s JOIN users u ON u.id=s.student_id WHERE s.lesson_id=? ORDER BY s.approved_at', l.id) : [];
   res.json({
     isHost: host,
@@ -829,16 +842,16 @@ app.post('/api/lessons/:id/moderate', auth, role('teacher', 'admin'), asyncRoute
       await run('DELETE FROM lesson_hands WHERE lesson_id=?', l.id);
       await run('DELETE FROM lesson_speakers WHERE lesson_id=?', l.id);
     } else if (action === 'mute_all') {
-      const participants = await roomService.listParticipants(l.room_key);
-      const studentRows = await all("SELECT id FROM users WHERE role='student' AND status='active'");
-      const liveStudentIds = new Set(studentRows.map(x => x.id));
-      const students = participants.filter(p => liveStudentIds.has(p.identity));
-      for (let i = 0; i < students.length; i += 16) {
-        await Promise.all(students.slice(i, i + 16).map(p => roomService.updateParticipant(l.room_key, p.identity, {
-          permission: participantPermission('')
-        })));
-      }
-      await run('DELETE FROM lesson_speakers WHERE lesson_id=?', l.id);
+      // Only participants explicitly granted publication can broadcast,
+      // so at most six updates are needed, even with thousands of viewers.
+      const permittedSpeakers=await all('SELECT student_id FROM lesson_speakers WHERE lesson_id=?',l.id);
+      const results=await Promise.allSettled(permittedSpeakers.map(member=>
+        roomService.updateParticipant(l.room_key,member.student_id,{permission:participantPermission('')})
+      ));
+      const serious=results.find(result=>result.status==='rejected'
+        &&!/not.found|404|no.such.participant/i.test(String(result.reason?.message||result.reason)));
+      if(serious)throw serious.reason;
+      await run('DELETE FROM lesson_speakers WHERE lesson_id=?',l.id);
     } else if (action === 'remove') {
       await run('INSERT OR IGNORE INTO lesson_bans(lesson_id,student_id,banned_at) VALUES(?,?,?)', l.id, id, now());
       try {
@@ -895,7 +908,14 @@ app.get('/api/lessons/:id', auth, async (req, res) => {
     videoLocalOnly: localVideo
   });
 });
-app.post('/api/lessons/:id/token', auth, asyncRoute(async (req, res) => {
+const classroomJoinLimiter=rateLimit({
+ windowMs:60000,
+ limit:req=>req.user.role==='student'?30:80,
+ keyGenerator:req=>req.user.id,
+ standardHeaders:'draft-8',legacyHeaders:false,
+ message:{code:'JOIN_RATE_LIMITED',error:'طلبات دخول كثيرة لهذا الحساب. انتظر قليلًا قبل إعادة المحاولة.'}
+});
+app.post('/api/lessons/:id/token',auth,classroomJoinLimiter,admission.middleware,asyncRoute(async(req,res)=>{
   const l = await get('SELECT l.*,c.teacher_id FROM lessons l JOIN courses c ON c.id=l.course_id WHERE l.id=?', req.params.id);
   if (!l) return send(res, 404, {
     error: 'الحصة غير موجودة'
@@ -935,7 +955,7 @@ app.post('/api/lessons/:id/token', auth, asyncRoute(async (req, res) => {
     room: l.room_key,
     ...grant
   });
-  res.json({
+  res.set('Cache-Control','no-store, private').json({
     token: await token.toJwt(),
     serverUrl: process.env.LIVEKIT_URL,
     teacherId: l.teacher_id,

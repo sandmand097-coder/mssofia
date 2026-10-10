@@ -1,4 +1,5 @@
-import React,{useEffect,useState,useCallback,lazy,Suspense,createContext,useContext} from 'react';
+import React,{useEffect,useState,useCallback,useRef,lazy,Suspense,createContext,useContext} from 'react';
+import {joinWithBackoff} from './components/live-resilience.js';
 import {Routes,Route,Link,Navigate,useLocation,useNavigate,useParams} from 'react-router-dom';
 import {LockKeyhole,ChevronLeft,ShieldCheck,Video,Play,ArrowLeft} from 'lucide-react';
 import {BrandHeader,BrandFooter,dashboardPath} from './components/MrsSofiaBrand.jsx';
@@ -23,14 +24,25 @@ const Context=createContext(null);
 const useApp=()=>useContext(Context);
 const fmt=date=>new Intl.DateTimeFormat('ar-EG',{dateStyle:'medium',timeStyle:'short',timeZone:'Africa/Cairo'}).format(new Date(date));
 async function api(path,options={}){
- const response=await fetch('/api'+path,{
-  credentials:'same-origin',
-  ...options,
-  headers:{'Content-Type':'application/json',...options.headers}
- });
+ let response;
+ try{
+  response=await fetch('/api'+path,{
+   credentials:'same-origin',
+   ...options,
+   headers:{'Content-Type':'application/json',...options.headers}
+  });
+ }catch(error){
+  if(error?.name!=='AbortError')error.code='NETWORK_ERROR';
+  throw error;
+ }
  let data={};
  try{data=await response.json()}catch{}
- if(!response.ok)throw Error(data.error||'تعذر إتمام العملية، حاول مجدداً');
+ if(!response.ok){
+  const issue=new Error(data.error||'تعذر إتمام العملية، حاول مجدداً');
+  issue.status=response.status;issue.code=data.code||'';
+  issue.retryAfterSeconds=Number(data.retryAfterSeconds||response.headers.get('Retry-After')||0);
+  throw issue;
+ }
  return data;
 }
 function RoutePortal(){
@@ -45,12 +57,13 @@ function RoutePortal(){
  return <Navigate to="/" replace/>;
 }
 function LessonRoom(){
- const {id}=useParams(),{show,user}=useApp(),[data,setData]=useState(null),[connection,setConnection]=useState(null),[error,setError]=useState(''),[joining,setJoining]=useState(false),[preview,setPreview]=useState(false),[deviceStatus,setDeviceStatus]=useState(''),[deviceChecking,setDeviceChecking]=useState(false),[clock,setClock]=useState(Date.now());
+ const {id}=useParams(),{show,user}=useApp(),[data,setData]=useState(null),[connection,setConnection]=useState(null),[error,setError]=useState(''),[joining,setJoining]=useState(false),[preview,setPreview]=useState(false),[deviceStatus,setDeviceStatus]=useState(''),[deviceChecking,setDeviceChecking]=useState(false),[clock,setClock]=useState(Date.now()),[recoveryNotice,setRecoveryNotice]=useState('');
+ const requestRef=useRef(null),recoveryRef=useRef({timer:null,attempts:0});
  useEffect(()=>{
   let live=true;
   setData(null);setConnection(null);setError('');setDeviceStatus('');
   api('/lessons/'+id).then(result=>{if(live)setData(result)}).catch(e=>{if(live)setError(e.message)});
-  return ()=>{live=false};
+  return ()=>{live=false;requestRef.current?.abort();clearTimeout(recoveryRef.current.timer);recoveryRef.current.attempts=0};
  },[id]);
  useEffect(()=>{const interval=setInterval(()=>setClock(Date.now()),15000);return()=>clearInterval(interval)},[]);
  const isHost=user?.role==='admin'||(user?.role==='teacher'&&data?.lesson?.teacher_id===user.id);
@@ -74,19 +87,49 @@ function LessonRoom(){
    setDeviceChecking(false);
   }
  };
- const join=async()=>{
+ const join=async(auto=false)=>{
   if(!roomJoinable){setError(isHost?'انتهى وقت الاستوديو لهذه الحصة.':'لم يبدأ وقت دخول الحصة بعد، أو انتهت الحصة.');return}
+  if(requestRef.current&&!requestRef.current.signal.aborted)return;
+  const controller=new AbortController();
+  requestRef.current=controller;
+  if(!auto)recoveryRef.current.attempts=0;
   setError('');setJoining(true);
-  try{setConnection(await api('/lessons/'+id+'/token',{method:'POST'}))}
-  catch(e){setError(e.message);show(e.message)}
-  finally{setJoining(false)}
+  try{
+   const result=await joinWithBackoff(
+    ({signal})=>api('/lessons/'+id+'/token',{method:'POST',signal}),
+    {signal:controller.signal,maxAttempts:4,onRetry:({nextAttempt,delayMs})=>
+     setRecoveryNotice('خادم الحصة مشغول مؤقتًا؛ إعادة المحاولة '+nextAttempt+' خلال '+Math.ceil(delayMs/1000)+' ثانية...')}
+   );
+   if(!controller.signal.aborted){setConnection(result);setRecoveryNotice('')}
+  }catch(e){
+   if(e.name!=='AbortError'){setRecoveryNotice('');setError(e.message);if(!auto)show(e.message)}
+  }finally{
+   if(requestRef.current===controller)requestRef.current=null;
+   setJoining(false);
+  }
  };
+ const recover=()=>{
+  setConnection(null);
+  if(!roomJoinable)return;
+  if(recoveryRef.current.attempts>=3){setRecoveryNotice('تعذر استعادة الاتصال بعد عدة محاولات. اضغط زر الدخول مجددًا.');return}
+  recoveryRef.current.attempts++;
+  const delay=1500+recoveryRef.current.attempts*1400+Math.floor(Math.random()*750);
+  setRecoveryNotice('انقطع الاتصال؛ نحاول إعادة الانضمام تلقائيًا مع الحفاظ على الاشتراك...');
+  clearTimeout(recoveryRef.current.timer);
+  recoveryRef.current.timer=setTimeout(()=>{if(navigator.onLine)void join(true);else setRecoveryNotice('الإنترنت غير متصل. بعد عودته اضغط زر دخول الحصة.')},delay);
+ };
+ useEffect(()=>{
+  if(!connection)return;
+  const stable=setTimeout(()=>{recoveryRef.current.attempts=0},90000);
+  return()=>clearTimeout(stable);
+ },[connection]);
+
  if(error&&!data)return <main className="container empty-state"><LockKeyhole size={40}/><h2>{error}</h2><Link to="/dashboard">العودة للوحة التحكم</Link></main>;
  if(!data)return <main className="loading">جارٍ تجهيز غرفة الدرس...</main>;
  return <main className="room-page"><div className="container">
   <div className="room-head"><div><Link className="breadcrumb" to="/dashboard">لوحة التحكم <ChevronLeft size={15}/> الحصة المباشرة</Link><h1>{data.lesson.title}</h1><p>{data.lesson.course_title} • {fmt(data.lesson.starts_at)}</p></div><span className="room-secure"><ShieldCheck size={17}/> غرفة خاصة بالطلاب المقبولين</span></div>
-  {connection?<Suspense fallback={<div className="loading">جارٍ تحميل الفصل المباشر...</div>}><Classroom connection={connection} onDisconnected={()=>setConnection(null)} onConnectionError={message=>{setConnection(null);setError(message);show(message)}} onTimingChange={result=>setData(current=>current?{...current,lesson:{...current.lesson,duration_minutes:result.duration_minutes}}:current)}/></Suspense>:
-  <div className="room-placeholder"><div className="video-illustration"><Video size={56}/><span className="video-ring"/></div><h2>{user?.role==='admin'?'استوديو بث المديرة':'غرفة الحصة المباشرة'}</h2><p>{user?.role==='admin'?'أنتِ مقدمة البث. بعد فتح الاستوديو اضغطي «ابدئي البث الآن» لتشغيل صوتك والكاميرا، أو اختاري مشاركة الشاشة. الطلاب يشاهدون ويستمعون فقط حتى تسمحي بالمشاركة.':'تابع شرح المعلمة بالصوت والفيديو ومشاركة الشاشة. الأطفال يبدأون في وضع الاستماع، والمعلمة وحدها تمنح إذن فتح الميكروفون والكاميرا بعد رفع اليد.'}</p>{!data.videoConfigured&&<div className="video-warning">البث المباشر يحتاج تفعيل LiveKit وإعداد المفاتيح على الخادم.</div>}{data.videoLocalOnly&&<div className="video-warning">تم تفعيل بث تجريبي محلي يعمل على هذا الكمبيوتر فقط. دخول الطلاب من خارج المنزل يحتاج ربط LiveKit Cloud ونشر الموقع بأمان.</div>}{error&&<div className="video-warning">{error}</div>}{isHost&&roomJoinable&&clock<opensAt&&<div className="video-warning" role="status">الاستوديو متاح لكِ الآن للتحضير وتجربة الكاميرا والميكروفون ومشاركة الشاشة. دخول الطلاب يظل مغلقًا حتى 15 دقيقة قبل موعد الحصة.</div>}{!roomJoinable&&<div className="video-warning" role="status">{data.lesson.status==='ended'||clock>closesAt?'انتهى وقت هذه الحصة.':'يُفتح دخول الطلاب قبل موعد الحصة بـ15 دقيقة. الوقت المتبقي: '+Math.max(1,Math.ceil((opensAt-clock)/60000))+' دقيقة.'}</div>}<button className="sofia-cta" onClick={join} disabled={joining||!data.videoConfigured||!roomJoinable}><Play size={17}/>{joining?'جارٍ الاتصال...':isHost?'فتح استوديو البث':'الدخول لمشاهدة الحصة'}</button><small>{isHost?'يمكنك فتح الاستوديو للتحضير قبل موعد الدرس. لن تعمل الكاميرا أو الميكروفون تلقائيًا، ولن يستطيع الطلاب الدخول قبل الموعد بـ15 دقيقة.':'دخول الطلاب متاح قبل موعد الحصة بـ15 دقيقة وبعد قبول اشتراكهم.'}</small>{isHost&&<div className="sofia-director-device-check"><button className="portal-soft-btn" type="button" disabled={deviceChecking} onClick={checkDevices}>{deviceChecking?'جارٍ اختبار الأجهزة...':'فحص الكاميرا والميكروفون قبل البث'}</button>{deviceStatus&&<small role="status">{deviceStatus}</small>}</div>}</div>}
+  {connection?<Suspense fallback={<div className="loading">جارٍ تحميل الفصل المباشر...</div>}><Classroom connection={connection} onDisconnected={()=>{setConnection(null);setRecoveryNotice('')}} onRecover={recover} onConnectionError={message=>{setConnection(null);setError(message);setRecoveryNotice('')}} onTimingChange={result=>setData(current=>current?{...current,lesson:{...current.lesson,duration_minutes:result.duration_minutes}}:current)}/></Suspense>:
+  <div className="room-placeholder"><div className="video-illustration"><Video size={56}/><span className="video-ring"/></div><h2>{user?.role==='admin'?'استوديو بث المديرة':'غرفة الحصة المباشرة'}</h2><p>{user?.role==='admin'?'أنتِ مقدمة البث. بعد فتح الاستوديو اضغطي «ابدئي البث الآن» لتشغيل صوتك والكاميرا، أو اختاري مشاركة الشاشة. الطلاب يشاهدون ويستمعون فقط حتى تسمحي بالمشاركة.':'تابع شرح المعلمة بالصوت والفيديو ومشاركة الشاشة. الأطفال يبدأون في وضع الاستماع، والمعلمة وحدها تمنح إذن فتح الميكروفون والكاميرا بعد رفع اليد.'}</p>{!data.videoConfigured&&<div className="video-warning">البث المباشر يحتاج تفعيل LiveKit وإعداد المفاتيح على الخادم.</div>}{data.videoLocalOnly&&<div className="video-warning">تم تفعيل بث تجريبي محلي يعمل على هذا الكمبيوتر فقط. دخول الطلاب من خارج المنزل يحتاج ربط LiveKit Cloud ونشر الموقع بأمان.</div>}{error&&<div className="video-warning">{error}</div>}{recoveryNotice&&<div className="video-warning" role="status" aria-live="polite">{recoveryNotice}</div>}{isHost&&roomJoinable&&clock<opensAt&&<div className="video-warning" role="status">الاستوديو متاح لكِ الآن للتحضير وتجربة الكاميرا والميكروفون ومشاركة الشاشة. دخول الطلاب يظل مغلقًا حتى 15 دقيقة قبل موعد الحصة.</div>}{!roomJoinable&&<div className="video-warning" role="status">{data.lesson.status==='ended'||clock>closesAt?'انتهى وقت هذه الحصة.':'يُفتح دخول الطلاب قبل موعد الحصة بـ15 دقيقة. الوقت المتبقي: '+Math.max(1,Math.ceil((opensAt-clock)/60000))+' دقيقة.'}</div>}<button className="sofia-cta" onClick={()=>void join(false)} disabled={joining||!data.videoConfigured||!roomJoinable}><Play size={17}/>{joining?'جارٍ الاتصال...':isHost?'فتح استوديو البث':'الدخول لمشاهدة الحصة'}</button><small>{isHost?'يمكنك فتح الاستوديو للتحضير قبل موعد الدرس. لن تعمل الكاميرا أو الميكروفون تلقائيًا، ولن يستطيع الطلاب الدخول قبل الموعد بـ15 دقيقة.':'دخول الطلاب متاح قبل موعد الحصة بـ15 دقيقة وبعد قبول اشتراكهم.'}</small>{isHost&&<div className="sofia-director-device-check"><button className="portal-soft-btn" type="button" disabled={deviceChecking} onClick={checkDevices}>{deviceChecking?'جارٍ اختبار الأجهزة...':'فحص الكاميرا والميكروفون قبل البث'}</button>{deviceStatus&&<small role="status">{deviceStatus}</small>}</div>}</div>}
   {!connection&&<div style={{textAlign:'center',marginTop:18}}><button type="button" className="portal-soft-btn" onClick={()=>setPreview(v=>!v)}>{preview?'إخفاء معاينة الفصل':'معاينة تصميم الفصل الجديد'}</button></div>}
   {!connection&&preview&&<Suspense fallback={<div className="loading">جارٍ عرض المعاينة...</div>}><ClassroomPreview isHost={user?.role==='teacher'||user?.role==='admin'}/></Suspense>}
  </div></main>;
