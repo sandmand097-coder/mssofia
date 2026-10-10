@@ -598,17 +598,31 @@ app.patch('/api/lessons/:id/duration', auth, role('teacher', 'admin'), async (re
  if(!lesson)return send(res,404,{error:'الحصة غير موجودة'});
  if(!owns(lesson,req.user))return send(res,403,{error:'تغيير المدة متاح لمقدمة الحصة فقط'});
  if(lesson.status!=='scheduled')return send(res,409,{error:'لا يمكن تعديل حصة انتهت'});
- const value=Number(req.body?.duration_minutes);
- if(!Number.isInteger(value)||value<15||value>240)return send(res,400,{error:'اختاري مدة صحيحة من 15 إلى 240 دقيقة'});
+ const increment=req.body?.add_minutes!==undefined;
+ const delta=Number(req.body?.add_minutes);
+ if(increment&&![15,30,60].includes(delta))return send(res,400,{error:'التمديد السريع مسموح بـ15 أو 30 أو 60 دقيقة فقط'});
+ const value=increment?Number(lesson.duration_minutes)+delta:Number(req.body?.duration_minutes);
+ if(!Number.isInteger(value)||value<15||value>240)return send(res,400,{error:'المدة الإجمالية المسموحة من 15 إلى 240 دقيقة'});
  const start=Date.parse(lesson.starts_at),clock=Date.now();
  const presentEnd=start+Number(lesson.duration_minutes)*60000+30*60000;
  if(!Number.isFinite(start)||clock>presentEnd)return send(res,409,{error:'انتهت نافذة تعديل هذه الحصة'});
  if(clock>=start && start+value*60000<clock+3*60000)
   return send(res,409,{error:'المدة المختارة يجب أن تترك ثلاث دقائق على الأقل من وقت الحصة'});
- await run("UPDATE lessons SET duration_minutes=? WHERE id=? AND status='scheduled'",value,lesson.id);
- res.set('Cache-Control','no-store').json({ok:true,duration_minutes:value,starts_at:lesson.starts_at,
-  ends_at:new Date(start+value*60000).toISOString(),
-  note:'تم تحديث موعد نهاية الحصة. لإنهاء اتصال الطلاب الحاليين فورًا استخدمي زر إنهاء الحصة للجميع.'});
+ let newMinutes=value;
+ if(increment){
+  // Atomic increment: double-clicks or parallel directors cannot overwrite a
+  // previous extension or exceed the 4-hour lesson cap.
+  const minimum=Math.max(15,Math.ceil((clock+3*60000-start)/60000));
+  const updated=await run("UPDATE lessons SET duration_minutes=duration_minutes+? WHERE id=? AND status='scheduled' AND duration_minutes+? BETWEEN ? AND 240",
+   delta,lesson.id,delta,minimum);
+  if(!updated.changes)return send(res,409,{error:'لم يمكن التمديد؛ تحققي من الوقت الحالي وحد الأربع ساعات'});
+  newMinutes=Number((await get('SELECT duration_minutes FROM lessons WHERE id=?',lesson.id)).duration_minutes);
+ }else{
+  await run("UPDATE lessons SET duration_minutes=? WHERE id=? AND status='scheduled'",value,lesson.id);
+ }
+ res.set('Cache-Control','no-store').json({ok:true,duration_minutes:newMinutes,starts_at:lesson.starts_at,
+  ends_at:new Date(start+newMinutes*60000).toISOString(),
+  note:'تم تحديث نهاية الحصة. مدة LiveKit الفعلية تخضع لرصيد الدقائق وحدود الباقة، ولا يضيف تمديد الجدول رصيدًا مجانيًا.'});
 });
 // Paid bookings are settled exclusively by a verified payment decision.
 // The generic booking action may RECONCILE an already confirmed payment but
