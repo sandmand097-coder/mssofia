@@ -85,11 +85,21 @@ export async function onRequest(context){
  headers.set('cache-control','no-store');
  const hasBody=!['GET','HEAD'].includes(request.method);
  try{
-  const upstreamRequest=new Request(upstream.toString(),{
-   method:request.method,headers,body:hasBody?request.body:undefined,
-   ...(hasBody?{duplex:'half'}:{}),redirect:'manual'
-  });
-  const response=await fetch(upstreamRequest);
+  // Apply time limits to read requests and idempotent token generation only.
+  // Never automatically replay financial, booking, or moderation mutations.
+  const tokenJoin=request.method==='POST'&&/^\/api\/lessons\/[^/]+\/token$/.test(pathname);
+  const bounded=request.method==='GET'||request.method==='HEAD'||tokenJoin;
+  const controller=bounded?new AbortController():null;
+  const deadline=controller?setTimeout(()=>controller.abort(),19000):null;
+  let response;
+  try{
+   const upstreamRequest=new Request(upstream.toString(),{
+    method:request.method,headers,body:hasBody?request.body:undefined,
+    ...(hasBody?{duplex:'half'}:{}),redirect:'manual',
+    ...(controller?{signal:controller.signal}:{})
+   });
+   response=await fetch(upstreamRequest);
+  }finally{if(deadline)clearTimeout(deadline)}
   const out=new Response(response.body,response);
   out.headers.set('cache-control','no-store, private');
   out.headers.set('x-content-type-options','nosniff');
@@ -104,6 +114,8 @@ export async function onRequest(context){
   return out;
  }catch{
   // Do not disclose backend details or credentials to the public.
-  return json(503,{error:'خدمة الطلاب غير متاحة مؤقتًا. يُرجى المحاولة بعد قليل'});
+  const response=json(503,{code:'UPSTREAM_UNAVAILABLE',error:'هناك ضغط مؤقت على الخدمة. يمكنك المحاولة بعد قليل.',retryAfterSeconds:3});
+  response.headers.set('Retry-After','3');
+  return response;
  }
 }
