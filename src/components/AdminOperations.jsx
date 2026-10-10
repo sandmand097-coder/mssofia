@@ -10,7 +10,8 @@ const steps=[
  {title:'٤. تسجيل ولي الأمر والطالب',detail:'ولي الأمر يدخل بحساب Google المؤكد وينشئ ملف الطالب بعد الموافقة على الخصوصية. التسجيل لا يمنح دخول الحصص قبل اعتماد الحجز.',icon:Users,tab:'users',action:'سجل الحسابات'},
  {title:'٥. يختار الطالب الدورة ويرفع الإيصال',detail:'من صفحة الكورسات يحجز مكانًا، ثم من لوحة الطالب ← «فودافون كاش» يرفع الإيصال ويكتب رقم الموبايل الذي حوّل منه.',icon:Smartphone,tab:'bookings',action:'طلبات الحجز'},
  {title:'٦. راجعي تحويل فودافون كاش',detail:'من «تحويلات فودافون كاش» افتحي الإيصال، وقارني المبلغ ورقم الهاتف مع ما وصل فعلًا، ثم فعّلي مربع التأكيد واضغطي «تأكيد التحويل وقبول الطالب».',icon:ShieldCheck,tab:'payments',action:'مراجعة التحويلات'},
- {title:'٧. الحضور والمشاركة داخل الفصل',detail:'بعد الموافقة يظهر جدول الحصص في لوحة الطالب. يبدأ الاستماع فقط، ويرفع يده، والمعلمة تمنح إذن الميكروفون أو الكاميرا وتتابع الحضور.',icon:CheckCircle2,tab:'attendance',action:'سجل الحضور'}
+ {title:'٧. الحضور والمشاركة داخل الفصل',detail:'بعد الموافقة يظهر جدول الحصص في لوحة الطالب. يبدأ الاستماع فقط، ويرفع يده، والمعلمة تمنح إذن الميكروفون أو الكاميرا وتتابع الحضور.',icon:CheckCircle2,tab:'attendance',action:'سجل الحضور'},
+ {title:'٨. تابعي مدة الاشتراك والتجديد',detail:'من الاشتراكات الشهرية تابعي الطلاب الذين اقترب انتهاء مدة الثلاثين يومًا لديهم. يرسل ولي الأمر إيصال تجديد مستقلًا، ولا يمتد الاشتراك إلا بعد مطابقة التحويل وقبوله من الإدارة.',icon:CalendarDays,tab:'subscriptions',action:'الاشتراكات الشهرية'}
 ];
 const liveVerification=[
  {key:'databaseConnected',label:'اتصال قاعدة بيانات الطلاب والمديرة',description:'استعلام فعلي بقاعدة PostgreSQL وبصلاحية تطبيق المدرسة'},
@@ -26,7 +27,9 @@ const readiness=[
  {key:'outboundMailConfigured',label:'إعداد مزود إرسال بريد التأكيد (إن استُخدمت كلمات المرور)'},
  {key:'paymentWalletConfigured',label:'إعداد رقم محفظة فودافون كاش'},
  {key:'privateReceiptStorageConfigured',label:'إعداد مخزن إيصالات الدفع الخاص'},
- {key:'livekitCredentialsConfigured',label:'إعداد LiveKit للبث المباشر'}
+ {key:'livekitCredentialsConfigured',label:'إعداد LiveKit للبث المباشر'},
+ {key:'monthlyRenewalsEnabled',label:'تفعيل تجديد الاشتراكات الشهرية بعد ترحيل قاعدة البيانات'},
+ {key:'classroomQuestionsEnabled',label:'تفعيل الأسئلة المكتوبة الخاصة داخل الحصة'}
 ];
 export default function AdminOperations({setup,diagnostics,onRefresh,onNavigate}){
  return <div className="sofia-operations" dir="rtl">
@@ -58,6 +61,7 @@ export default function AdminOperations({setup,diagnostics,onRefresh,onNavigate}
      <div className="portal-list-copy"><strong>{item.label}</strong><small>{!setup?'جارٍ التحقق من إعدادات الخادم...':setup[item.key]?'الإعداد موجود':'لم يُفعّل بعد'}</small></div>
     </div>)}
    </div>
+   <p className="sofia-auth-hint">تنبيه التشغيل: لا تُفعّلي تجديد الاشتراكات أو دردشة الأسئلة إلا بعد تطبيق ترحيل قاعدة البيانات والتحقق من الصلاحيات. خدمة إرسال البريد منفصلة عن تسجيل Google، ونجاح فحص LiveKit API لا يغني عن تجربة حصة صوت وصورة على جهازين.</p>
    <p className="sofia-auth-hint">لن يُفتح التسجيل العام قبل تأكيد الخصوصية، تفعيل وسائل تسجيل ولي الأمر، حماية الإيصالات، واختبار الحصص من جهازين. لا تطلبي من ولي الأمر تحويل أي مبلغ قبل ظهور تعليمات الدفع الرسمية داخل لوحة الطالب.</p>
    <Link className="portal-soft-btn" to="/privacy"><ShieldCheck size={16}/> راجعي سياسة الخصوصية</Link>
    <Link className="portal-soft-btn" to="/terms"><MailCheck size={16}/> شروط الدراسة والاسترداد</Link>
