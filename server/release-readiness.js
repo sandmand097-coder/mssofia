@@ -31,6 +31,9 @@ export function schoolReadiness(env=process.env){
   paymentWalletConfigured:walletNumberConfigured,
   privateReceiptStorageConfigured:receiptStorageConfigured,
   paymentUploadConfigured:walletNumberConfigured&&receiptStorageConfigured,
-  livekitCredentialsConfigured:livestreamConfigured
+  livekitCredentialsConfigured:livestreamConfigured,
+  // These flags describe activation, not evidence of a successful real payment.
+  monthlyRenewalsEnabled:env.MONTHLY_RENEWALS_ENABLED==='true',
+  classroomQuestionsEnabled:env.CLASSROOM_QA_ENABLED==='true'
  };
 }
