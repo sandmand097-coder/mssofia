@@ -3,6 +3,7 @@ import {Link} from 'react-router-dom';
 import {LayoutDashboard,BookOpen,CalendarDays,ClipboardList,UserRound,GraduationCap,Video,CheckCircle2,Clock3,ArrowLeft,TrendingUp,PlayCircle,Save} from 'lucide-react';
 import PortalShell,{Metric,PanelEmpty,PanelHeading,StatusPill,dateTimeLabel} from '../components/PortalShell.jsx';
 import StudentPayments from '../components/StudentPayments.jsx';
+import StudentRenewals from '../components/StudentRenewals.jsx';
 const api=async(path,opts={})=>{const r=await fetch('/api'+path,{credentials:'same-origin',headers:{'Content-Type':'application/json'},...opts});const d=await r.json();if(!r.ok)throw Error(d.error||'حدث خطأ');return d};
 export default function StudentPortal({user,setUser,show}){
  const [tab,setTab]=useState('overview'),[data,setData]=useState(null),[learning,setLearning]=useState(null),[error,setError]=useState(''),[name,setName]=useState(user.name),[busy,setBusy]=useState(false);
@@ -24,7 +25,7 @@ export default function StudentPortal({user,setUser,show}){
  {tab==='courses'&&<section className="portal-panel"><PanelHeading title="الدورات المسجلة" description="مؤشر التقدم يعتمد على تسجيل الحضور الفعلي"/>{courses.length?courseCards:<PanelEmpty title="لم تنضم لدورة حتى الآن" description="ابدأ باكتشاف الدورات المتاحة واختيار المناسب"/>}</section>}
  {tab==='schedule'&&<section className="portal-panel"><PanelHeading title="قائمة الحصص" description="عرض مواعيد الحصص المقبولة من الأقدم للأحدث"/>{lessonRows(lessons)}</section>}
  {tab==='bookings'&&<section className="portal-panel"><PanelHeading title="جميع الطلبات" description="حالة الموافقة تحدد إمكانية دخول الحصص"/>{bookingRows}</section>}
- {tab==='payments'&&<StudentPayments bookings={bookings} refresh={load}/> }
+ {tab==='payments'&&<><StudentPayments bookings={bookings} refresh={load}/><StudentRenewals bookings={bookings} refresh={load}/></>}
  {tab==='profile'&&<section className="portal-panel portal-form-panel"><PanelHeading title="بيانات الحساب" description="يمكنك تغيير اسم العرض هنا. البريد الإلكتروني ثابت حالياً."/><form onSubmit={async e=>{e.preventDefault();setBusy(true);try{const r=await api('/my/profile',{method:'PATCH',body:JSON.stringify({name})});setUser(r.user);show('تم تحديث بيانات الحساب')}catch(err){setError(err.message)}finally{setBusy(false)}}}><label>الاسم بالكامل<input value={name} maxLength={80} required onChange={e=>setName(e.target.value)}/></label><label>البريد الإلكتروني<input value={user.email} disabled readOnly/></label><label>نوع الحساب<input value="طالب" disabled readOnly/></label><button className="portal-primary-btn" disabled={busy} type="submit"><Save size={17}/>{busy?'جارٍ الحفظ...':'حفظ التغييرات'}</button></form></section>}
  </>}
  </PortalShell>
