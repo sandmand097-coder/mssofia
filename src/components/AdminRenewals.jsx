@@ -36,7 +36,7 @@ export default function AdminRenewals(){
   setError('');setManualMessage('');
   if(!chosen){setError('اختاري الطالب أولًا');return}
   if(!manualVerified){setError('لا يمكن اعتماد تجديد بدون التحقق من وصول التحويل');return}
-  if(!/^01[0125]\\d{8}$/.test(manualPhone.trim())){setError('رقم المحفظة المرسلة غير صحيح');return}
+  if(!/^01[0125]\d{8}$/.test(manualPhone.trim())){setError('رقم المحفظة المرسلة غير صحيح');return}
   if(!/^[A-Za-z0-9][A-Za-z0-9./_-]{4,63}$/.test(manualReference.trim())){setError('أدخلي رقم العملية الحقيقي من تطبيق فودافون كاش');return}
   if(Number(manualAmount)!==Number(chosen.amount_egp)){setError('المبلغ المكتوب لا يساوي قيمة التجديد');return}
   setBusy('manual');
