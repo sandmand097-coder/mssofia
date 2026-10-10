@@ -108,12 +108,77 @@ export function attachPaymentRoutes(app,{auth,role,get,all,run,uid,now}){
    return res.status(201).json({ok:true,status:'pending',message:'تم استلام صورة التحويل ورقم الموبايل. الطلب في انتظار قبول أو رفض الإدارة، ولا يتفعّل تلقائيًا.'});
   }catch(e){if(newKey)await removeProof(newKey);next(e)}
  });
+ // Director may approve a *real, already received* wallet transfer even if the
+ // student forgot to submit an image. No fake receipts and no automatic approval.
+ app.get('/api/admin/payments/without-proof',auth,onlyAdmin,async(req,res,next)=>{
+  try{
+   const rows=await all(`SELECT b.id AS booking_id,b.student_id,u.name AS student_name,u.email AS student_email,
+    c.title AS course_title,c.price,c.subject
+    FROM bookings b JOIN users u ON u.id=b.student_id
+    JOIN courses c ON c.id=b.course_id
+    LEFT JOIN payment_submissions p ON p.booking_id=b.id
+    WHERE b.status='pending' AND c.price>0 AND p.id IS NULL
+    ORDER BY b.created_at DESC LIMIT 200`);
+   res.set('Cache-Control','no-store, private').json({bookings:rows.map(r=>({
+    booking_id:r.booking_id,student_id:r.student_id,student_name:r.student_name,student_email:r.student_email,
+    course_title:r.course_title,amount_egp:requiredAmount(r)
+   }))});
+  }catch(e){next(e)}
+ });
+ app.post('/api/admin/bookings/:id/manual-payment',auth,onlyAdmin,async(req,res,next)=>{
+  try{
+   const senderPhone=String(req.body?.sender_phone||'').trim();
+   const reference=String(req.body?.transfer_reference||'').trim().toUpperCase();
+   const amount=Number(req.body?.amount_egp);
+   if(req.body?.confirmedOnPhone!==true)
+    return json(res,400,{error:'يجب إقرار المديرة صراحةً بوصول المبلغ فعليًا إلى محفظتها قبل فتح الاشتراك'});
+   if(!isEgyptianPhone(senderPhone))
+    return json(res,400,{error:'رقم الهاتف الذي ظهر في التحويل الوارد غير صحيح'});
+   if(!/^[A-Z0-9][A-Z0-9./_-]{4,63}$/.test(reference))
+    return json(res,400,{error:'اكتبي رقم عملية التحويل الحقيقي الموجود في محفظة فودافون كاش (5–64 حرفًا أو رقمًا)'});
+   if(!Number.isSafeInteger(amount)||amount<=0)
+    return json(res,400,{error:'اكتبي المبلغ الذي وصل فعليًا إلى المحفظة'});
+   const outcome=await withTransaction(async tx=>{
+    const lock=isCloudDatabase?' FOR UPDATE OF b,c':'';
+    const booking=await tx.get('SELECT b.id,b.student_id,b.course_id,b.status,c.subject,c.price,c.capacity FROM bookings b JOIN courses c ON c.id=b.course_id WHERE b.id=?'+lock,req.params.id);
+    if(!booking)return{status:404,error:'طلب الحجز غير موجود'};
+    if(booking.status!=='pending')return{status:409,error:'سبق اتخاذ قرار في هذا الحجز'};
+    const due=requiredAmount(booking);
+    if(due<=0)return{status:409,error:'الدورة مجانية ولا تحتاج تحويلًا'};
+    if(due!==amount)return{status:409,error:'المبلغ المستلم لا يطابق قيمة الاشتراك المستحقة: '+due+' جنيه'};
+    const previous=await tx.get('SELECT status FROM payment_submissions WHERE booking_id=?',booking.id);
+    if(previous)return{status:409,error:'يوجد إيصال أو قرار دفع سابق لهذا الحجز، راجعيه من قائمة تحويلات فودافون كاش'};
+    const transfer='MANUAL-'+reference;
+    if(await tx.get('SELECT id FROM subscription_renewals WHERE transfer_reference=?',transfer))
+     return{status:409,error:'رقم هذا التحويل مُسجّل بالفعل لتجديد اشتراك آخر'};
+    const used=await countCurrentMembers(tx.all,booking.course_id);
+    if(Number(used)>=Number(booking.capacity))return{status:409,error:'لا يمكن تفعيل الاشتراك بعد اكتمال المقاعد'};
+    const paidAt=now();
+    await tx.run(`INSERT INTO payment_submissions
+     (id,booking_id,student_id,course_id,amount_egp,transfer_reference,sender_phone,sender_last4,proof_key,status,submitted_at,reviewed_at,reviewed_by,review_note,confirmed_on_phone)
+     VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+     uid(),booking.id,booking.student_id,booking.course_id,due,'MANUAL-'+reference,senderPhone,senderPhone.slice(-4),
+     'manual:'+uid(),'approved',paidAt,paidAt,req.user.id,
+     'اعتماد يدوي من المديرة بعد التحقق من وصول تحويل فودافون كاش فعليًا، دون صورة إيصال',
+     isCloudDatabase?true:1);
+    const updated=await tx.run("UPDATE bookings SET status='approved',reviewed_at=? WHERE id=? AND status='pending'",paidAt,booking.id);
+    if(!updated.changes)throw Error('Concurrent manual payment review conflict');
+    return{status:201,ok:true,booking_id:booking.id,amount_egp:due};
+   });
+   res.set('Cache-Control','no-store, private').status(outcome.status).json(outcome.error?{error:outcome.error}:outcome);
+  }catch(err){
+   if(/unique|duplicate key|constraint failed/i.test(String(err.message||'')))
+    return json(res,409,{error:'سبق تسجيل رقم هذا التحويل أو جرى اعتماد الحجز في طلب آخر'});
+   next(err);
+  }
+ });
  app.get('/api/admin/payments',auth,onlyAdmin,async(req,res,next)=>{
   try{const payments=await all("SELECT p.id,p.booking_id,p.student_id,p.amount_egp,p.transfer_reference,p.sender_phone,p.sender_last4,p.status,p.submitted_at,p.reviewed_at,p.review_note,p.confirmed_on_phone,u.name AS student_name,u.email AS student_email,c.title AS course_title FROM payment_submissions p JOIN users u ON u.id=p.student_id JOIN courses c ON c.id=p.course_id ORDER BY p.submitted_at DESC LIMIT 200");res.json({payments});}
   catch(e){next(e)}
  });
  app.get('/api/admin/payments/:id/proof',auth,onlyAdmin,async(req,res,next)=>{
   try{const row=await get('SELECT proof_key FROM payment_submissions WHERE id=?',req.params.id);if(!row)return json(res,404,{error:'الإيصال غير موجود'});
+   if(row.proof_key.startsWith('manual:'))return json(res,404,{error:'تم اعتماد تحويل يدويًا دون صورة إيصال'});
    const data=await loadProof(row.proof_key);
    res.set({'Content-Type':'image/webp','Cache-Control':'no-store, private','Content-Disposition':'inline; filename="vodafone-receipt.webp"','X-Content-Type-Options':'nosniff'}).send(data);
   }catch(e){next(e)}

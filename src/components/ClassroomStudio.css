@@ -119,3 +119,133 @@
 .sofia-director-start:focus-visible{outline:3px solid #49a9d8;outline-offset:2px}
 .sofia-director-start:disabled{opacity:.55;cursor:not-allowed}
 @media(max-width:600px){.sofia-director-broadcast{flex-direction:column;align-items:stretch;padding:12px}.sofia-director-start{width:100%}}
+
+
+/* Adaptive media: measured track dimensions choose the stage shape.
+   Never stretch or crop portrait mobile cameras, landscape laptop cameras,
+   square cameras, or shared screens. The publisher is not forced to rotate. */
+.sofia-video-surface video,
+.sofia-video-surface video.lk-video-track{
+ width:100%!important;
+ height:100%!important;
+ max-width:100%;
+ max-height:100%;
+ object-fit:contain!important;
+ object-position:center center!important;
+}
+.sofia-meeting-stage.has-video.is-portrait,
+.sofia-meeting-stage.has-video.is-square{
+ flex:0 0 auto;
+ align-self:center;
+ width:min(100%,calc(76dvh * var(--sofia-source-aspect,.5625)));
+ aspect-ratio:var(--sofia-source-aspect,.5625);
+ min-height:0;
+ max-height:76dvh;
+ background:#081b20;
+}
+.sofia-meeting-picture{
+ aspect-ratio:var(--sofia-pip-aspect,4/3);
+ max-height:38%;
+ background:#081b20;
+}
+@media(max-width:1050px){
+ .sofia-meeting-main.has-video{min-height:0}
+ .sofia-meeting-stage.has-video.is-landscape{
+  flex:0 0 auto;
+  align-self:center;
+  width:min(100%,calc(75dvh * var(--sofia-source-aspect,1.77778)));
+  aspect-ratio:var(--sofia-source-aspect,1.77778);
+  min-height:0;
+  max-height:75dvh;
+ }
+}
+@media(max-width:640px){
+ .sofia-meeting-stage.has-video.is-portrait,
+ .sofia-meeting-stage.has-video.is-square{
+  width:min(100%,calc(70dvh * var(--sofia-source-aspect,.5625)));
+  max-height:70dvh;
+ }
+ .sofia-meeting-picture{width:clamp(78px,27vw,130px);max-height:32%;bottom:42px;left:8px}
+ .sofia-meeting-stage-bottom{padding:10px 11px}
+ .sofia-meeting-layout{min-height:0}
+}
+
+
+/* Host controls remain legible and touch-friendly beside portrait/landscape video. */
+.sofia-meeting-professional{
+ border:1px solid #3a6862;
+ border-radius:13px;
+ padding:14px;
+ margin-top:12px;
+ display:grid;
+ gap:12px;
+ background:#163c3d;
+ color:#e4f7ef;
+}
+.sofia-meeting-settings-head{
+ display:flex;
+ flex-wrap:wrap;
+ align-items:center;
+ justify-content:space-between;
+ gap:8px;
+}
+.sofia-meeting-settings-head strong,.sofia-meeting-duration label,.sofia-meeting-exposure{
+ display:flex;align-items:center;gap:8px;font-weight:900;font-size:12px;
+}
+.sofia-meeting-alert-tools{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.sofia-meeting-sound-toggle,.sofia-meeting-duration button{
+ font:800 11px Cairo,Tahoma,sans-serif;
+ border:1px solid #4a8b80;
+ background:#235a54;
+ color:#f4fffc;
+ border-radius:10px;
+ padding:9px 12px;
+ min-height:42px;
+ cursor:pointer;
+ display:inline-flex;align-items:center;justify-content:center;gap:8px;
+}
+.sofia-meeting-sound-toggle:hover,.sofia-meeting-duration button:hover{background:#1d7668}
+.sofia-meeting-duration,.sofia-meeting-camera-controls{
+ display:flex;align-items:center;flex-wrap:wrap;gap:9px 12px;
+}
+.sofia-meeting-duration input{
+ width:88px;min-height:43px;
+ border-radius:9px;border:1px solid #6a9d92;
+ background:#eff9f5;color:#15312e;
+ padding:6px 9px;text-align:center;font:800 14px Cairo,Tahoma,sans-serif;
+}
+.sofia-meeting-camera-controls label{font-size:12px;font-weight:900}
+.sofia-meeting-camera-controls select{
+ border-radius:9px;padding:10px;
+ border:1px solid #6a9d92;
+ background:#eff9f5;
+ color:#15312e;
+ font:800 11px Cairo,Tahoma,sans-serif;
+ max-width:100%;
+}
+.sofia-meeting-duration small,.sofia-meeting-camera-controls small,.sofia-meeting-light-tip,.sofia-meeting-duration-note{
+ color:#bfe2d6;
+ font-size:10px;
+ line-height:1.8;
+}
+.sofia-meeting-light-tip{display:flex;gap:8px;align-items:flex-start}
+.sofia-meeting-light-tip svg{flex-shrink:0}
+.sofia-meeting-exposure{flex-wrap:wrap}
+.sofia-meeting-exposure input{accent-color:#6fd3b0;max-width:180px}
+.sofia-meeting-professional button:disabled{opacity:.5;cursor:not-allowed}
+.sofia-meeting-arrival{
+ background:#def9ec;color:#086548;
+ display:flex;align-items:center;gap:9px;
+ border:1px solid #79bc9e;
+ padding:10px 13px;border-radius:10px;
+ margin-bottom:12px;
+ font:900 12px Cairo,Tahoma,sans-serif;
+}
+@media(max-width:640px){
+ .sofia-meeting-professional{padding:10px;gap:11px}
+ .sofia-meeting-duration,.sofia-meeting-camera-controls{justify-content:flex-start}
+ .sofia-meeting-duration small,.sofia-meeting-camera-controls small{flex-basis:100%}
+ .sofia-meeting-duration input{width:72px}
+ .sofia-meeting-alert-tools{width:100%}
+ .sofia-meeting-sound-toggle{flex:1 1 110px}
+}

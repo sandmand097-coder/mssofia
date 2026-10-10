@@ -23,15 +23,17 @@ const user=role=>{
   id,role+' mock',email,hash,role,'active',now(),now());
  return{id,email};
 };
-const admin=user('admin'),student=user('student'),expired=user('student'),outsider=user('student');
-const course=uid(),lesson=uid(),earlyLesson=uid(),room=uid();
+const admin=user('admin'),student=user('student'),expired=user('student'),outsider=user('student'),manualStudent=user('student');
+const course=uid(),lesson=uid(),earlyLesson=uid(),activeLesson=uid(),room=uid();
 run(`INSERT INTO courses(id,title,description,subject,level,price,duration_minutes,capacity,teacher_id,status,created_at)
  VALUES(?,?,?,?,?,?,?,?,?,?,?)`,course,'علوم شهري','حصة بث داخل الموقع','علوم','الابتدائي',170,60,30,admin.id,'published',now());
 run('INSERT INTO lessons(id,course_id,title,starts_at,duration_minutes,status,room_key,created_at) VALUES(?,?,?,?,?,?,?,?)',
  lesson,course,'درس علوم',new Date(Date.now()+8*60000).toISOString(),60,'scheduled',room,now());
 run('INSERT INTO lessons(id,course_id,title,starts_at,duration_minutes,status,room_key,created_at) VALUES(?,?,?,?,?,?,?,?)',
  earlyLesson,course,'تحضير الاستوديو المبكر',new Date(Date.now()+75*60000).toISOString(),60,'scheduled',uid(),now());
-for(const [person,ago] of [[student,27],[expired,31]]){
+run('INSERT INTO lessons(id,course_id,title,starts_at,duration_minutes,status,room_key,created_at) VALUES(?,?,?,?,?,?,?,?)',
+ activeLesson,course,'حصة بدأت بالفعل',new Date(Date.now()-10*60000).toISOString(),60,'scheduled',uid(),now());
+for(const [person,ago] of [[student,27],[expired,31],[manualStudent,27]]){
  const booking=uid(),paid=new Date(Date.now()-ago*86400000).toISOString();
  run('INSERT INTO bookings(id,course_id,student_id,status,created_at,reviewed_at) VALUES(?,?,?,?,?,?)',booking,course,person.id,'approved',now(),paid);
  run(`INSERT INTO payment_submissions(id,booking_id,student_id,course_id,amount_egp,transfer_reference,sender_phone,proof_key,status,submitted_at,reviewed_at,reviewed_by,confirmed_on_phone)
@@ -80,10 +82,21 @@ try{
   try{if((await api('/health')).status===200){online=true;break}}catch{}
  }
  assert.ok(online,logs.slice(-2200));checks++;
- const cookies={admin:await login(admin),student:await login(student),expired:await login(expired),outsider:await login(outsider)};
+ const cookies={admin:await login(admin),student:await login(student),expired:await login(expired),outsider:await login(outsider),manual:await login(manualStudent)};
  eq((await api('/lessons/'+earlyLesson+'/token',{method:'POST',cookie:cookies.admin})).status,200,'director may prepare the video room before the lesson window');
  eq((await api('/lessons/'+earlyLesson+'/token',{method:'POST',cookie:cookies.student})).status,403,'active paying student remains blocked before the lesson window');
  eq((await api('/lessons/'+earlyLesson+'/token',{method:'POST',cookie:cookies.outsider})).status,403,'unbooked student cannot enter early room');
+ eq((await api('/lessons/'+activeLesson+'/duration',{method:'PATCH',cookie:cookies.student,body:{duration_minutes:90}})).status,403,'student cannot change duration');
+ eq((await api('/lessons/'+activeLesson+'/duration',{method:'PATCH',cookie:cookies.outsider,body:{duration_minutes:90}})).status,403,'unbooked viewer cannot change duration');
+ eq((await api('/lessons/'+activeLesson+'/duration',{method:'PATCH',cookie:cookies.admin,body:{duration_minutes:300}})).status,400,'duration above 240 minutes is rejected');
+ eq((await api('/lessons/'+activeLesson+'/duration',{method:'PATCH',cookie:cookies.admin,body:{duration_minutes:10}})).status,400,'duration below 15 minutes is rejected');
+ eq((await api('/lessons/'+activeLesson+'/duration',{method:'PATCH',cookie:cookies.admin,body:{duration_minutes:15}})).status,200,'director can shorten active lesson without ending it');
+ eq((await api('/lessons/'+activeLesson+'/duration',{method:'PATCH',cookie:cookies.admin,body:{duration_minutes:12}})).status,400,'shortening below minimum rejected even if already live');
+ const extended=await api('/lessons/'+activeLesson+'/duration',{method:'PATCH',cookie:cookies.admin,body:{duration_minutes:120}});
+ eq(extended.status,200,'director can extend active lesson');
+ const classroom=await api('/lessons/'+activeLesson+'/classroom',{cookie:cookies.admin});
+ eq(classroom.data.duration_minutes,120,'live classroom shows newly approved duration');
+ eq((await api('/lessons/'+activeLesson+'/token',{method:'POST',cookie:cookies.student})).status,200,'paid student remains allowed after live extension');
  eq((await api('/student/renewals',{cookie:cookies.student})).data.enabled,true,'student sees enabled renewals');
  eq((await api('/admin/renewals',{cookie:cookies.student})).status,403,'no student sees admin renewal queue');
  eq((await api('/lessons/'+lesson+'/token',{method:'POST',cookie:cookies.expired})).status,403,'expired student initially denied');
@@ -114,6 +127,22 @@ try{
  const expiredId=expiredRenewals.find(r=>r.student_id===expired.id).id;
  eq((await api('/admin/renewals/'+expiredId+'/review',{method:'POST',cookie:cookies.admin,body:{decision:'approved',confirmedOnPhone:true}})).status,200,'expired renewal can restart from approval timestamp');
  eq((await api('/lessons/'+lesson+'/token',{method:'POST',cookie:cookies.expired})).status,200,'renewed student can enter live video');
+ const eligible=await api('/admin/renewals/without-proof',{cookie:cookies.admin});
+ eq(eligible.status,200,'director can list students eligible to renew without submitting an image');
+ eq(eligible.data.bookings.some(b=>b.booking_id===manualStudent.booking&&b.amount_egp===170),true,'near expiry manual renewal has correct amount');
+ eq((await api('/admin/renewals/without-proof',{cookie:cookies.manual})).status,403,'student cannot view manual renewal queue');
+ const manualBody={sender_phone:'01012345678',transfer_reference:'VFCASH-RENEW-002',amount_egp:170,confirmedOnPhone:true};
+ eq((await api('/admin/bookings/'+manualStudent.booking+'/manual-renewal',{method:'POST',cookie:cookies.manual,body:manualBody})).status,403,'student cannot approve own renewal');
+ eq((await api('/admin/bookings/'+manualStudent.booking+'/manual-renewal',{method:'POST',cookie:cookies.admin,body:{...manualBody,confirmedOnPhone:false}})).status,400,'manual renewal requires real wallet verification');
+ eq((await api('/admin/bookings/'+manualStudent.booking+'/manual-renewal',{method:'POST',cookie:cookies.admin,body:{...manualBody,amount_egp:100}})).status,409,'manual renewal refuses incorrect amount');
+ const manualResult=await api('/admin/bookings/'+manualStudent.booking+'/manual-renewal',{method:'POST',cookie:cookies.admin,body:manualBody});
+ eq(manualResult.status,201,'director can extend student subscription without an image');
+ assert.ok(Date.parse(manualResult.data.period_end)-Date.now()>31*86400000,'manual renewal extends from existing expiry');checks++;
+ eq((await api('/admin/bookings/'+manualStudent.booking+'/manual-renewal',{method:'POST',cookie:cookies.admin,body:manualBody})).status,409,'duplicate wallet transaction or premature second renewal rejected');
+ const manualRecords=(await api('/admin/renewals',{cookie:cookies.admin})).data.renewals;
+ const manualRecord=manualRecords.find(r=>r.booking_id===manualStudent.booking);
+ eq(manualRecord?.transfer_reference,'MANUAL-VFCASH-RENEW-002','director manual renewal is auditable');
+ eq((await api('/admin/renewals/'+manualRecord.id+'/proof',{cookie:cookies.admin})).status,404,'no fabricated proof for manual renewal');
  const q=await api('/lessons/'+lesson+'/questions',{method:'POST',cookie:cookies.student,body:{message:'ما الفرق بين الخلية النباتية والحيوانية؟'}});
  eq(q.status,201,'student can ask private lesson question');
  eq((await api('/lessons/'+lesson+'/questions',{cookie:cookies.outsider})).status,403,'nonmember cannot read class messages');

@@ -85,7 +85,7 @@ function LessonRoom(){
  if(!data)return <main className="loading">جارٍ تجهيز غرفة الدرس...</main>;
  return <main className="room-page"><div className="container">
   <div className="room-head"><div><Link className="breadcrumb" to="/dashboard">لوحة التحكم <ChevronLeft size={15}/> الحصة المباشرة</Link><h1>{data.lesson.title}</h1><p>{data.lesson.course_title} • {fmt(data.lesson.starts_at)}</p></div><span className="room-secure"><ShieldCheck size={17}/> غرفة خاصة بالطلاب المقبولين</span></div>
-  {connection?<Suspense fallback={<div className="loading">جارٍ تحميل الفصل المباشر...</div>}><Classroom connection={connection} onDisconnected={()=>setConnection(null)} onConnectionError={message=>{setConnection(null);setError(message);show(message)}}/></Suspense>:
+  {connection?<Suspense fallback={<div className="loading">جارٍ تحميل الفصل المباشر...</div>}><Classroom connection={connection} onDisconnected={()=>setConnection(null)} onConnectionError={message=>{setConnection(null);setError(message);show(message)}} onTimingChange={result=>setData(current=>current?{...current,lesson:{...current.lesson,duration_minutes:result.duration_minutes}}:current)}/></Suspense>:
   <div className="room-placeholder"><div className="video-illustration"><Video size={56}/><span className="video-ring"/></div><h2>{user?.role==='admin'?'استوديو بث المديرة':'غرفة الحصة المباشرة'}</h2><p>{user?.role==='admin'?'أنتِ مقدمة البث. بعد فتح الاستوديو اضغطي «ابدئي البث الآن» لتشغيل صوتك والكاميرا، أو اختاري مشاركة الشاشة. الطلاب يشاهدون ويستمعون فقط حتى تسمحي بالمشاركة.':'تابع شرح المعلمة بالصوت والفيديو ومشاركة الشاشة. الأطفال يبدأون في وضع الاستماع، والمعلمة وحدها تمنح إذن فتح الميكروفون والكاميرا بعد رفع اليد.'}</p>{!data.videoConfigured&&<div className="video-warning">البث المباشر يحتاج تفعيل LiveKit وإعداد المفاتيح على الخادم.</div>}{data.videoLocalOnly&&<div className="video-warning">تم تفعيل بث تجريبي محلي يعمل على هذا الكمبيوتر فقط. دخول الطلاب من خارج المنزل يحتاج ربط LiveKit Cloud ونشر الموقع بأمان.</div>}{error&&<div className="video-warning">{error}</div>}{isHost&&roomJoinable&&clock<opensAt&&<div className="video-warning" role="status">الاستوديو متاح لكِ الآن للتحضير وتجربة الكاميرا والميكروفون ومشاركة الشاشة. دخول الطلاب يظل مغلقًا حتى 15 دقيقة قبل موعد الحصة.</div>}{!roomJoinable&&<div className="video-warning" role="status">{data.lesson.status==='ended'||clock>closesAt?'انتهى وقت هذه الحصة.':'يُفتح دخول الطلاب قبل موعد الحصة بـ15 دقيقة. الوقت المتبقي: '+Math.max(1,Math.ceil((opensAt-clock)/60000))+' دقيقة.'}</div>}<button className="sofia-cta" onClick={join} disabled={joining||!data.videoConfigured||!roomJoinable}><Play size={17}/>{joining?'جارٍ الاتصال...':isHost?'فتح استوديو البث':'الدخول لمشاهدة الحصة'}</button><small>{isHost?'يمكنك فتح الاستوديو للتحضير قبل موعد الدرس. لن تعمل الكاميرا أو الميكروفون تلقائيًا، ولن يستطيع الطلاب الدخول قبل الموعد بـ15 دقيقة.':'دخول الطلاب متاح قبل موعد الحصة بـ15 دقيقة وبعد قبول اشتراكهم.'}</small>{isHost&&<div className="sofia-director-device-check"><button className="portal-soft-btn" type="button" disabled={deviceChecking} onClick={checkDevices}>{deviceChecking?'جارٍ اختبار الأجهزة...':'فحص الكاميرا والميكروفون قبل البث'}</button>{deviceStatus&&<small role="status">{deviceStatus}</small>}</div>}</div>}
   {!connection&&<div style={{textAlign:'center',marginTop:18}}><button type="button" className="portal-soft-btn" onClick={()=>setPreview(v=>!v)}>{preview?'إخفاء معاينة الفصل':'معاينة تصميم الفصل الجديد'}</button></div>}
   {!connection&&preview&&<Suspense fallback={<div className="loading">جارٍ عرض المعاينة...</div>}><ClassroomPreview isHost={user?.role==='teacher'||user?.role==='admin'}/></Suspense>}
@@ -100,8 +100,16 @@ function NotFound(){
 function PageTitle(){
  const {pathname}=useLocation();
  useEffect(()=>{
-  const title=pathname==='/privacy'?'الخصوصية':pathname==='/terms'?'شروط الاشتراك':pathname==='/courses'?'الكورسات':pathname.startsWith('/courses/')?'تفاصيل الكورس':pathname==='/login'?'تسجيل الدخول':pathname==='/register'?'إنشاء حساب':pathname==='/student'?'لوحة الطالب':pathname==='/admin'?'لوحة الإدارة':pathname==='/teacher'?'لوحة المعلم':pathname.startsWith('/lesson/')?'الفصل المباشر':'مدرسة العلوم';
-  document.title=title+' | mrsofia — Mrs Sofia';
+  const path=pathname.endsWith('/')&&pathname!=='/'?pathname.slice(0,-1):pathname;
+  const label=path==='/privacy'?'الخصوصية':path==='/terms'?'شروط الاشتراك':path==='/courses'?'كورسات العلوم':path.startsWith('/courses/')?'تفاصيل كورس العلوم':path==='/login'?'تسجيل الدخول':path==='/register'?'إنشاء حساب':path==='/student'?'لوحة الطالب':path==='/admin'?'لوحة الإدارة':path==='/teacher'?'لوحة المعلم':path.startsWith('/lesson/')?'الفصل المباشر':'مدرسة العلوم أونلاين';
+  document.title=path==='/'?'مس صوفيا للعلوم | مدرسة العلوم أونلاين — Mrs Sofia':label+' | مس صوفيا للعلوم';
+  const publicPage=path==='/'||path==='/courses'||path==='/privacy'||path==='/terms'||path.startsWith('/courses/');
+  const canonical=document.querySelector('link[rel="canonical"]');
+  if(canonical)canonical.setAttribute('href','https://mssofia.pages.dev'+(publicPage?path:'/')+(publicPage&&path==='/'?'':''));
+  const robots=document.querySelector('meta[name="robots"]');
+  if(robots)robots.setAttribute('content',publicPage?'index, follow, max-image-preview:large':'noindex, nofollow');
+  const ogUrl=document.querySelector('meta[property="og:url"]');
+  if(ogUrl)ogUrl.setAttribute('content','https://mssofia.pages.dev'+(publicPage?path:'/' ));
  },[pathname]);
  return null;
 }

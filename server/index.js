@@ -585,6 +585,26 @@ app.patch('/api/lessons/:id', auth, role('teacher', 'admin'), async (req, res) =
     id: lesson.id
   });
 });
+// Director/instructor may extend or shorten a scheduled or in-progress
+// lesson without changing student subscriptions. Ending immediately is the
+// separate room moderation action that disconnects existing participants.
+app.patch('/api/lessons/:id/duration', auth, role('teacher', 'admin'), async (req,res)=>{
+ const lesson=await get('SELECT l.id,l.starts_at,l.duration_minutes,l.status,c.teacher_id FROM lessons l JOIN courses c ON c.id=l.course_id WHERE l.id=?',req.params.id);
+ if(!lesson)return send(res,404,{error:'الحصة غير موجودة'});
+ if(!owns(lesson,req.user))return send(res,403,{error:'تغيير المدة متاح لمقدمة الحصة فقط'});
+ if(lesson.status!=='scheduled')return send(res,409,{error:'لا يمكن تعديل حصة انتهت'});
+ const value=Number(req.body?.duration_minutes);
+ if(!Number.isInteger(value)||value<15||value>240)return send(res,400,{error:'اختاري مدة صحيحة من 15 إلى 240 دقيقة'});
+ const start=Date.parse(lesson.starts_at),clock=Date.now();
+ const presentEnd=start+Number(lesson.duration_minutes)*60000+30*60000;
+ if(!Number.isFinite(start)||clock>presentEnd)return send(res,409,{error:'انتهت نافذة تعديل هذه الحصة'});
+ if(clock>=start && start+value*60000<clock+3*60000)
+  return send(res,409,{error:'المدة المختارة يجب أن تترك ثلاث دقائق على الأقل من وقت الحصة'});
+ await run("UPDATE lessons SET duration_minutes=? WHERE id=? AND status='scheduled'",value,lesson.id);
+ res.set('Cache-Control','no-store').json({ok:true,duration_minutes:value,starts_at:lesson.starts_at,
+  ends_at:new Date(start+value*60000).toISOString(),
+  note:'تم تحديث موعد نهاية الحصة. لإنهاء اتصال الطلاب الحاليين فورًا استخدمي زر إنهاء الحصة للجميع.'});
+});
 app.patch('/api/bookings/:id', auth, role('teacher', 'admin'), async (req, res) => {
   const b = await get('SELECT b.*,c.teacher_id,c.capacity,c.price FROM bookings b JOIN courses c ON c.id=b.course_id WHERE b.id=?', req.params.id);
   if (!b) return send(res, 404, {
@@ -722,6 +742,9 @@ app.get('/api/lessons/:id/classroom', auth, async (req, res) => {
     hands,
     speakers,
     status: l.status,
+    starts_at: l.starts_at,
+    duration_minutes: l.duration_minutes,
+    ends_at: new Date(Date.parse(l.starts_at)+Number(l.duration_minutes)*60000).toISOString(),
     qaEnabled: classroomQuestionsEnabled(),
     maxActiveSpeakers: MAX_ACTIVE_SPEAKERS
   });
