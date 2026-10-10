@@ -32,6 +32,12 @@ try {
  await verifyRoute('/api/payments/config',401);
  await verifyRoute('/api/auth/register',503,'POST');
  await verifyRoute('/api/auth/login',503,'POST');
+ await verifyRoute('/api/admin/setup-status',401);
+ const financial=await Promise.all(['/api/admin/payments/00000000-0000-0000-0000-000000000000/review','/api/bookings/00000000-0000-0000-0000-000000000000/payment'].map(async pathname=>{
+  const response=await fetch(origin+pathname,{method:'POST',headers:{'Content-Type':'application/json','Cookie':'session=invalid-qa-only'},body:'{}',signal:AbortSignal.timeout(25000)});
+  return {pathname,status:response.status};
+ }));
+ for(const item of financial)assert.equal(item.status,503,'Financial changes must stay locked: '+item.pathname);
  assert.deepEqual(await verifyRoute('/api/courses',200),{courses:[]});
  console.log('PASS Cloudflare Admin API flags, Google config, registration locked, private routes protected');
  for(const width of [390,1366]){
