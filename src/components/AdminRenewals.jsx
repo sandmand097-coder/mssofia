@@ -7,7 +7,7 @@ const api=async(path,opts={})=>{
  if(!res.ok)throw Error(data.error||'تعذر إتمام العملية');
  return data;
 };
-export default function AdminRenewals(){
+export default function AdminRenewals({onChanged}){
  const [records,setRecords]=useState({enabled:false,renewals:[]}),[ready,setReady]=useState(false),
   [error,setError]=useState(''),[busy,setBusy]=useState(''),[verified,setVerified]=useState({}),[reasons,setReasons]=useState({});
  const [available,setAvailable]=useState([]),[selectedBooking,setSelectedBooking]=useState('');
@@ -26,7 +26,7 @@ export default function AdminRenewals(){
    await api('/admin/renewals/'+item.id+'/review',{method:'POST',body:JSON.stringify({
     decision,confirmedOnPhone:verified[item.id]===true,reason:reasons[item.id]||''
    })});
-   await load();setVerified(v=>({...v,[item.id]:false}));
+   await load();await onChanged?.();setVerified(v=>({...v,[item.id]:false}));
   }catch(e){setError(e.message)}
   finally{setBusy('')}
  };
@@ -46,7 +46,7 @@ export default function AdminRenewals(){
    })});
    setManualMessage('تم اعتماد تجديد '+chosen.student_name+' لمدة 30 يومًا، دون رفع صورة إيصال.');
    setSelectedBooking('');setManualPhone('');setManualReference('');setManualAmount('');setManualVerified(false);
-   await load();
+   await load();await onChanged?.();
   }catch(e){setError(e.message)}finally{setBusy('')}
  };
  if(!ready)return <section className="portal-panel">جارٍ تحميل تجديدات الاشتراكات...</section>;

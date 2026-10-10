@@ -173,7 +173,7 @@ export function attachPaymentRoutes(app,{auth,role,get,all,run,uid,now}){
   }
  });
  app.get('/api/admin/payments',auth,onlyAdmin,async(req,res,next)=>{
-  try{const payments=await all("SELECT p.id,p.booking_id,p.student_id,p.amount_egp,p.transfer_reference,p.sender_phone,p.sender_last4,p.status,p.submitted_at,p.reviewed_at,p.review_note,p.confirmed_on_phone,u.name AS student_name,u.email AS student_email,c.title AS course_title FROM payment_submissions p JOIN users u ON u.id=p.student_id JOIN courses c ON c.id=p.course_id ORDER BY p.submitted_at DESC LIMIT 200");res.json({payments});}
+  try{const payments=await all("SELECT p.id,p.booking_id,p.student_id,p.amount_egp,p.transfer_reference,p.sender_phone,p.sender_last4,p.status,p.submitted_at,p.reviewed_at,p.review_note,p.confirmed_on_phone,b.status AS booking_status,u.name AS student_name,u.email AS student_email,c.title AS course_title FROM payment_submissions p JOIN bookings b ON b.id=p.booking_id JOIN users u ON u.id=p.student_id JOIN courses c ON c.id=p.course_id ORDER BY p.submitted_at DESC LIMIT 200");res.json({payments});}
   catch(e){next(e)}
  });
  app.get('/api/admin/payments/:id/proof',auth,onlyAdmin,async(req,res,next)=>{

@@ -4,7 +4,7 @@ import {CheckCircle2,ShieldCheck,Smartphone,RefreshCw,AlertTriangle} from 'lucid
 const money=amount=>Number(amount).toLocaleString('ar-EG')+' جنيه';
 const dateTime=value=>value?new Intl.DateTimeFormat('ar-EG',{dateStyle:'medium',timeStyle:'short',timeZone:'Africa/Cairo'}).format(new Date(value)):'—';
 
-export default function AdminPayments(){
+export default function AdminPayments({onChanged}){
  const [data,setData]=useState(null),[error,setError]=useState(''),[busy,setBusy]=useState(''),[checked,setChecked]=useState({}),[reasons,setReasons]=useState({});
  const [withoutProof,setWithoutProof]=useState([]),[selectedBooking,setSelectedBooking]=useState('');
  const [manualPhone,setManualPhone]=useState(''),[manualReference,setManualReference]=useState(''),[manualAmount,setManualAmount]=useState(''),[manualConfirmed,setManualConfirmed]=useState(false);
@@ -41,7 +41,7 @@ export default function AdminPayments(){
    if(!response.ok)throw Error(result.error||'تعذر تسجيل التحويل يدويًا');
    setManualMessage('تم اعتماد تحويل '+chosen.student_name+' وفتح اشتراكه لمدة 30 يومًا، دون الحاجة إلى رفع صورة.');
    setManualPhone('');setManualReference('');setManualAmount('');setSelectedBooking('');setManualConfirmed(false);
-   await load();
+   await load();await onChanged?.();
   }catch(err){setError(err.message)}
   finally{setBusy('')}
  };
@@ -58,7 +58,22 @@ export default function AdminPayments(){
    });
    const result=await response.json().catch(()=>({}));
    if(!response.ok)throw Error(result.error||'تعذرت مراجعة هذا الإيصال');
-   await load();setChecked(current=>({...current,[payment.id]:false}));
+   await load();await onChanged?.();setChecked(current=>({...current,[payment.id]:false}));
+  }catch(e){setError(e.message)}
+  finally{setBusy('')}
+ };
+ const reconcile=async(payment)=>{
+  if(busy)return;
+  setError('');setBusy(payment.id);
+  try{
+   const response=await fetch('/api/bookings/'+encodeURIComponent(payment.booking_id),{
+    credentials:'same-origin',method:'PATCH',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({status:'approved'})
+   });
+   const result=await response.json().catch(()=>({}));
+   if(!response.ok)throw Error(result.error||'تعذر استكمال تفعيل الحجز');
+   await load();await onChanged?.();
+   setManualMessage('تمت مزامنة الحجز مع التحويل المعتمد سابقًا، دون تسجيل دفعة جديدة.');
   }catch(e){setError(e.message)}
   finally{setBusy('')}
  };
@@ -116,6 +131,14 @@ export default function AdminPayments(){
      {payment.status==='pending'&&<img src={'/api/admin/payments/'+payment.id+'/proof'} loading="lazy" alt={'إيصال مُرسل من '+payment.student_name}/>}
     </>}
    </div>
+   {payment.status==='approved'&&payment.booking_status==='pending'&&(payment.confirmed_on_phone===true||payment.confirmed_on_phone===1)&&
+    <div className="sofia-payment-sync-alert" role="status">
+     <AlertTriangle size={17}/>
+     <span>التحويل مؤكد، لكن حالة الحجز لم تتحدث. هذه مزامنة للحجز نفسه وليست قبولًا جديدًا للمال.</span>
+     <button className="portal-soft-btn" type="button" disabled={busy!==''} onClick={()=>reconcile(payment)}>استكمال تفعيل الحجز</button>
+    </div>}
+   {payment.status==='approved'&&payment.booking_status==='rejected'&&
+    <p className="portal-alert" role="alert">تعارض غير معتاد: التحويل معتمد لكن الحجز مرفوض. يحتاج تحقيقًا إداريًا قبل أي تعديل.</p>}
    {payment.status==='pending'?<div className="sofia-payment-review-actions">
     <label className="sofia-payment-check">
      <input type="checkbox" checked={checked[payment.id]===true} onChange={e=>setChecked(current=>({...current,[payment.id]:e.target.checked}))}/>

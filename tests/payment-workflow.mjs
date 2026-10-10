@@ -8,6 +8,7 @@ import {fileURLToPath} from 'node:url';
 import {randomBytes} from 'node:crypto';
 import bcrypt from 'bcryptjs';
 import sharp from 'sharp';
+import {DatabaseSync} from 'node:sqlite';
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const temp=fs.mkdtempSync(path.join(os.tmpdir(),'mssofia-payment-'));
 process.env.MADRASATI_DB_PATH=path.join(temp,'payment.sqlite');
@@ -114,6 +115,39 @@ try{
  ok((await call('/admin/payments/'+manualRecord.id+'/proof','GET',undefined,a)).status===404,'no fabricated screenshot for manually verified payment');
  const manualAccess=(await call('/my/overview','GET',undefined,m)).data.bookings.find(b=>b.id===manualBooking);
  ok(manualAccess?.live_access_active===true&&manualAccess?.live_access_days_remaining>=29,'student obtains 30-day entitlement after manual director approval');
+ // RED-TEAM: deliberately corrupt ONLY this disposable test database.
+ const listed=(await call('/admin/payments','GET',undefined,a)).data.payments.find(x=>x.booking_id===manualBooking);
+ ok(listed?.booking_status==='approved','payment listing exposes confirmed booking state');
+ ok((await call('/bookings/'+manualBooking,'PATCH',{status:'rejected'},a)).status===409,'stale reject cannot revoke verified paid access');
+ ok((await call('/bookings/'+manualBooking,'PATCH',{status:'approved'},a)).status===409,'repeated booking approval cannot change an already approved decision');
+ const forensic=new DatabaseSync(process.env.MADRASATI_DB_PATH);
+ forensic.prepare("UPDATE bookings SET status='pending' WHERE id=?").run(manualBooking);
+ forensic.close();
+ const stale=(await call('/my/overview','GET',undefined,m)).data.bookings.find(b=>b.id===manualBooking);
+ ok(stale?.status==='pending'&&stale?.payment_status==='approved'&&stale?.live_access_active===false,'simulated old mismatch does not wrongly grant access');
+ ok((await call('/bookings/'+manualBooking,'PATCH',{status:'approved'},m)).status===403,'student cannot self-reconcile paid booking');
+ ok((await call('/bookings/'+manualBooking,'PATCH',{status:'rejected'},a)).status===409,'administrator cannot reject pending booking with approved payment');
+ const unverified=new DatabaseSync(process.env.MADRASATI_DB_PATH);
+ unverified.prepare('UPDATE payment_submissions SET confirmed_on_phone=0 WHERE booking_id=?').run(manualBooking);
+ unverified.close();
+ ok((await call('/bookings/'+manualBooking,'PATCH',{status:'approved'},a)).status===409,'approved status without real wallet confirmation cannot unlock booking');
+ const verified=new DatabaseSync(process.env.MADRASATI_DB_PATH);
+ verified.prepare('UPDATE payment_submissions SET confirmed_on_phone=1 WHERE booking_id=?').run(manualBooking);
+ verified.close();
+ const race=await Promise.all(Array.from({length:8},()=>call('/bookings/'+manualBooking,'PATCH',{status:'approved'},a)));
+ ok(race.filter(x=>x.status===200).length===1&&race.filter(x=>x.status===409).length===7,'eight simultaneous repair requests produce exactly one success');
+ const recovered=(await call('/my/overview','GET',undefined,m)).data.bookings.find(b=>b.id===manualBooking);
+ ok(recovered?.status==='approved'&&recovered?.live_access_active===true,'reconciliation restores 30-day access without accepting payment again');
+ const after=(await call('/admin/payments','GET',undefined,a)).data.payments.filter(x=>x.booking_id===manualBooking);
+ ok(after.length===1&&after[0].id===manualRecord.id,'payment audit trail remains unchanged and contains one payment');
+ ok((await call('/bookings/'+manualBooking,'PATCH',{status:'rejected'},a)).status===409,'reconciled payment cannot be revoked by stale booking reject');
+ ok((await call('/bookings/'+uid(),'PATCH',{status:'approved'},a)).status===404,'invalid booking identifier has no impact');
+ ok((await call('/bookings/'+manualBooking,'PATCH',{status:['approved']},a)).status===400,'array-typed status injection is rejected');
+ ok((await call('/bookings/'+manualBooking,'PATCH',{status:'approved',price:0,confirmedOnPhone:true},s)).status===403,'forged body cannot promote student booking privileges');
+ ok((await call('/bookings/'+encodeURIComponent("anything' OR 1=1 --"),'PATCH',{status:'approved'},a)).status===404,'SQL injection string cannot match a booking');
+ const csrf=await fetch(base+'/bookings/'+manualBooking,{method:'PATCH',headers:{Cookie:a,Origin:'https://attacker.example','Content-Type':'application/json'},body:JSON.stringify({status:'rejected'})});
+ ok(csrf.status===403,'cross-site origin cannot send authenticated booking mutations');
+
  console.log('RESULT '+checks+' payment workflow checks passed');
 }finally{
  app.kill();await Promise.race([new Promise(r=>app.once('exit',r)),wait(3000)]);
