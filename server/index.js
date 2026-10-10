@@ -905,15 +905,18 @@ app.get('/api/lessons/:id', auth, async (req, res) => {
   const timestamp=Date.now(),begins=Date.parse(l.starts_at);
   const opensAt=begins-15*60000,closesAt=begins+(l.duration_minutes+30)*60000;
   const liveWindow=timestamp>=opensAt&&timestamp<=closesAt;
-  // Teachers can publish before the scheduled window. Once an AUTHORIZED
-  // director/instructor is actually streaming media in this specific room,
-  // paid and approved learners may join, but cannot bypass expiry or bans.
-  const studentEarlyLive=req.user.role==='student'&&l.status==='scheduled'
-   &&Number.isFinite(begins)&&timestamp<opensAt&&timestamp<=closesAt
-   ?await earlyLiveInspector.isBroadcasting(l):false;
-  if(req.user.role==='student'&&!liveWindow&&!studentEarlyLive)l.meet_url=null;
+  // Only previously authorized learners receive studio state. A connected,
+  // authorized director opens the private waiting lobby even with media off;
+  // this lobby does not consume LiveKit participant-minutes.
+  const presence=req.user.role==='student'&&l.status==='scheduled'
+   &&Number.isFinite(begins)&&timestamp<=closesAt
+   ?await earlyLiveInspector.getStatus(l):{connected:false,publishing:false};
+  const studentRoomOpen=l.status==='scheduled'&&timestamp<=closesAt&&(liveWindow||presence.connected);
+  const studentEarlyLive=timestamp<opensAt&&presence.publishing;
+  if(req.user.role==='student'&&!studentRoomOpen)l.meet_url=null;
   res.set('Cache-Control','no-store, private').json({
-    lesson:(()=>{const {room_key,...safeLesson}=l;return safeLesson})(),studentEarlyLive,
+    lesson:(()=>{const {room_key,...safeLesson}=l;return safeLesson})(),
+    studentRoomOpen,hostConnected:presence.connected,hostPublishing:presence.publishing,studentEarlyLive,
     videoConfigured: !!(process.env.LIVEKIT_URL && process.env.LIVEKIT_API_KEY && process.env.LIVEKIT_API_SECRET),
     videoLocalOnly: localVideo
   });
@@ -941,17 +944,17 @@ app.post('/api/lessons/:id/token',auth,classroomJoinLimiter,admission.middleware
   const starts = Date.parse(l.starts_at),
     ends = starts + l.duration_minutes * 60000;
   const host = admin || teacher;
-  // An instructor may begin teaching before the scheduled 15-minute window.
-  // Allow early viewers ONLY while an active, authenticated school broadcaster
-  // has published media, after roomPermitted has checked paid subscription.
+  // Opening the instructor studio is enough to admit verified learners;
+  // the browser holds them in a no-media waiting lobby until publication.
+  // A hostile client cannot bypass this server-side check or paid membership.
   const timestamp=Date.now();
   const needsEarlyCheck=!host&&Number.isFinite(starts)&&timestamp<starts-15*60000;
-  const broadcasterAlreadyLive=needsEarlyCheck&&timestamp<=ends+30*60000
-   ?await earlyLiveInspector.isBroadcasting(l):false;
+  const hostInRoom=needsEarlyCheck&&timestamp<=ends+30*60000
+   ?await earlyLiveInspector.isHostConnected(l):false;
   if (!Number.isFinite(starts) || timestamp > ends + 30 * 60000
-    || (needsEarlyCheck&&!broadcasterAlreadyLive)) return send(res, 403, {
-    code:needsEarlyCheck?'LESSON_NOT_LIVE_YET':'LESSON_WINDOW_CLOSED',
-    error:host?'انتهى وقت الاستوديو لهذه الحصة':'المعلمة لم تبدأ البث بعد. يمكنك الدخول الآن إذا بدأت المعلمة البث، أو قبل موعد الحصة بـ15 دقيقة.'
+    || (needsEarlyCheck&&!hostInRoom)) return send(res, 403, {
+    code:needsEarlyCheck?'LESSON_NOT_OPEN_YET':'LESSON_WINDOW_CLOSED',
+    error:host?'انتهى وقت الاستوديو لهذه الحصة':'قاعة الحصة لم تُفتح بعد. يُفتح الدخول عند دخول المعلمة للاستوديو أو قبل موعد الحصة بـ15 دقيقة.'
   });
   if (!process.env.LIVEKIT_URL || !process.env.LIVEKIT_API_KEY || !process.env.LIVEKIT_API_SECRET) return send(res, 503, {
     error: 'لم يتم إعداد مزود البث LiveKit بعد'
