@@ -741,8 +741,18 @@ app.get('/api/lessons/:id/classroom', auth, async (req, res) => {
   const host = isLessonHost(l, req.user);
   const raised = host ? false : !!(await get('SELECT student_id FROM lesson_hands WHERE lesson_id=? AND student_id=?', l.id, req.user.id));
   const mode = host ? 'host' : (await get('SELECT mode FROM lesson_speakers WHERE lesson_id=? AND student_id=?', l.id, req.user.id))?.mode || '';
-  const raisedHands=host?await all("SELECT h.student_id,h.raised_at,u.name FROM lesson_hands h JOIN users u ON u.id=h.student_id JOIN bookings b ON b.student_id=u.id AND b.course_id=? AND b.status='approved' WHERE h.lesson_id=? AND u.status='active' ORDER BY h.raised_at LIMIT 100",l.course_id,l.id):[];
-  const hands=host?(await Promise.all(raisedHands.map(async hand=>(await studentCanStream(l.course_id,hand.student_id))?hand:null))).filter(Boolean):[];
+  // Single entitlement query, not 100 one-by-one SQL reads per polling cycle.
+  const raisedHands=host?await all(`SELECT h.student_id,h.raised_at,u.name,b.status AS booking_status,
+    c.price AS course_price,p.status AS payment_status,p.reviewed_at AS payment_reviewed_at,
+    p.confirmed_on_phone,${renewalEndSelect('b')}
+    FROM lesson_hands h JOIN users u ON u.id=h.student_id
+    JOIN bookings b ON b.student_id=u.id AND b.course_id=?
+    JOIN courses c ON c.id=b.course_id
+    LEFT JOIN payment_submissions p ON p.booking_id=b.id
+    WHERE h.lesson_id=? AND u.status='active'
+    ORDER BY h.raised_at LIMIT 100`,l.course_id,l.id):[];
+  const hands=raisedHands.filter(row=>evaluateMonthlyAccess(row).active)
+    .map(row=>({student_id:row.student_id,name:row.name,raised_at:row.raised_at}));
   const speakers = host ? await all('SELECT s.student_id,s.mode,s.approved_at,u.name FROM lesson_speakers s JOIN users u ON u.id=s.student_id WHERE s.lesson_id=? ORDER BY s.approved_at', l.id) : [];
   res.json({
     isHost: host,
@@ -832,16 +842,16 @@ app.post('/api/lessons/:id/moderate', auth, role('teacher', 'admin'), asyncRoute
       await run('DELETE FROM lesson_hands WHERE lesson_id=?', l.id);
       await run('DELETE FROM lesson_speakers WHERE lesson_id=?', l.id);
     } else if (action === 'mute_all') {
-      const participants = await roomService.listParticipants(l.room_key);
-      const studentRows = await all("SELECT id FROM users WHERE role='student' AND status='active'");
-      const liveStudentIds = new Set(studentRows.map(x => x.id));
-      const students = participants.filter(p => liveStudentIds.has(p.identity));
-      for (let i = 0; i < students.length; i += 16) {
-        await Promise.all(students.slice(i, i + 16).map(p => roomService.updateParticipant(l.room_key, p.identity, {
-          permission: participantPermission('')
-        })));
-      }
-      await run('DELETE FROM lesson_speakers WHERE lesson_id=?', l.id);
+      // Only participants explicitly granted publication can broadcast,
+      // so at most six updates are needed, even with thousands of viewers.
+      const permittedSpeakers=await all('SELECT student_id FROM lesson_speakers WHERE lesson_id=?',l.id);
+      const results=await Promise.allSettled(permittedSpeakers.map(member=>
+        roomService.updateParticipant(l.room_key,member.student_id,{permission:participantPermission('')})
+      ));
+      const serious=results.find(result=>result.status==='rejected'
+        &&!/not.found|404|no.such.participant/i.test(String(result.reason?.message||result.reason)));
+      if(serious)throw serious.reason;
+      await run('DELETE FROM lesson_speakers WHERE lesson_id=?',l.id);
     } else if (action === 'remove') {
       await run('INSERT OR IGNORE INTO lesson_bans(lesson_id,student_id,banned_at) VALUES(?,?,?)', l.id, id, now());
       try {
