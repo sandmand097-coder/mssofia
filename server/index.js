@@ -17,7 +17,7 @@ import {attachAdminOnlyGuard} from './admin-only.js';
 import {attachPaymentRoutes} from './payment-routes.js';
 import {attachClassroomQuestions,classroomQuestionsEnabled} from './classroom-questions.js';
 import {evaluateMonthlyAccess,accessView,countCurrentMembers,renewalEndSelect} from './monthly-access.js';
-import { get, all, run, uid, now, publicUser, checkConnection } from './db-adapter.js';
+import { get, all, run, uid, now, publicUser, checkConnection, withTransaction, isCloudDatabase } from './db-adapter.js';
 const app = express(),
   PORT = Number(process.env.PORT || 4010);
 const secret = process.env.JWT_SECRET;
