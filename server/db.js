@@ -25,6 +25,28 @@ CREATE TABLE IF NOT EXISTS payment_submissions(id TEXT PRIMARY KEY,booking_id TE
 CREATE INDEX IF NOT EXISTS idx_payment_review_queue ON payment_submissions(status,submitted_at);
 CREATE TABLE IF NOT EXISTS payment_review_links(id TEXT PRIMARY KEY,payment_id TEXT NOT NULL REFERENCES payment_submissions(id) ON DELETE CASCADE,token_hash TEXT NOT NULL UNIQUE,recipient_email TEXT NOT NULL,expires_at TEXT NOT NULL,used_at TEXT,created_at TEXT NOT NULL);
 CREATE INDEX IF NOT EXISTS idx_review_links_payment ON payment_review_links(payment_id,created_at);
+CREATE TABLE IF NOT EXISTS subscription_renewals (
+ id TEXT PRIMARY KEY,
+ booking_id TEXT NOT NULL REFERENCES bookings(id),
+ student_id TEXT NOT NULL REFERENCES users(id),
+ course_id TEXT NOT NULL REFERENCES courses(id),
+ amount_egp INTEGER NOT NULL CHECK(amount_egp>0 AND amount_egp<=100000),
+ transfer_reference TEXT NOT NULL UNIQUE,
+ sender_phone TEXT NOT NULL,
+ proof_key TEXT NOT NULL UNIQUE,
+ status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','approved','rejected')),
+ submitted_at TEXT NOT NULL,
+ reviewed_at TEXT,
+ reviewed_by TEXT REFERENCES users(id),
+ review_note TEXT,
+ confirmed_on_phone INTEGER NOT NULL DEFAULT 0,
+ period_start TEXT,
+ period_end TEXT,
+ CHECK(status!='approved' OR (confirmed_on_phone=1 AND period_start IS NOT NULL AND period_end IS NOT NULL AND period_end>period_start))
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_renewal_one_pending ON subscription_renewals(booking_id) WHERE status='pending';
+CREATE INDEX IF NOT EXISTS idx_renewals_booking_period ON subscription_renewals(booking_id,status,period_end);
+CREATE INDEX IF NOT EXISTS idx_renewals_review_queue ON subscription_renewals(status,submitted_at);
 `);
 const columns=new Set(db.prepare('PRAGMA table_info(users)').all().map(x=>x.name));
 if(!columns.has('email_verified_at'))db.exec('ALTER TABLE users ADD COLUMN email_verified_at TEXT');
