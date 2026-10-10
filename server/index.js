@@ -746,7 +746,7 @@ app.get('/api/lessons/:id/classroom', auth, async (req, res) => {
     c.price AS course_price,p.status AS payment_status,p.reviewed_at AS payment_reviewed_at,
     p.confirmed_on_phone,${renewalEndSelect('b')}
     FROM lesson_hands h JOIN users u ON u.id=h.student_id
-    JOIN bookings b ON b.student_id=u.id AND b.course_id=?
+    JOIN bookings b ON b.student_id=u.id AND b.course_id=? AND b.status='approved'
     JOIN courses c ON c.id=b.course_id
     LEFT JOIN payment_submissions p ON p.booking_id=b.id
     WHERE h.lesson_id=? AND u.status='active'
