@@ -37,5 +37,9 @@ jobs:
           REGISTRATION_ENABLED: 'false'
       - name: Build production website
         run: npm run build
+      - name: Install isolated headless browser
+        run: npx --yes playwright@1.64.0 install --with-deps chromium
+      - name: Verify transient classroom recovery and permanent denial in browser
+        run: node qa-classroom-join-recovery-browser.mjs
       - name: Audit runtime dependencies
         run: npm audit --omit=dev --audit-level=high
