@@ -32,3 +32,37 @@
 .sofia-meet-fallback{background:#eff7ff;border:1px solid #c9dff0;border-radius:14px;padding:20px;display:flex;flex-direction:column;align-items:center;gap:12px;margin-bottom:15px}
 .sofia-meet-fallback p{color:#2c6187;line-height:1.75;font-size:13px}
 @media(max-width:650px){.sofia-payments-review{grid-template-columns:1fr}.sofia-payment-item,.sofia-payment-review{padding:14px}.sofia-payment-number strong{font-size:21px}}
+
+
+/* Verified wallet transfers may be approved without a screenshot, by the director only. */
+.sofia-payment-manual{
+ display:grid;gap:15px;
+ background:linear-gradient(140deg,#f1faf5,#eaf5f3);
+ border:1px solid #a3d1bd;
+ border-radius:16px;
+ padding:20px;
+ color:#21463b;
+}
+.sofia-payment-manual h3{display:flex;align-items:center;gap:9px;font-size:17px;font-weight:900}
+.sofia-payment-manual p{line-height:1.9;font-size:12px;color:#365b4d}
+.sofia-payment-manual-form{display:grid;grid-template-columns:repeat(auto-fit,minmax(205px,1fr));gap:14px}
+.sofia-payment-manual-form>label:not(.sofia-payment-check){display:grid;gap:8px;font:800 12px Cairo,Tahoma,sans-serif;color:#255d4a}
+.sofia-payment-manual-form input:not([type=checkbox]),.sofia-payment-manual-form select{
+ width:100%;max-width:100%;min-width:0;
+ padding:11px;border:1px solid #a2c5b8;border-radius:9px;
+ min-height:44px;background:#fff;color:#143d32;
+ font:700 12px Cairo,Tahoma,sans-serif;
+}
+.sofia-payment-manual-form input:focus-visible,.sofia-payment-manual-form select:focus-visible{
+ outline:2px solid #158467;outline-offset:2px;
+}
+.sofia-payment-manual-form>.sofia-payment-check,
+.sofia-payment-manual-form>.portal-primary-btn,
+.sofia-payment-manual-due{grid-column:1/-1}
+.sofia-payment-manual-form>.portal-primary-btn{justify-self:start}
+.sofia-payment-manual-form>.portal-primary-btn:disabled{opacity:.5;cursor:not-allowed}
+@media(max-width:640px){
+ .sofia-payment-manual{padding:13px}
+ .sofia-payment-manual-form{grid-template-columns:minmax(0,1fr)}
+ .sofia-payment-manual-form>.portal-primary-btn{width:100%}
+}
