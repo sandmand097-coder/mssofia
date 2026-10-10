@@ -9,6 +9,7 @@ import {withTransaction,isCloudDatabase} from './db-adapter.js';
 import {verifyPrivateStorage} from './deployment-diagnostics.js';
 import {createPaymentStorageGate} from './payment-storage-gate.js';
 import {countCurrentMembers} from './monthly-access.js';
+import {attachSubscriptionRenewalRoutes} from './subscription-renewals.js';
 
 export const FIRST_MONTH_EGP=100;
 export const REGULAR_MONTH_EGP=170;
@@ -54,6 +55,7 @@ async function removeProof(key){
 export function attachPaymentRoutes(app,{auth,role,get,all,run,uid,now}){
  const onlyStudent=role('student'),onlyAdmin=role('admin');
  const notifyPaymentReviewer=attachEmailReview(app,{get,run,uid,now,loadProof,withTransaction,isCloudDatabase});
+ attachSubscriptionRenewalRoutes(app,{auth,role,get,all,uid,now,withTransaction,isCloudDatabase,receiptUpload,storageReady,saveProof,loadProof,removeProof});
  app.get('/api/payments/config',auth,async(req,res,next)=>{
   try{
    const verified=await storageReady();

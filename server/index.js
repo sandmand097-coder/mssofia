@@ -15,7 +15,8 @@ import {schoolReadiness} from './release-readiness.js';
 import {createDiagnosticReader} from './deployment-diagnostics.js';
 import {attachAdminOnlyGuard} from './admin-only.js';
 import {attachPaymentRoutes} from './payment-routes.js';
-import {evaluateMonthlyAccess,accessView,countCurrentMembers} from './monthly-access.js';
+import {attachClassroomQuestions,classroomQuestionsEnabled} from './classroom-questions.js';
+import {evaluateMonthlyAccess,accessView,countCurrentMembers,renewalEndSelect} from './monthly-access.js';
 import { get, all, run, uid, now, publicUser, checkConnection } from './db-adapter.js';
 const app = express(),
   PORT = Number(process.env.PORT || 4010);
@@ -30,7 +31,7 @@ if (process.env.NODE_ENV === 'production') {
   if (!process.env.APP_ORIGIN?.startsWith('https://')) throw Error('Production requires secure APP_ORIGIN.');
   if (adminOnly && (!googleAdminConfig().enabled || process.env.REGISTRATION_ENABLED==='true')) throw Error('Admin-only production requires configured Google login and disabled public registration.');
 }
-app.disable('x-powered-by');
+// Render places one trusted reverse-proxy hop in front of Express.\n// Never use boolean true: that would trust client-supplied X-Forwarded-For.\napp.set('trust proxy', process.env.NODE_ENV === 'production' ? 1 : false);\napp.disable('x-powered-by');
 app.use(helmet({
   contentSecurityPolicy: false
 }));
@@ -150,9 +151,9 @@ const parseLesson = input => {
   };
 };
 const courseQuery = `SELECT c.*,u.name AS teacher_name,u.specialty AS teacher_specialty,(SELECT COUNT(*) FROM bookings b WHERE b.course_id=c.id AND b.status='approved') AS enrolled,(SELECT MIN(starts_at) FROM lessons l WHERE l.course_id=c.id AND datetime(l.starts_at)>=datetime('now')) AS next_date FROM courses c JOIN users u ON u.id=c.teacher_id`;
-const studentAccessRows=studentId=>all(`SELECT b.course_id,b.status AS booking_status,c.price AS course_price,p.status AS payment_status,p.reviewed_at AS payment_reviewed_at,p.confirmed_on_phone AS confirmed_on_phone FROM bookings b JOIN courses c ON c.id=b.course_id LEFT JOIN payment_submissions p ON p.booking_id=b.id WHERE b.student_id=?`,studentId);
+const studentAccessRows=studentId=>all(`SELECT b.course_id,b.status AS booking_status,c.price AS course_price,p.status AS payment_status,p.reviewed_at AS payment_reviewed_at,p.confirmed_on_phone AS confirmed_on_phone,${renewalEndSelect('b')} FROM bookings b JOIN courses c ON c.id=b.course_id LEFT JOIN payment_submissions p ON p.booking_id=b.id WHERE b.student_id=?`,studentId);
 const studentCanStream=async(courseId,studentId)=>{
- const row=await get(`SELECT b.status AS booking_status,c.price AS course_price,p.status AS payment_status,p.reviewed_at AS payment_reviewed_at,p.confirmed_on_phone AS confirmed_on_phone FROM bookings b JOIN courses c ON c.id=b.course_id LEFT JOIN payment_submissions p ON p.booking_id=b.id WHERE b.course_id=? AND b.student_id=?`,courseId,studentId);
+ const row=await get(`SELECT b.status AS booking_status,c.price AS course_price,p.status AS payment_status,p.reviewed_at AS payment_reviewed_at,p.confirmed_on_phone AS confirmed_on_phone,${renewalEndSelect('b')} FROM bookings b JOIN courses c ON c.id=b.course_id LEFT JOIN payment_submissions p ON p.booking_id=b.id WHERE b.course_id=? AND b.student_id=?`,courseId,studentId);
  return evaluateMonthlyAccess(row).active;
 };
 app.get('/api/health', (req, res) => res.json({
@@ -397,6 +398,26 @@ app.get('/api/courses/:id', async (req, res) => {
     lessons: await all('SELECT id,course_id,title,starts_at,duration_minutes,status FROM lessons WHERE course_id=? ORDER BY starts_at', c.id)
   });
 });
+app.get('/api/admin/subscriptions',auth,role('admin'),asyncRoute(async(req,res)=>{
+ const rows=await all(`SELECT b.id,b.student_id,b.course_id,b.status AS booking_status,
+  u.name AS student_name,u.email AS student_email,c.title AS course_title,c.price AS course_price,
+  p.status AS payment_status,p.reviewed_at AS payment_reviewed_at,p.confirmed_on_phone,
+  ${renewalEndSelect('b')}
+  FROM bookings b JOIN users u ON u.id=b.student_id
+  JOIN courses c ON c.id=b.course_id
+  LEFT JOIN payment_submissions p ON p.booking_id=b.id
+  WHERE b.status='approved' ORDER BY b.created_at DESC LIMIT 1000`);
+ const memberships=rows.map(row=>({...row,...accessView(row)}));
+ const counts={active:0,expiringSoon:0,expired:0,unpaid:0};
+ for(const m of memberships){
+  if(m.live_access_active){
+   counts.active++;
+   if(Number.isFinite(m.live_access_days_remaining)&&m.live_access_days_remaining<=5)counts.expiringSoon++;
+  }else if(m.live_access_status==='expired')counts.expired++;
+  else counts.unpaid++;
+ }
+ res.set('Cache-Control','no-store, private').json({memberships,counts});
+}));
 app.get('/api/student/dashboard', auth, role('student'), async (req, res) => {
   const id = req.user.id,
     asOf = now();
@@ -420,7 +441,7 @@ app.get('/api/my/overview', auth, async (req, res) => {
   let courses,
     bookings = [];
   if (u.role === 'student') {
-    bookings = await all(`SELECT b.*,(SELECT p.status FROM payment_submissions p WHERE p.booking_id=b.id) AS payment_status,(SELECT p.amount_egp FROM payment_submissions p WHERE p.booking_id=b.id) AS payment_amount,(SELECT p.review_note FROM payment_submissions p WHERE p.booking_id=b.id) AS payment_note,(SELECT p.reviewed_at FROM payment_submissions p WHERE p.booking_id=b.id) AS payment_reviewed_at,(SELECT p.confirmed_on_phone FROM payment_submissions p WHERE p.booking_id=b.id) AS confirmed_on_phone,c.price,c.title AS course_title,c.subject,c.teacher_id,u.name AS teacher_name FROM bookings b JOIN courses c ON c.id=b.course_id JOIN users u ON u.id=c.teacher_id WHERE b.student_id=? ORDER BY b.created_at DESC`, u.id);
+    bookings = await all(`SELECT b.*,(SELECT p.status FROM payment_submissions p WHERE p.booking_id=b.id) AS payment_status,(SELECT p.amount_egp FROM payment_submissions p WHERE p.booking_id=b.id) AS payment_amount,(SELECT p.review_note FROM payment_submissions p WHERE p.booking_id=b.id) AS payment_note,(SELECT p.reviewed_at FROM payment_submissions p WHERE p.booking_id=b.id) AS payment_reviewed_at,(SELECT p.confirmed_on_phone FROM payment_submissions p WHERE p.booking_id=b.id) AS confirmed_on_phone,${renewalEndSelect('b')},c.price,c.title AS course_title,c.subject,c.teacher_id,u.name AS teacher_name FROM bookings b JOIN courses c ON c.id=b.course_id JOIN users u ON u.id=c.teacher_id WHERE b.student_id=? ORDER BY b.created_at DESC`, u.id);
     const allowedIds=new Set(bookings.filter(b=>evaluateMonthlyAccess(b).active).map(b=>b.course_id));
     bookings=bookings.map(b=>({...b,...accessView(b)}));
     courses = (await all(courseQuery + ` WHERE c.id IN (SELECT course_id FROM bookings WHERE student_id=? AND status='approved')`, u.id)).filter(c=>allowedIds.has(c.id));
@@ -679,6 +700,7 @@ const selectedStudent = async(l,id)=>{
  const student=await get("SELECT u.id,u.name FROM users u WHERE u.id=? AND u.role='student' AND u.status='active'",id);
  return student&&(await studentCanStream(l.course_id,id))?student:null;
 };
+attachClassroomQuestions(app,{auth,role,get,all,run,uid,now,roomLesson,roomPermitted,isLessonHost});
 app.get('/api/lessons/:id/classroom', auth, async (req, res) => {
   const l = await roomLesson(req.params.id);
   if (!l) return send(res, 404, {
@@ -700,6 +722,7 @@ app.get('/api/lessons/:id/classroom', auth, async (req, res) => {
     hands,
     speakers,
     status: l.status,
+    qaEnabled: classroomQuestionsEnabled(),
     maxActiveSpeakers: MAX_ACTIVE_SPEAKERS
   });
 });
