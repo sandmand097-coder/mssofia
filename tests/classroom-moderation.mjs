@@ -59,6 +59,16 @@ try{
  check(MAX_ACTIVE_SPEAKERS===6,'simultaneous speaker limit configured');
  const a={teacher:await login(teacher),admin:await login(admin),student:await login(student),outsider:await login(outsider),other:await login(teacherTwo)};
  const change=(action,identity,cookie=a.teacher)=>request('/lessons/'+lesson+'/moderate','POST',{action,student_id:identity},cookie);
+ const extend=(minutes,cookie=a.admin)=>request('/lessons/'+lesson+'/duration','PATCH',{add_minutes:minutes},cookie);
+ check((await extend(15,a.student)).status===403,'viewer cannot extend stream or force an extra hour');
+ check((await extend(45)).status===400,'extension can only use allowed increments');
+ check((await extend(30)).data.duration_minutes===120,'director extends lesson 30 minutes while room is ready');
+ check((await extend(15)).data.duration_minutes===135,'director can extend again without restarting LiveKit room');
+ const burst=await Promise.all(Array.from({length:6},()=>extend(15)));
+ check(burst.every(r=>r.status===200),'six simultaneous 15-minute extensions complete without lost increments');
+ check((await request('/lessons/'+lesson+'/classroom','GET',null,a.admin)).data.duration_minutes===225,'concurrent extension resulted in 225 total minutes');
+ check((await extend(30)).status===400,'4-hour cap prevents accidental marathon that exceeds allowed classroom schedule');
+
  check((await change('allow_audio',student.id,a.student)).status===403,'student moderation forbidden');
  check((await change('allow_audio',student.id,a.other)).status===403,'other teacher moderation forbidden');
  check((await change('allow_audio',outsider.id)).status===400,'cannot grant audio to unapproved child');
