@@ -30,7 +30,7 @@ if (process.env.NODE_ENV === 'production') {
   if (!process.env.APP_ORIGIN?.startsWith('https://')) throw Error('Production requires secure APP_ORIGIN.');
   if (adminOnly && (!googleAdminConfig().enabled || process.env.REGISTRATION_ENABLED==='true')) throw Error('Admin-only production requires configured Google login and disabled public registration.');
 }
-app.disable('x-powered-by');
+// Render places one trusted reverse-proxy hop in front of Express.\n// Never use boolean true: that would trust client-supplied X-Forwarded-For.\napp.set('trust proxy', process.env.NODE_ENV === 'production' ? 1 : false);\napp.disable('x-powered-by');
 app.use(helmet({
   contentSecurityPolicy: false
 }));
