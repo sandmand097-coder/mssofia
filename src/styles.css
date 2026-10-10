@@ -37,3 +37,11 @@
 .schedule-edit-row .lesson-row{border:0}
 .edit-lesson-btn{display:block;margin:0 65px 9px 0;border:1px solid #dcd5fa;color:#6b50ce;background:#f7f4ff;border-radius:9px;padding:7px 11px;font-size:11px;font-weight:800}
 @media(max-width:490px){.course-edit-actions{grid-template-columns:1fr}.edit-lesson-btn{margin-right:8px}}
+
+/* Pre-stream private waiting lobby: no LiveKit participant connection yet. */
+.sofia-waiting-lobby{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;min-height:470px}
+.sofia-waiting-lobby p{max-width:620px;line-height:1.95}
+.sofia-waiting-lobby small{max-width:620px;line-height:1.9}
+.sofia-waiting-actions{display:flex;flex-wrap:wrap;justify-content:center;gap:12px;margin:10px auto}
+.sofia-waiting-actions button{min-height:44px}
+@media(max-width:580px){.sofia-waiting-actions{width:100%;flex-direction:column}.sofia-waiting-actions button{width:100%}.sofia-waiting-lobby{min-height:420px}}
