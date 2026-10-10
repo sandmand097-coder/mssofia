@@ -598,7 +598,7 @@ app.patch('/api/lessons/:id/duration', auth, role('teacher', 'admin'), async (re
  const start=Date.parse(lesson.starts_at),clock=Date.now();
  const presentEnd=start+Number(lesson.duration_minutes)*60000+30*60000;
  if(!Number.isFinite(start)||clock>presentEnd)return send(res,409,{error:'انتهت نافذة تعديل هذه الحصة'});
- if(clock>=start && start+value*60000<=clock+2*60000)
+ if(clock>=start && start+value*60000<clock+3*60000)
   return send(res,409,{error:'المدة المختارة يجب أن تترك ثلاث دقائق على الأقل من وقت الحصة'});
  await run("UPDATE lessons SET duration_minutes=? WHERE id=? AND status='scheduled'",value,lesson.id);
  res.set('Cache-Control','no-store').json({ok:true,duration_minutes:value,starts_at:lesson.starts_at,
