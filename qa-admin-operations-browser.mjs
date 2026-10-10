@@ -40,6 +40,7 @@ try{
    if(pathname==='/api/admin/renewals/without-proof')return reply(200,{enabled:true,bookings:[]});
    if(pathname==='/api/admin/bookings/paid-1/manual-payment'&&route.request().method()==='POST'){paidApproved=true;return reply(201,{ok:true,amount_egp:100})}
    if(pathname==='/api/bookings/paid-1'&&route.request().method()==='PATCH'){if(!paidApproved)return reply(409,{error:'no payment'});legacyMismatch=false;return reply(200,{ok:true,status:'approved'})}
+   if(pathname==='/api/admin/live/admission')return reply(200,{admission:{active:2,activeStudents:1,studentLimit:14,totalLimit:20,throttled:4,scope:'this-server-instance'}});
    if(pathname==='/api/admin/dependencies')return reply(200,{checkedAt:new Date().toISOString(),databaseConnected:true,livekitApiVerified:true,receiptBucketPrivateVerified:false,mailDeliveryTested:false});
    if(pathname==='/api/admin/setup-status')return reply(200,{
     launchMode:'admin',adminGoogleEnabled:true,studentGoogleEnabled:false,studentGoogleRegistrationEnabled:false,
@@ -57,6 +58,8 @@ try{
   await page.getByText('٦. راجعي تحويل فودافون كاش').waitFor();
   await page.getByRole('heading',{name:'التحقق من التجهيز للإطلاق العام'}).waitFor();
   await page.getByRole('heading',{name:'اختبار الخدمات الفعلي'}).waitFor();
+  await page.getByRole('heading',{name:'مراقبة دخول البث والتعافي'}).waitFor();
+  await page.getByText(/طلبات قيد المعالجة: 2 من 20/).waitFor();
   await page.getByText('اتصال قاعدة بيانات الطلاب والمديرة').waitFor();
   await page.getByRole('button',{name:'الحجوزات',exact:true}).click();
   const paid=page.locator('.portal-list-item').filter({hasText:'طالب حجز مدفوع'});
