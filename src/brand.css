@@ -400,8 +400,8 @@ body{color:var(--sf-ink)}
  .sofia-detail-art{height:250px}
  .sofia-detail-section{padding:20px}
  .sofia-detail-sidebar{padding:22px}
- .sofia-auth-bg{padding:20px 0 55px}
- .sofia-auth-layout{grid-template-columns:1fr}
+ .sofia-auth-bg{min-height:0;padding:20px 0 45px}
+ .sofia-auth-layout{grid-template-columns:1fr;min-height:0}
  .sofia-auth-card{padding:27px 24px}
  .sofia-auth-visual{display:none}
 }
