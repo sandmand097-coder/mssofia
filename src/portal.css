@@ -66,3 +66,11 @@
  .sofia-payment-manual-form{grid-template-columns:minmax(0,1fr)}
  .sofia-payment-manual-form>.portal-primary-btn{width:100%}
 }
+
+
+/* Reconciled payment warnings are not actionable new payment approvals. */
+.sofia-booking-sync-notice{display:block;margin-top:8px;color:#95621c;font-weight:800;line-height:1.8;font-size:12px}
+.sofia-payment-sync-alert{display:flex;flex-wrap:wrap;gap:11px;align-items:center;padding:14px;border:1px solid #dfc38d;background:#fff7e7;color:#735321;border-radius:12px;line-height:1.8;font-size:12px;font-weight:700}
+.sofia-payment-sync-alert>span{flex:1 1 240px}
+.sofia-payment-sync-alert button{flex:0 1 auto}
+@media(max-width:650px){.sofia-payment-sync-alert{align-items:flex-start}.sofia-payment-sync-alert button{width:100%}}
