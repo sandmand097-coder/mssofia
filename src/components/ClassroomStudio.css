@@ -192,6 +192,7 @@
 .sofia-meeting-settings-head strong,.sofia-meeting-duration label,.sofia-meeting-exposure{
  display:flex;align-items:center;gap:8px;font-weight:900;font-size:12px;
 }
+.sofia-meeting-alert-tools{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .sofia-meeting-sound-toggle,.sofia-meeting-duration button{
  font:800 11px Cairo,Tahoma,sans-serif;
  border:1px solid #4a8b80;
@@ -245,5 +246,6 @@
  .sofia-meeting-duration,.sofia-meeting-camera-controls{justify-content:flex-start}
  .sofia-meeting-duration small,.sofia-meeting-camera-controls small{flex-basis:100%}
  .sofia-meeting-duration input{width:72px}
- .sofia-meeting-sound-toggle{flex:1 1 100%}
+ .sofia-meeting-alert-tools{width:100%}
+ .sofia-meeting-sound-toggle{flex:1 1 110px}
 }
