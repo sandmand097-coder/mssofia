@@ -854,6 +854,10 @@ app.post('/api/lessons/:id/token', auth, asyncRoute(async (req, res) => {
   const token = new AccessToken(process.env.LIVEKIT_API_KEY, process.env.LIVEKIT_API_SECRET, {
     identity: req.user.id,
     name: req.user.name,
+    // The student's player selects the active director's video even when an
+    // older course points to a different teacher_id. Only the server assigns
+    // these roles; students cannot elevate themselves through client input.
+    metadata: JSON.stringify({mrsSofiaRole: admin ? 'director' : teacher ? 'instructor' : 'viewer'}),
     ttl: '30m'
   });
   token.addGrant({

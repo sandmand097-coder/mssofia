@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import '@livekit/components-styles';
 import './ClassroomStudio.css';
+import {broadcasterIdentity} from './broadcast-presenter.js';
 
 const api=async(path,opts={})=>{
  const res=await fetch('/api'+path,{credentials:'same-origin',...opts,headers:{'Content-Type':'application/json',...opts.headers}});
@@ -33,12 +34,15 @@ export function MeetingStudio({connection,onDisconnected}){
  const permission=useLocalParticipantPermissions();
  const peers=useParticipants();
  const videoTracks=useTracks([Track.Source.ScreenShare,Track.Source.Camera],{onlySubscribed:true});
+ const audioTracks=useTracks([Track.Source.Microphone,Track.Source.ScreenShareAudio],{onlySubscribed:true});
  const {chatMessages,send,isSending}=useChat();
  const host=connection.isHost;
- const hostId=host?localParticipant.identity:connection.teacherId;
+ const hostId=host?localParticipant.identity:broadcasterIdentity(peers,connection.teacherId);
  const camera=videoTracks.find(t=>t.participant.identity===hostId&&t.source===Track.Source.Camera);
  const screen=videoTracks.find(t=>t.participant.identity===hostId&&t.source===Track.Source.ScreenShare);
  const stage=screen||camera;
+ const audioStreaming=audioTracks.some(t=>t.participant.identity===hostId&&!t.publication?.isMuted);
+ const liveNow=host?(isMicrophoneEnabled||isCameraEnabled||isScreenShareEnabled):(Boolean(stage)||audioStreaming);
  const [roomInfo,setRoomInfo]=useState(null),[busy,setBusy]=useState(false),[error,setError]=useState(''),[tab,setTab]=useState('participants'),[query,setQuery]=useState(''),[listLimit,setListLimit]=useState(40),[announcement,setAnnouncement]=useState(''),[onlineCount,setOnlineCount]=useState(1),[expanded,setExpanded]=useState(false);
  const micAllowed=host||Boolean(permission?.canPublish&&(permission.canPublishSources?.length===0||permission.canPublishSources?.includes(2)));
  const cameraAllowed=host||Boolean(permission?.canPublish&&(permission.canPublishSources?.length===0||permission.canPublishSources?.includes(1)));
@@ -58,6 +62,21 @@ export function MeetingStudio({connection,onDisconnected}){
    if(type==='camera')await localParticipant.setCameraEnabled(!isCameraEnabled);
    if(type==='share')await localParticipant.setScreenShareEnabled(!isScreenShareEnabled,{audio:true});
   }catch(e){setError('تعذر تشغيل الجهاز: '+(e.message||'تحقق من الأذونات'))}finally{setBusy(false)}
+ };
+ const startTeaching=async()=>{
+  if(!host||busy)return;
+  setBusy(true);setError('');
+  // These two explicit enable calls request permission from the director's
+  // own browser; students' devices can never be switched on remotely.
+  const results=await Promise.allSettled([
+   localParticipant.setMicrophoneEnabled(true),
+   localParticipant.setCameraEnabled(true)
+  ]);
+  if(results.every(r=>r.status==='rejected'))
+   setError('تعذر تشغيل الميكروفون والكاميرا؛ تحققي من أذونات المتصفح أو استخدمي مشاركة الشاشة.');
+  else if(results.some(r=>r.status==='rejected'))
+   setError('بدأ جزء من البث؛ تحققي من السماح بالكاميرا والميكروفون. يمكنك متابعة الشرح بالصوت أو الشاشة.');
+  setBusy(false);
  };
  const changeHand=async()=>{
   if(busy)return;
@@ -90,12 +109,13 @@ export function MeetingStudio({connection,onDisconnected}){
  const view=(
   <div className="sofia-meeting-layout">
    <section className="sofia-meeting-main">
-    <div className="sofia-meeting-info"><div className="sofia-meeting-live"><span className="sofia-live-led"/> فصل مباشر • Mrs Sofia</div><div className="sofia-meeting-count"><Users size={16}/> {onlineCount.toLocaleString('ar-EG')} مشارك</div></div>
+    <div className="sofia-meeting-info"><div className="sofia-meeting-live"><span className="sofia-live-led"/> {liveNow?'البث مباشر • Mrs Sofia':host?'استوديو المعلمة جاهز':'في انتظار بدء بث المعلمة'}</div><div className="sofia-meeting-count"><Users size={16}/> {onlineCount.toLocaleString('ar-EG')} مشارك</div></div>
     <div className="sofia-meeting-stage">
-     <VideoSurface refTrack={stage} emptyText={host?'الكاميرا متوقفة — ابدئي الشرح':'في انتظار بث المعلمة'} icon={host?Camera:BookOpen}/>
+     <VideoSurface refTrack={stage} emptyText={host?'شغّلي الكاميرا أو مشاركة الشاشة للشرح':audioStreaming?'صوت المعلمة مباشر — في انتظار الفيديو':'في انتظار بث المعلمة'} icon={host?Camera:BookOpen}/>
      {screen&&camera&&<div className="sofia-meeting-picture"><VideoSurface refTrack={camera} small emptyText="المعلمة"/></div>}
      <div className="sofia-meeting-stage-bottom"><span><Radio size={15}/> {screen?'مشاركة شاشة المعلمة':camera?'فيديو المعلمة':'جاهز للدرس'}</span><span>{connection.isHost?'أنتِ تديرين الفصل':'تستمع إلى درس Mrs Sofia'}</span></div>
     </div>
+    {host&&<div className="sofia-director-broadcast" role="status"><div><strong>{liveNow?'البث قيد التشغيل':'أنتِ المعلمة المسؤولة عن البث'}</strong><small>{liveNow?'يمكنك تغيير الكاميرا أو الصوت أو مشاركة الشاشة، والطلاب يشاهدون ما تنشرينه فقط.':'اضغطي «بدء البث» لتشغيل الكاميرا والميكروفون بموافقتك. ويمكنك استخدام مشاركة الشاشة بدل الكاميرا.'}</small></div>{!liveNow&&<button type="button" className="sofia-director-start" onClick={startTeaching} disabled={busy}><Radio size={17}/>{busy?'جارٍ تشغيل الأجهزة...':'ابدئي البث الآن'}</button>}</div>}
     <div className="sofia-meeting-tools"><div className="sofia-meeting-tool-group">
      {host&&<ClassButton icon={isMicrophoneEnabled?Mic:MicOff} onClick={()=>toggle('mic')} active={isMicrophoneEnabled} disabled={busy}>{isMicrophoneEnabled?'إيقاف صوتي':'تشغيل صوتي'}</ClassButton>}
      {!host&&micAllowed&&<ClassButton icon={isMicrophoneEnabled?Mic:MicOff} onClick={()=>toggle('mic')} active={isMicrophoneEnabled} disabled={busy}>{isMicrophoneEnabled?'إغلاق ميكروفوني':'تشغيل ميكروفوني'}</ClassButton>}

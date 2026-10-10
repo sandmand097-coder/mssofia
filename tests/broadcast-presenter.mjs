@@ -1,0 +1,23 @@
+import assert from 'node:assert/strict';
+import {broadcasterIdentity,isDirectorBroadcaster} from '../src/components/broadcast-presenter.js';
+import {videoGrant} from '../server/classroom.js';
+
+const teacher={identity:'original-teacher',metadata:JSON.stringify({mrsSofiaRole:'instructor'})};
+const admin={identity:'school-director',metadata:JSON.stringify({mrsSofiaRole:'director'})};
+const viewer={identity:'child-123',metadata:JSON.stringify({mrsSofiaRole:'viewer'})};
+assert.equal(broadcasterIdentity([viewer,teacher],teacher.identity),teacher.identity,'assigned instructor appears if the director is absent');
+assert.equal(broadcasterIdentity([teacher,viewer,admin],teacher.identity),admin.identity,'the admin stream is preferred even on a course assigned to someone else');
+assert.equal(broadcasterIdentity([viewer,admin],teacher.identity),admin.identity,'director selected without assigned teacher being present');
+assert.equal(broadcasterIdentity([viewer],teacher.identity),teacher.identity,'legacy classroom falls back to scheduled teacher');
+assert.equal(broadcasterIdentity([{identity:'old-host',permissions:{canPublish:true,canPublishData:true}},viewer],teacher.identity),'old-host','legacy host with video publishing privileges supported');
+assert.equal(broadcasterIdentity([{identity:'invalid',metadata:'{not json}'},viewer],teacher.identity),teacher.identity,'malformed metadata does not break student video');
+assert.equal(broadcasterIdentity([],teacher.identity),teacher.identity,'empty waiting room is safe');
+assert.equal(broadcasterIdentity([],''),'','unknown presenter is not invented');
+assert.ok(isDirectorBroadcaster({role:'admin'}));
+assert.equal(isDirectorBroadcaster({role:'student'}),false);
+assert.equal(videoGrant('admin').roomAdmin,true,'admin is room moderator');
+assert.equal(videoGrant('admin').canPublish,true,'admin can present camera microphone and screen');
+assert.equal(videoGrant('admin').canPublishData,true,'only host can publish announcements');
+assert.equal(videoGrant('student').canPublish,false,'student is view-only by default');
+assert.equal(videoGrant('student').canPublishData,false,'student cannot send arbitrary chat');
+console.log('PASS director-first LiveKit broadcast presenter selection and safe student permissions');

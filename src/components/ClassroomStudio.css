@@ -107,3 +107,15 @@
 @media(max-width:640px){.sofia-meeting{border-radius:13px}.sofia-meeting-heading{padding:12px}.sofia-meeting-heading strong{font-size:12px}.sofia-meeting-heading>button{font-size:0;padding:9px}.sofia-meeting-main{padding:9px;min-height:400px}.sofia-meeting-stage{min-height:275px}.sofia-video-idle>span{width:77px;height:77px;border-radius:23px}.sofia-video-idle>span svg{width:35px}.sofia-video-idle strong{font-size:13px}.sofia-meeting-tools{padding-top:9px}.sofia-meeting-tool-group{gap:5px}.sofia-class-button{padding:9px;min-height:42px;font-size:10px;gap:4px}.sofia-class-button svg{width:16px}.sofia-meeting-info{gap:4px}.sofia-meeting-live,.sofia-meeting-count{font-size:9px}.sofia-class-preview-body{grid-template-columns:1fr}.sofia-class-preview-stage{min-height:235px}.sofia-class-preview-body aside{padding:12px}.sofia-class-preview-body aside>div{margin-top:8px}.sofia-meeting-picture{width:104px;bottom:45px}}
 @media(max-width:380px){.sofia-class-button span{font-size:9px}.sofia-meeting-tools{justify-content:center}.sofia-meeting-tool-group{justify-content:center}.sofia-meeting-stage-bottom{font-size:8px}}
 @media(prefers-reduced-motion:reduce){.sofia-meeting *{transition:none!important;animation:none!important}}
+
+/* Explicit director broadcast controls. A room connection alone is not a live broadcast. */
+.sofia-director-broadcast{display:flex;align-items:center;justify-content:space-between;gap:15px;padding:14px 17px;background:#ecf9f0;border:1px solid #9fd3b8;border-radius:13px;margin:9px 0}
+.sofia-director-broadcast>div{min-width:0;flex:1}
+.sofia-director-broadcast strong,.sofia-director-broadcast small{display:block}
+.sofia-director-broadcast strong{font:900 13px Cairo,Tahoma;color:#086b51}
+.sofia-director-broadcast small{font:600 11px Cairo,Tahoma;color:#356d5b;line-height:1.9;margin-top:3px}
+.sofia-director-start{display:flex;align-items:center;justify-content:center;gap:8px;border:0;border-radius:11px;padding:12px 17px;background:#067a62;color:#fff;font:900 12px Cairo,Tahoma;cursor:pointer;flex-shrink:0;min-height:44px}
+.sofia-director-start:hover{background:#055f4e}
+.sofia-director-start:focus-visible{outline:3px solid #49a9d8;outline-offset:2px}
+.sofia-director-start:disabled{opacity:.55;cursor:not-allowed}
+@media(max-width:600px){.sofia-director-broadcast{flex-direction:column;align-items:stretch;padding:12px}.sofia-director-start{width:100%}}

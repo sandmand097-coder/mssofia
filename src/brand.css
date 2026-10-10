@@ -518,3 +518,8 @@ body{color:var(--sf-ink)}
 .sofia-guardian-email-form{border-top:1px solid #dcebe3;padding-top:20px}
 .sofia-guardian-email-form>small{font-size:11px;color:#657d76;line-height:1.8}
 @media(max-width:680px){.sofia-guardian-signup{padding:15px}.sofia-guardian-signup h2,.sofia-guardian-email-form h2{font-size:14px}}
+
+/* Director device preflight is explicit, does not transmit or retain audio/video. */
+.sofia-director-device-check{display:grid;justify-items:center;gap:9px;margin:14px 0 0}
+.sofia-director-device-check .portal-soft-btn{max-width:100%;min-height:43px}
+.sofia-director-device-check small{max-width:540px;font-size:12px;line-height:1.9;color:#267866}
