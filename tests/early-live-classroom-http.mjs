@@ -99,7 +99,7 @@ try{
  ok(lobby.data.hostConnected===true&&lobby.data.hostPublishing===false,'camera/mic may remain OFF in private waiting lobby');
  ok(!('room_key' in lobby.data.lesson),'LiveKit room key never exposed in pre-stream lobby response');
  const earlyToken=await call(path+'/token','POST',{},signed.student);
- ok(earlyToken.status===200&&earlyToken.data.canPublish===false,'paid subscriber may request read-only entry after instructor joins studio');
+ ok(earlyToken.status===403&&earlyToken.data.code==='LESSON_NOT_BROADCASTING','no early SFU token before teacher publishes: protects free WebRTC minutes');
  ok((await call(path,'GET',null,signed.unpaid)).status===403,'unpaid booking cannot read private lobby');
  ok((await call(path+'/token','POST',{},signed.unpaid)).status===403,'unverified payment cannot obtain LiveKit token');
  ok((await call(path,'GET',null,signed.stranger)).status===403,'stranger cannot discover private lesson');
@@ -116,11 +116,13 @@ try{
  await wait(5400);
  const broadcasting=await call(path,'GET',null,signed.student);
  ok(broadcasting.status===200&&broadcasting.data.hostPublishing===true,'client can automatically start WebRTC media when instructor begins teaching');
+ const authorizedVideo=await call(path+'/token','POST',{},signed.student);
+ ok(authorizedVideo.status===200&&authorizedVideo.data.canPublish===false,'after live media starts paid child can connect with read-only LiveKit grant');
  published=false;
  await wait(5400);
  const paused=await call(path,'GET',null,signed.student);
  ok(paused.status===200&&paused.data.hostConnected===true&&paused.data.hostPublishing===false,'stopping camera keeps waiting room available to subscribed child');
- ok((await call(path+'/token','POST',{},signed.student)).status===200,'subscribed student can remain authorized after media pauses');
+ ok((await call(path+'/token','POST',{},signed.student)).status===403,'pausing instructor media returns viewer to cost-free waiting state before timetable window');
  connected=false;
  await wait(5400);
  const left=await call(path,'GET',null,signed.student);
