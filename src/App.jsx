@@ -5,6 +5,7 @@ import {LockKeyhole,ChevronLeft,ShieldCheck,Video,Play,ArrowLeft} from 'lucide-r
 import {BrandHeader,BrandFooter,dashboardPath} from './components/MrsSofiaBrand.jsx';
 import {isPublicBootstrapRoute} from './public-bootstrap.js';
 import {publicSeoMeta,SEO_ORIGIN} from './public-seo.js';
+import {inspectPresenterDevices,presenterPreflightMessage} from './components/broadcast-preflight.js';
 
 const MrsHome=lazy(()=>import('./pages/MrsSofiaSite.jsx').then(m=>({default:m.MrsHome})));
 const MrsCourses=lazy(()=>import('./pages/MrsSofiaSite.jsx').then(m=>({default:m.MrsCourses})));
@@ -95,19 +96,14 @@ function LessonRoom(){
   return()=>{closed=true;clearInterval(timer)};
  },[id,isHost,Boolean(connection),Boolean(data),waitingRoom,Number.isFinite(opensAt)&&clock<opensAt,closesAt]);
  const checkDevices=async()=>{
-  if(!isHost)return;
-  if(!navigator.mediaDevices?.getUserMedia){setDeviceStatus('المتصفح لا يدعم اختبار الأجهزة؛ استخدمي Chrome أو Edge من رابط HTTPS.');return}
+  if(!isHost||deviceChecking)return;
   setDeviceChecking(true);setDeviceStatus('');
-  let stream;
   try{
-   stream=await navigator.mediaDevices.getUserMedia({audio:true,video:true});
-   setDeviceStatus('اختبار ناجح: الميكروفون والكاميرا متاحان. اضغطي «فتح استوديو البث» عندما يقترب موعد الحصة.');
+   const results=await inspectPresenterDevices(navigator.mediaDevices);
+   setDeviceStatus(presenterPreflightMessage(results));
   }catch{
-   setDeviceStatus('تعذر اختبار الكاميرا والميكروفون معًا. تحققي من صلاحيات المتصفح، ويمكنك بدء الشرح بالصوت فقط أو مشاركة الشاشة.');
-  }finally{
-   stream?.getTracks().forEach(track=>track.stop());
-   setDeviceChecking(false);
-  }
+   setDeviceStatus('تعذر إكمال فحص الأجهزة. تأكدي من أذونات المتصفح وحاولي مرة أخرى.');
+  }finally{setDeviceChecking(false)}
  };
  const join=async(auto=false)=>{
   if(!roomJoinable){setError(isHost?'انتهى وقت الاستوديو لهذه الحصة.':'لم يبدأ وقت دخول الحصة بعد، أو انتهت الحصة.');return}
