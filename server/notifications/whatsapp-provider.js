@@ -14,7 +14,7 @@ export function verifiedPhone(number){
 }
 export function publicSchoolOrigin(env=process.env){
  const origin=env.SCHOOL_PUBLIC_URL||'https://mssofia.pages.dev';
- return ['https://mssofia.pages.dev','https://mssofia.com','https://www.mssofia.com'].includes(origin)?origin:'https://mssofia.pages.dev';
+ return ['https://mssofia.pages.dev','https://mssofia.com'].includes(origin)?origin:'https://mssofia.pages.dev';
 }
 export function whatsappTemplatePayload({type,phone,studentName,courseTitle,lessonTitle,lessonDate,bookingId,lessonId},{env=process.env}={}){
  if(!verifiedPhone(phone))throw Error('Recipient is not verified E.164');
