@@ -6,6 +6,8 @@ import {publicSeoMeta,SEO_ORIGIN} from '../src/public-seo.js';
 const read=file=>readFileSync(new URL('../'+file,import.meta.url),'utf8');
 const app=read('src/App.jsx');
 const guide=read('src/pages/GettingStartedGuide.jsx');
+const liveWalk=read('src/components/LiveLessonWalkthrough.jsx');
+const liveCss=read('src/live-lesson-walkthrough.css');
 const brand=read('src/components/MrsSofiaBrand.jsx');
 const home=read('src/pages/MrsSofiaSite.jsx');
 const auth=read('src/pages/MrsSofiaAuth.jsx');
@@ -51,4 +53,22 @@ assert.match(css,/sofia-guide-step-tab:focus-visible/,'keyboard focus visibility
 assert.ok(sitemap.includes('<loc>'+SEO_ORIGIN+'/guide</loc>'),'sitemap includes guide');
 assert.equal(publicSeoMeta('/guide').canonical,SEO_ORIGIN+'/guide');
 assert.equal(publicSeoMeta('/guide').pathname,'/guide');
+
+assert.match(guide,/<LiveLessonWalkthrough\/>/,'classroom guide embedded in parent guide');
+assert.match(guide,/href="#live-class"/,'guide hero links to broadcast help');
+assert.match(app,/to="\/guide#live-class"/,'lesson prejoin screen links to help');
+assert.match(student,/to="\/guide#live-class"/,'student dashboard links to broadcast help');
+assert.match(home,/to="\/guide#live-class"/,'homepage links to broadcast help');
+assert.match(liveWalk,/id="live-class"/,'anchored lesson and broadcast walkthrough');
+assert.match(liveWalk,/aria-pressed=\{active===i\}/,'accessible stage navigation');
+assert.match(liveWalk,/عرض توضيحي • ليس بثًا حقيقيًا/,'visual tour is explicitly labelled a simulation');
+assert.match(liveWalk,/لا تشغّل الميكروفون أو الكاميرا تلقائيًا/,'microphone not auto-enabled');
+assert.match(liveWalk,/اشتراكًا ساريًا/,'private broadcast admission explained');
+for(const phrase of ['جدول الحصص','مشاهدة البث','الدخول لمشاهدة الحصة','قاعة انتظار الحصة','قبل الموعد بـ15 دقيقة','اضغط هنا لتشغيل صوت الدرس','ارفع إيدك','وضع المشاهدة','الصوت فقط','ابدئي البث الآن','إنهاء الحصة للجميع'])
+ assert.ok(liveWalk.includes(phrase),'accurate broadcast control: '+phrase);
+assert.equal((liveWalk.match(/title:'(?:افتح لوحة الطالب|اختار الحصة|افتح غرفة الدرس|استنى بداية البث|اتفرّج وشارك)'/g)||[]).length,5,'five progressive visual steps');
+assert.match(liveCss,/prefers-reduced-motion/,'reduced-motion styles');
+assert.match(liveCss,/sofia-livewalk-stage:focus-visible/,'keyboard visible focus');
+assert.ok(!/ليلة الامتحان|نزول الأطفال بالليل|كلهم عارفين بعض/.test(liveWalk),'do not disclose private motivation');
+
 console.log('PASS newcomer guide covers real registration, payment and LiveKit controls, safe payments, navigation and scroll routing');
