@@ -85,3 +85,12 @@
 @media(max-width:730px){.sofia-livewalk-section{padding:57px 0}.sofia-livewalk-heading{align-items:flex-start;flex-direction:column}.sofia-livewalk-layout{grid-template-columns:1fr}.sofia-livewalk-navigation{display:flex;gap:8px;overflow-x:auto;scroll-snap-type:x mandatory;padding:5px 2px 12px}.sofia-livewalk-stage{flex:0 0 183px;scroll-snap-align:start;min-height:68px}.sofia-livewalk-stage>svg:last-child{display:none}.sofia-livewalk-stage-text strong{font-size:11px}.sofia-livewalk-detail{padding:19px}.sofia-livewalk-more{grid-template-columns:1fr;gap:10px}.sofia-livewalk-portal-link{width:100%}}
 @media(max-width:410px){.sofia-livewalk-heading h2{font-size:27px}.sofia-livewalk-detail{padding:14px;border-radius:16px}.sofia-livewalk-detail-title h3{font-size:22px}.sofia-livewalk-screen-body{padding:12px}.sofia-livewalk-lesson-row{align-items:flex-start}.sofia-livewalk-lesson-row>.sofia-livewalk-demo-btn{width:100%}.sofia-livewalk-browser{gap:6px;padding-inline:9px}.sofia-livewalk-browser small{font-size:8px}.sofia-livewalk-directions li p{font-size:11px}.sofia-livewalk-stage{flex-basis:168px}}
 @media(prefers-reduced-motion:reduce){.sofia-livewalk-section *, .sofia-livewalk-section *:before,.sofia-livewalk-section *:after{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
+
+/* Deep links into the walkthrough from public home, pupil dashboard and lesson lobby. */
+.sofia-guide-home-deep-link{display:inline-flex;align-items:center;gap:7px;color:#087e6d;font-size:11px;font-weight:800;margin-top:7px;text-decoration:underline;text-underline-offset:4px}
+.sofia-guide-home-deep-link:hover{color:#005a4c}
+.sofia-student-guide-help>a[href="/guide#live-class"]{margin-inline-start:0;border:1px solid #b8d9ce;background:#fff;border-radius:10px;padding:8px 10px}
+.sofia-room-help{display:inline-flex;align-items:center;gap:6px;margin-top:8px;color:#087969;font-size:12px;font-weight:800;text-decoration:underline;text-underline-offset:4px}
+.sofia-room-help:hover{color:#005a4c}
+.sofia-guide-home-deep-link:focus-visible,.sofia-room-help:focus-visible,.sofia-student-guide-help>a[href="/guide#live-class"]:focus-visible{outline:3px solid #0e927c;outline-offset:3px;border-radius:5px}
+@media(max-width:680px){.sofia-student-guide-help>a[href="/guide#live-class"]{margin-inline-start:0}}
