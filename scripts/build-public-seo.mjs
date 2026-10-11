@@ -1,7 +1,7 @@
 // After Vite builds the SPA, provide a distinct, crawlable HTML head at each
 // public extensionless URL. Cloudflare Pages maps /courses to /courses.html.
 // Private student, admin and lesson URLs are deliberately NOT generated here.
-import {readFile,writeFile} from 'node:fs/promises';
+import {readFile,writeFile,mkdir} from 'node:fs/promises';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import sharp from 'sharp';
@@ -35,12 +35,12 @@ function render(route,meta){
  ])html=setMeta(html,kind,key,value);
  const linked={
   '@context':'https://schema.org',
-  '@type':route==='/courses'?'CollectionPage':'WebPage',
-  name:meta.title,
+  '@type':meta.courseName?'Course':route==='/courses'?'CollectionPage':'WebPage',
+  name:meta.courseName||meta.title,
   description:meta.description,
   url:canonical,
   inLanguage:'ar-EG',
-  isPartOf:{'@id':SEO_ORIGIN+'/#school'}
+  ...(meta.courseName?{provider:{'@id':SEO_ORIGIN+'/#school'}}:{isPartOf:{'@id':SEO_ORIGIN+'/#school'}})
  };
  const json=JSON.stringify(linked).replace(/</g,'\\u003c');
  html=replaceRequired(html,/<\/head>/i,'<script type="application/ld+json">'+json+'</script>\n</head>','head');
@@ -50,6 +50,7 @@ function render(route,meta){
 // immediate HTTP response metadata without needing to execute JavaScript.
 for(const [route,meta] of Object.entries(PUBLIC_SEO)){
  const filename=route==='/'?'index.html':route.slice(1)+'.html';
+ await mkdir(path.dirname(path.join(out,filename)),{recursive:true});
  await writeFile(path.join(out,filename),render(route,meta),'utf8');
 }
 // A public, static social card; no pupil photos, private metadata or third-party assets.
@@ -69,4 +70,4 @@ const socialSvg=`<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="63
  <text x="318" y="488" fill="#173b3c" font-family="DejaVu Sans,Arial,sans-serif" font-size="28" font-weight="bold" text-anchor="middle">mssofia.pages.dev</text>
  </svg>`;
 await sharp(Buffer.from(socialSvg)).png({compressionLevel:9}).toFile(path.join(out,'miss-sofia-social.png'));
-console.log('PASS distinct SEO snapshots /, /courses, /privacy, /terms and public social image');
+console.log('PASS distinct SEO snapshots for school, course and policies; social image');
