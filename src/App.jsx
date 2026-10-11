@@ -8,6 +8,7 @@ import {BrandHeader,BrandFooter,dashboardPath} from './components/MrsSofiaBrand.
 import {WhatsAppContact} from './components/WhatsAppContact.jsx';
 import {showWhatsAppContact} from './components/whatsapp-contact.js';
 import {publicSeoMeta,SEO_ORIGIN} from './public-seo.js';
+import RouteScrollManager from './components/RouteScrollManager.jsx';
 
 const MrsHome=lazy(()=>import('./pages/MrsSofiaSite.jsx').then(m=>({default:m.MrsHome})));
 const MrsCourses=lazy(()=>import('./pages/MrsSofiaSite.jsx').then(m=>({default:m.MrsCourses})));
@@ -19,6 +20,7 @@ const ForgotPasswordPage=lazy(()=>import('./pages/MrsSofiaAuth.jsx').then(m=>({d
 const ResetPasswordPage=lazy(()=>import('./pages/MrsSofiaAuth.jsx').then(m=>({default:m.ResetPasswordPage})));
 const PrivacyPolicy=lazy(()=>import('./pages/SchoolPolicies.jsx').then(m=>({default:m.PrivacyPolicy})));
 const SchoolTerms=lazy(()=>import('./pages/SchoolPolicies.jsx').then(m=>({default:m.SchoolTerms})));
+const GettingStartedGuide=lazy(()=>import('./pages/GettingStartedGuide.jsx'));
 const StudentPortal=lazy(()=>import('./pages/StudentPortal.jsx'));
 const TeacherPortal=lazy(()=>import('./pages/TeacherPortal.jsx'));
 const AdminPortal=lazy(()=>import('./pages/AdminPortal.jsx'));
@@ -284,6 +286,7 @@ export default function App(){
  const previewNavigation=publicOnly||launchMode==='checking';
  return <Context.Provider value={{user,setUser,show,logout,launchMode,retryBootstrap,reconnecting}}>
   <PageTitle/>
+  <RouteScrollManager/>
   <BrandHeader user={user} logout={logout} previewMode={previewNavigation} adminOnly={adminOnly}/>
   {/*
     No global launch banner. A transient 503 must not claim that enrollment or
@@ -297,6 +300,7 @@ export default function App(){
      <Route path="/courses" element={<MrsCourses api={api}/>}/>
      <Route path="/privacy" element={<PrivacyPolicy/>}/>
      <Route path="/terms" element={<SchoolTerms/>}/>
+     <Route path="/guide" element={<GettingStartedGuide/>}/>
      <Route path="/courses/:id" element={publicOnly||adminOnly?<PublicUnavailable/>:<MrsCourseDetails api={api} user={user} show={show}/>}/>
      <Route path="/login" element={publicOnly?<PublicUnavailable/>:<SignInPage api={api} user={user} setUser={setUser} show={show} adminOnly={adminOnly}/>}/>
      <Route path="/register" element={publicOnly||adminOnly?<PublicUnavailable/>:<RegisterPage api={api} user={user} setUser={setUser}/>}/>

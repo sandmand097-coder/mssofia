@@ -83,6 +83,7 @@ export function RegisterPage({api,user,setUser}){
    </form>:
    !googleRegistration&&<p className="sofia-auth-hint">إنشاء حسابات الطلاب لم يُفتح بعد. لا ترسل أي مدفوعات قبل ظهور وسيلة التسجيل الرسمية داخل الموقع.</p>}
   </>}
+  <div className="sofia-auth-switch">أول مرة تستخدم المنصة؟ <Link to="/guide">شوف شرح التسجيل والدفع وحضور الحصة خطوة بخطوة</Link></div>
   <div className="sofia-auth-switch">عندك حساب؟ <Link to="/login">سجّل دخولك</Link></div>
  </AuthLayout>;
 }
