@@ -222,19 +222,28 @@ export default function App(){
  const navigate=useNavigate(),{pathname}=useLocation();
  useEffect(()=>{
   mounted.current=true;
-  Promise.allSettled([api('/auth/me'),api('/health')]).then(([session,health])=>{
-   if(!mounted.current)return;
+  let active=true;
+  // Active guards prevent an earlier StrictMode mount from overriding the
+  // latest bootstrap result after its own effect has been cleaned up.
+  Promise.allSettled([
+   api('/auth/me',{signal:AbortSignal.timeout(12000)}),
+   api('/health',{signal:AbortSignal.timeout(12000)})
+  ]).then(([session,health])=>{
+   if(!active)return;
    setUser(session.status==='fulfilled'?session.value.user:null);
    setLaunchMode(health.status==='fulfilled'?launchModeFromHealth(health.value):'offline');
   });
-  return()=>{mounted.current=false};
+  return()=>{active=false;mounted.current=false};
  },[]);
  const retryBootstrap=useCallback(async()=>{
   if(retryInFlight.current||!mounted.current)return;
   retryInFlight.current=true;
   setReconnecting(true);
   try{
-   const [session,health]=await Promise.allSettled([api('/auth/me'),api('/health')]);
+   const [session,health]=await Promise.allSettled([
+    api('/auth/me',{signal:AbortSignal.timeout(12000)}),
+    api('/health',{signal:AbortSignal.timeout(12000)})
+   ]);
    const mode=health.status==='fulfilled'?launchModeFromHealth(health.value):'offline';
    if(mounted.current&&mode!=='offline'){
     setUser(session.status==='fulfilled'?session.value.user:null);
