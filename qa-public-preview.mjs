@@ -24,9 +24,9 @@ try{
  assert.equal(await desktop.getByText(/تسجيل الطلاب والبث المباشر هيفتحوا/).count(),0,'preview should not display misleading global launch banner');
  console.log('PASS public home and 100/170 EGP promotional banner');
  await desktop.goto(origin+'/login',{waitUntil:'networkidle'});
- await desktop.getByRole('heading',{name:'التسجيل هيفتح قريبًا'}).waitFor();
+ await desktop.getByRole('heading',{name:'التسجيل غير متاح حاليًا'}).waitFor();
  await desktop.goto(origin+'/register',{waitUntil:'networkidle'});
- await desktop.getByRole('heading',{name:'التسجيل هيفتح قريبًا'}).waitFor();
+ await desktop.getByRole('heading',{name:'التسجيل غير متاح حاليًا'}).waitFor();
  const auth=await fetch(origin+'/api/auth/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:'test'})});
  assert.equal(auth.status,503);
  console.log('PASS public auth inaccessible before secure provider activation');
