@@ -17,7 +17,7 @@ export default{
    try{
     const response=await fetch(endpoint,{
      method:'POST',
-     signal:AbortSignal.timeout(45000),
+     signal:AbortSignal.timeout(90000),
      headers:{Authorization:'Bearer '+env.NOTIFICATION_CRON_SECRET,'Content-Type':'application/json'},
      body:'{}'
     });
