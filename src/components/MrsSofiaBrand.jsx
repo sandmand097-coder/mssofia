@@ -6,6 +6,13 @@ import {WHATSAPP_CONTACT_LOCAL,WHATSAPP_CONTACT_E164,WHATSAPP_CONTACT_URL} from 
 export const scienceSubjects=['الكل','علوم','أحياء','فيزياء','كيمياء'];
 export const scienceSubject=name=>/(علوم|فيزياء|أحياء|كيمياء|science|physics|biology|chemistry)/i.test(name||'');
 export const currency=n=>Number(n)===0?'مجاناً':Number(n).toLocaleString('ar-EG')+' ج.م';
+export const introductoryOfferApplies=course=>course?.subject==='علوم'&&course?.title==='دورة العلوم'&&Number(course?.price)===100;
+export const publicTeacherName=name=>/school administration/i.test(String(name||''))?'مس صوفيا':String(name||'مس صوفيا');
+export function publicCourseDescription(course){
+ const description=String(course?.description||'').trim();
+ if(description&&!/^حص[ةه]\s+علوم\s*[.!؟]?$/.test(description))return description;
+ return 'شرح مبسّط لمفاهيم العلوم للمرحلة الابتدائية، بأمثلة وأسئلة تساعد على الفهم. اطلع على مواعيد الحصص المنشورة قبل طلب الحجز.';
+}
 export const formatDate=d=>new Intl.DateTimeFormat('ar-EG',{day:'numeric',month:'short',year:'numeric',timeZone:'Africa/Cairo'}).format(new Date(d));
 export const formatDateTime=d=>new Intl.DateTimeFormat('ar-EG',{day:'numeric',month:'short',hour:'numeric',minute:'2-digit',timeZone:'Africa/Cairo'}).format(new Date(d));
 export const dashboardPath=user=>user?.role==='admin'?'/admin':user?.role==='teacher'?'/teacher':'/student';
@@ -81,6 +88,6 @@ export function ScienceCourseCard({course}){
  const subject=course.subject||'علوم';const setting=palettes[subject]||{icon:Microscope,tone:'mint',eyebrow:'DISCOVER'};const Icon=setting.icon;
  return <Link className="sofia-course-card" to={'/courses/'+course.id}>
   <div className={'sofia-course-cover tone-'+setting.tone}><span className="sofia-course-grid-art"/><span className="sofia-course-english">{setting.eyebrow}</span><Icon size={86} strokeWidth={1.2}/><span className="sofia-course-live"><span/> حصص تفاعلية</span></div>
-  <div className="sofia-course-content"><div className="sofia-course-tags"><span>{subject}</span><span>{course.level}</span></div><h3>{course.title}</h3><p>{course.description}</p><div className="sofia-course-meta"><span><GraduationCap size={15}/> {course.teacher_name}</span><span><Clock3 size={15}/> {course.duration_minutes} دقيقة</span></div><div className="sofia-course-price">{scienceSubject(course.subject)&&Number(course.price)>0?<strong>أول شهر 100 ج.م <del style={{fontSize:'.72em',opacity:.65}}>170 ج.م</del></strong>:<strong>{currency(course.price)}</strong>}<span>تفاصيل الدورة <ArrowLeft size={17}/></span></div></div>
+  <div className="sofia-course-content"><div className="sofia-course-tags"><span>{subject}</span><span>{course.level}</span></div><h3>{course.title}</h3><p>{publicCourseDescription(course)}</p><div className="sofia-course-meta"><span><GraduationCap size={15}/> {publicTeacherName(course.teacher_name)}</span><span><Clock3 size={15}/> {course.duration_minutes} دقيقة</span></div><div className="sofia-course-price">{introductoryOfferApplies(course)?<strong>أول شهر 100 ج.م <del style={{fontSize:'.72em',opacity:.65}}>170 ج.م</del></strong>:<strong>{currency(course.price)}</strong>}<span>تفاصيل الدورة <ArrowLeft size={17}/></span></div></div>
  </Link>;
 }
