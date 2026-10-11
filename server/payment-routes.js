@@ -29,7 +29,9 @@ const storageAuthHeaders=()=>{
 };
 const prodStorage=()=>Boolean(process.env.SUPABASE_URL&&storageKey());
 const devStorage=()=>process.env.NODE_ENV!=='production'&&!!process.env.TEST_PAYMENT_UPLOAD_DIR;
-const enabled=()=>Boolean(/^01[0125]\d{8}$/.test(process.env.VODAFONE_CASH_NUMBER||'')&&(prodStorage()||devStorage()));
+// New paid receipts remain unavailable in production until refund terms are approved.
+const refundPolicyReady=()=>process.env.NODE_ENV!=='production'||process.env.SCHOOL_REFUND_POLICY_APPROVED==='true';
+const enabled=()=>Boolean(refundPolicyReady()&&/^01[0125]\d{8}$/.test(process.env.VODAFONE_CASH_NUMBER||'')&&(prodStorage()||devStorage()));
 const storageReady=createPaymentStorageGate({configured:enabled,development:devStorage,verify:()=>verifyPrivateStorage(process.env)});
 const isEgyptianPhone=s=>/^01[0125]\d{8}$/.test(s||'');
 const storageBase=()=>process.env.SUPABASE_URL.replace(/\/$/,'');
@@ -127,6 +129,7 @@ export function attachPaymentRoutes(app,{auth,role,get,all,run,uid,now}){
  });
  app.post('/api/admin/bookings/:id/manual-payment',auth,onlyAdmin,async(req,res,next)=>{
   try{
+   if(!refundPolicyReady())return json(res,503,{error:'قبول اشتراكات مدفوعة جديدة معلّق حتى اعتماد سياسة الاسترداد والتعويض.'});
    const senderPhone=String(req.body?.sender_phone||'').trim();
    const reference=String(req.body?.transfer_reference||'').trim().toUpperCase();
    const amount=Number(req.body?.amount_egp);
