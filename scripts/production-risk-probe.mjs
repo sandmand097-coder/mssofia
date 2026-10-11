@@ -42,7 +42,9 @@ function validateBody(spec,response,body,{expectedMode}){
   return null;
  }
  if(!contentType.toLowerCase().includes('application/json'))return 'NOT_JSON';
- if(spec.kind==='denied')return null; // Never parse or print an unauthorized body.
+ // Never parse or print unauthorized responses. They must not be cacheable.
+ if(spec.kind==='denied')return /no-store/i.test(response.headers?.get('cache-control')||'')
+  ?null:'PRIVATE_API_CACHE_POLICY_MISSING';
  let parsed;
  try{parsed=JSON.parse(body)}catch{return 'MALFORMED_JSON'}
  if(!parsed||typeof parsed!=='object'||Array.isArray(parsed))return 'INVALID_PAYLOAD';
