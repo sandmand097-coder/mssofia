@@ -31,7 +31,12 @@ assert.match(payment,/refundPolicyReady\(\)/,'financial activation must be fail-
 assert.match(renewal,/SCHOOL_REFUND_POLICY_APPROVED/,'manual renewals must not bypass refund policy sign-off');
 assert.match(readiness,/refundPolicyApproved/,'admin setup status reports approval gate');
 assert.match(env,/^SCHOOL_REFUND_POLICY_APPROVED=false$/m,'refund policy is off by default');
-assert.match(offer,/سياسة الإلغاء والاسترداد/,'visitor-facing promotion points to cancellation policy');
+assert.match(offer,/لا تحوّل أي مبلغ/,'visitor still sees clear payment safety notice');
+assert.ok(cards.slice(cards.indexOf('sofia-footer-bottom')).includes('<Link to="/terms"'),'full legal terms remain linked unobtrusively at the bottom');
+assert.ok(!catalogue.includes('<h3>حقوق واضحة</h3>'),'course marketing does not prominently advertise refund policy');
+assert.match(catalogue,/تجربة رقمية متطورة/,'course marketing emphasizes digital learning improvement');
+assert.match(catalogue,/بنطوّر تجربة تعليم العلوم/,'homepage uses a technology development message');
+assert.ok(!/ليلة الامتحان|نزول الأطفال بالليل|كلهم عارفين بعض/.test(catalogue),'private educational motivation is not displayed to visitors');
 assert.match(catalogue,/معلومات قبل الحجز/,'catalogue explains purchase journey');
 assert.match(catalogue,/لم يُعلن موعد حصة قادمة/,'missing lesson dates are not fabricated');
 assert.match(catalogue,/introductoryOfferApplies\(c\)/,'course pricing never applies promotional figures to unrelated courses');

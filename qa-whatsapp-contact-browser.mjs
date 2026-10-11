@@ -67,8 +67,23 @@ try{
   assert.equal(await footer.getAttribute('target'),'_blank');
   // Contact must remain available in auth flow for a parent.
   await page.goto(origin+'/login',{waitUntil:'domcontentloaded'});
-  await page.locator('.sofia-wa-contact-link').waitFor({state:'visible',timeout:13000});
-  assert.equal(await page.locator('.sofia-wa-contact-link').getAttribute('href'),WHATSAPP_CONTACT_URL);
+  const authFooter=page.locator('.sofia-footer-wa-link');
+  await authFooter.waitFor({state:'attached',timeout:13000});
+  // Intentional behavior: the floating card disappears when the footer
+  // enters the viewport, avoiding duplicate WhatsApp actions on short pages.
+  const authFloat=page.locator('.sofia-wa-contact-link');
+  if(await authFloat.isVisible()){
+   assert.equal(await authFloat.getAttribute('href'),WHATSAPP_CONTACT_URL);
+  }else{
+   const footerOnScreen=await page.locator('.sofia-footer').evaluate(el=>{
+    const r=el.getBoundingClientRect();
+    return r.top<window.innerHeight&&r.bottom>0;
+   });
+   assert.ok(footerOnScreen,'floating contact may hide only when footer is on screen at '+width+'px');
+   await authFooter.scrollIntoViewIfNeeded();
+   assert.ok(await authFooter.isVisible(),'footer WhatsApp contact remains accessible on login');
+   assert.equal(await authFooter.getAttribute('href'),WHATSAPP_CONTACT_URL);
+  }
   // Critically, never obscure a live class with the floating contact widget.
   await page.goto(origin+'/lesson/isolated-qa',{waitUntil:'domcontentloaded'});
   await page.waitForTimeout(150);
