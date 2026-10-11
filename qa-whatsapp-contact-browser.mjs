@@ -55,6 +55,10 @@ try{
   const footer=page.locator('.sofia-footer-wa-link');
   assert.equal(await footer.getAttribute('href'),WHATSAPP_CONTACT_URL,'same contact in footer');
   assert.match(await footer.innerText(),/01027662546/);
+  const call=page.locator('.sofia-footer-note a[href^="tel:"]');
+  assert.equal(await call.getAttribute('href'),'tel:+201027662546','telephone link uses the new number');
+  assert.match(await call.innerText(),/01027662546/,'visible footer number matches owner-approved WhatsApp line');
+  assert.equal(await page.getByText('01027661546').count(),0,'obsolete support phone must not appear to visitors');
   if(width===390||width===1366){
    await page.screenshot({path:path.join(output,'whatsapp-home-'+width+'.png'),animations:'disabled'});
   }
