@@ -172,3 +172,6 @@
  .sofia-student-guide-help{flex-wrap:wrap}
  .sofia-student-guide-help>a{margin-inline-start:52px}
 }
+
+/* Keep anchored content below the sticky navigation after lazy route load. */
+#method,#about,#offer,#faq,#sofia-discovery,#guide-steps{scroll-margin-top:106px}
