@@ -58,6 +58,21 @@ try{
   assert.match(await title.innerText(),/أول مرة في/);
   assert.equal(await page.locator('.sofia-guide-step-tab').count(),7,'all onboarding steps visible as a selectable sequence');
   assert.equal(await page.locator('.sofia-guide-faqs details').count(),6);
+  const stages=page.locator('.sofia-livewalk-stage');
+  assert.equal(await stages.count(),5,'five progressive classroom walkthrough stages');
+  await stages.nth(1).click();
+  assert.equal(await stages.nth(1).getAttribute('aria-pressed'),'true');
+  assert.match(await page.locator('#sofia-livewalk-current').innerText(),/مشاهدة البث/);
+  await stages.nth(2).click();
+  assert.match(await page.locator('#sofia-livewalk-current').innerText(),/الدخول لمشاهدة الحصة/);
+  await stages.nth(3).click();
+  assert.match(await page.locator('#sofia-livewalk-current').innerText(),/قاعة انتظار الحصة/);
+  await stages.nth(4).click();
+  assert.match(await page.locator('#sofia-livewalk-current').innerText(),/ارفع إيدك/);
+  assert.match(await page.locator('.sofia-livewalk-screen').innerText(),/ليس بثًا حقيقيًا/);
+  assert.equal(await page.locator('.sofia-livewalk-faq details').count(),6,'common sound and waiting problems');
+  assert.equal(await page.locator('.sofia-livewalk-teacher').count(),1,'instructor guide remains accessible');
+
   const third=page.locator('.sofia-guide-step-tab').nth(2);
   await third.click();
   assert.equal(await third.getAttribute('aria-pressed'),'true');
@@ -80,6 +95,17 @@ try{
   await page.locator('.sofia-guide-hero h1').waitFor({state:'visible',timeout:14000});
   await page.waitForTimeout(240);
   assert.ok(await page.evaluate(()=>window.scrollY)<15,'refresh must reopen guide at top for '+width+'px');
+
+  // Deep-linked classroom guide should honor the anchor after lazy module loading.
+  await page.goto(origin+'/guide#live-class',{waitUntil:'domcontentloaded'});
+  await page.locator('#live-class').waitFor({state:'visible',timeout:14000});
+  await page.waitForFunction(()=>{
+   const target=document.getElementById('live-class');
+   if(!target)return false;
+   const rect=target.getBoundingClientRect();
+   return rect.top<220&&rect.bottom>100;
+  },null,{timeout:13000});
+  assert.match(await page.locator('#sofia-livewalk-heading').innerText(),/إزاي تدخل/);
 
   // Lazy-loaded home anchors must resolve even when entered directly.
   await page.goto(origin+'/#method',{waitUntil:'domcontentloaded'});
