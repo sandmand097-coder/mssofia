@@ -19,5 +19,5 @@ assert.deepEqual(calls,['cam:sub:true','cam:quality:high']);
 assert.equal(safeViewerMode('bogus'),'auto');
 assert.equal(updateViewerSubscriptions(null,'audio').length,0);
 assert.match(networkNotice('reconnecting','good'),/إعادة الاتصال/);
-assert.match(networkNotice('connected','poor'),/الصوت فقط/);
+assert.match(networkNotice('connected','poor'),/صوت المعلمة فقط/);
 console.log('PASS student video unsubscribed and screen share remains available in audio-only mode');
