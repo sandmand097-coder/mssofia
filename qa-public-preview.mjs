@@ -21,7 +21,7 @@ try{
  await desktop.getByRole('heading',{name:/العلوم مش حفظ/}).waitFor({timeout:14000});
  await desktop.getByText('100', {exact:false}).first().waitFor();
  await desktop.getByText('170 جنيه',{exact:false}).first().waitFor();
- assert.equal(await desktop.getByText(/تسجيل الطلاب والبث المباشر هيفتحوا/).count(),1,'preview displays registration limitation');
+ assert.equal(await desktop.getByText(/تسجيل الطلاب والبث المباشر هيفتحوا/).count(),0,'preview should not display misleading global launch banner');
  console.log('PASS public home and 100/170 EGP promotional banner');
  await desktop.goto(origin+'/login',{waitUntil:'networkidle'});
  await desktop.getByRole('heading',{name:'التسجيل هيفتح قريبًا'}).waitFor();
