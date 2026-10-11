@@ -51,6 +51,7 @@ jobs:
           npm run check
           npm test
           npm run build
+          npm run test:seo:build
 
       - name: Publish to Cloudflare Pages
         if: steps.credentials.outputs.enabled == 'true'

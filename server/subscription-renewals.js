@@ -145,6 +145,7 @@ export function attachSubscriptionRenewalRoutes(app,{
 
  app.post('/api/admin/bookings/:id/manual-renewal',auth,admin,async(req,res,next)=>{
   try{
+   if(process.env.NODE_ENV==='production'&&process.env.SCHOOL_REFUND_POLICY_APPROVED!=='true')return json(res,503,{error:'التجديدات المالية الجديدة معلّقة حتى اعتماد سياسة الاسترداد.'});
    if(!renewalsEnabled())return json(res,503,{error:'تجديد الاشتراكات غير مفعّل'});
    const senderPhone=String(req.body?.sender_phone||'').trim();
    const reference=String(req.body?.transfer_reference||'').trim().toUpperCase();

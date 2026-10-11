@@ -2,7 +2,7 @@
 // NEVER include environment values, SQL errors, tokens, emails or URLs in the API.
 import {schoolReadiness} from './release-readiness.js';
 
-const VERIFIED_PROJECT='wnkewiulyobbjftckfqb';
+const VERIFIED_PROJECT='jtluslevdmcpxxkngomj';
 const PRIVATE_BUCKET='mrsofia-payment-proofs';
 
 function withTimeout(promise,ms=9000){
