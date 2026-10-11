@@ -15,8 +15,8 @@
 .sofia-discovery-nucleus{fill:#ffc88f}.sofia-discovery-nucleus-light{fill:#ffeac9}
 .sofia-discovery-electron{fill:#118c7d;stroke:#e5fff2;stroke-width:3}.sofia-discovery-electron.second{fill:#f5ae6d}
 .sofia-discovery-art-icon{position:absolute;z-index:2;display:grid;place-items:center;width:72px;height:72px;border-radius:24px;color:#fff;background:linear-gradient(145deg,#158f7c,#0b615f);box-shadow:0 16px 35px #087d7033;transform:rotate(-8deg);pointer-events:none}
-.sofia-discovery-art-tag{position:absolute;bottom:3px;left:4%;z-index:2;display:flex;align-items:center;gap:7px;background:#fff;border:1px solid #e6eee5;border-radius:100px;padding:9px 13px;color:#0b806e;box-shadow:0 12px 28px #126b5521;font:800 10px Arial,sans-serif;letter-spacing:1.4px;direction:ltr}
-.sofia-discovery-note{display:flex;align-items:center;gap:10px;max-width:420px;color:#5d7a71;font-size:12px;font-weight:800;line-height:1.8}
+.sofia-discovery-art-tag{position:absolute;bottom:29px;left:4%;z-index:2;display:flex;align-items:center;gap:7px;background:#fff;border:1px solid #e6eee5;border-radius:100px;padding:9px 13px;color:#0b806e;box-shadow:0 12px 28px #126b5521;font:800 10px Arial,sans-serif;letter-spacing:1.4px;direction:ltr}
+.sofia-discovery-note{display:flex;align-items:center;gap:10px;max-width:420px;margin-top:14px;color:#5d7a71;font-size:12px;font-weight:800;line-height:1.8}
 .sofia-discovery-note svg{color:#ce9655;flex-shrink:0}
 .sofia-discovery-card{position:relative;overflow:hidden;min-width:0;background:#fff;border:1px solid #dceee4;border-radius:28px;padding:clamp(22px,3vw,35px);box-shadow:0 25px 75px #0b5b4820,0 5px 14px #0b5b480b}
 .sofia-discovery-card:after{content:"";position:absolute;top:-105px;left:-100px;width:230px;height:230px;border-radius:50%;border:1px solid #0b856f14;box-shadow:0 0 0 34px #e7f8ef42,0 0 0 70px #e7f8ef21;pointer-events:none}
@@ -93,7 +93,7 @@
  .sofia-discovery-orbits{width:245px}
  .sofia-discovery-art-icon{width:54px;height:54px;border-radius:18px}
  .sofia-discovery-art-icon svg{width:30px}
- .sofia-discovery-art-tag{font-size:8px;padding:7px 10px;left:0}
+ .sofia-discovery-art-tag{bottom:23px;font-size:8px;padding:7px 10px;left:0}
  .sofia-discovery-note{font-size:11px}
  .sofia-discovery-card{border-radius:19px;padding:19px}
  .sofia-discovery-question{min-height:65px;font-size:21px;margin:13px 0 17px}
