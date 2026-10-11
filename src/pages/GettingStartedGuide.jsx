@@ -2,6 +2,7 @@ import React,{useRef,useState} from 'react';
 import {Link} from 'react-router-dom';
 import {ArrowLeft,ArrowRight,BookOpen,CalendarClock,CheckCheck,CheckCircle2,ChevronLeft,ClipboardCheck,GraduationCap,Hand,HelpCircle,MessageCircle,PlayCircle,ShieldCheck,Smartphone,UserRoundPlus,Video,Volume2} from 'lucide-react';
 import {WHATSAPP_CONTACT_URL} from '../components/whatsapp-contact.js';
+import LiveLessonWalkthrough from '../components/LiveLessonWalkthrough.jsx';
 
 // Labels and steps mirror the actual public registration, student portal,
 // receipt-approval and LiveKit classroom UI. No demonstration sends real money,
@@ -127,6 +128,7 @@ export default function GettingStartedGuide(){
       <div className="sofia-guide-hero-actions">
        <a className="sofia-cta" href="#guide-steps">ابدأ الشرح خطوة بخطوة <ArrowLeft size={18}/></a>
        <Link className="sofia-guide-secondary" to="/register">إنشاء حساب الطالب</Link>
+       <a className="sofia-guide-secondary" href="#live-class">شرح دخول الحصة والبث المباشر</a>
       </div>
      </div>
      <div className="sofia-guide-hero-art" aria-label="ملخص الرحلة التعليمية">
@@ -173,6 +175,7 @@ export default function GettingStartedGuide(){
     <div className="sofia-guide-preview-note"><CheckCircle2 size={19}/><p>الدليل بيشرح خطوات الاستخدام الفعلية. أي تحويل مالي أو دخول لحصة مدفوعة يعتمد على تفعيل الخدمة واعتماد الحجز من الإدارة.</p></div>
    </div>
   </section>
+  <LiveLessonWalkthrough/>
   <section className="sofia-guide-ready-section" aria-labelledby="sofia-guide-ready-heading">
    <div className="sofia-container">
     <div className="sofia-guide-ready-head"><span className="sofia-kicker"><i/> قبل موعد الدرس</span><h2 id="sofia-guide-ready-heading">تجهيزات بسيطة لحصة أفضل</h2></div>
