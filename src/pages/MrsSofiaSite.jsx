@@ -29,7 +29,7 @@ export function MrsHome({api}){
   <LaunchOffer/>
   <section className="sofia-guide-home-strip" aria-labelledby="sofia-guide-home-title"><div className="sofia-container sofia-guide-home-inner">
    <div className="sofia-guide-home-icon"><GraduationCap size={28}/></div>
-   <div className="sofia-guide-home-copy"><span>دليل ولي الأمر والطالب</span><h2 id="sofia-guide-home-title">أول مرة تدخل المنصة؟ هنشرح لك كل خطوة.</h2><p>التسجيل، اختيار الدورة، الدفع الرسمي عند تفعيله، ودخول الحصة المباشرة — شرح واضح بأمثلة مرئية من خطوات الموقع.</p></div>
+   <div className="sofia-guide-home-copy"><span>دليل ولي الأمر والطالب</span><h2 id="sofia-guide-home-title">أول مرة تدخل المنصة؟ هنشرح لك كل خطوة.</h2><p>التسجيل، اختيار الدورة، الدفع الرسمي عند تفعيله، ودخول الحصة المباشرة — شرح واضح بأمثلة مرئية من خطوات الموقع.</p><Link to="/guide#live-class" className="sofia-guide-home-deep-link">شرح دخول الدرس والبث المباشر <ArrowLeft size={15}/></Link></div>
    <Link to="/guide" className="sofia-guide-home-link">شوف دليل الاستخدام <ArrowLeft size={18}/></Link>
   </div></section>
   <section className="sofia-trust-strip"><div className="sofia-container sofia-trust-grid"><div><span><Lightbulb size={23}/></span><b>افهم الفكرة الأول</b><small>الأساس قبل الحفظ</small></div><div><span><Microscope size={23}/></span><b>تعلّم بالاكتشاف</b><small>تجارب وأمثلة واقعية</small></div><div><span><CalendarDays size={23}/></span><b>نظّم وقتك</b><small>جدول حصص واضح</small></div><div><span><ShieldCheck size={23}/></span><b>حسابك ومساحتك</b><small>دوراتك وطلباتك في مكان واحد</small></div></div></section>
