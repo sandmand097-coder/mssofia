@@ -106,12 +106,12 @@ try{
  await student.frame.getByRole('button',{name:'الميكروفون بإذن المعلمة'}).waitFor();
  assert.equal(await student.frame.getByRole('button',{name:'الميكروفون بإذن المعلمة'}).isDisabled(),true);
  assert.equal(await student.frame.getByRole('button',{name:'مشاركة الشاشة'}).count(),0);
- await student.frame.locator('audio').first().waitFor({timeout:20000});
+ await student.frame.locator('audio').first().waitFor({state:'attached',timeout:20000});
  const audio=await student.frame.locator('audio').first().evaluate(el=>({tracks:el.srcObject?.getAudioTracks?.().length||0,readyState:el.readyState}));
  assert.ok(audio.tracks>0,'Real teacher audio MediaStream reached the learner interface');
  console.log('PASS listener subscribes to real host audio with student microphone locked');
  await teacher.frame.getByRole('button',{name:'تشغيل الكاميرا'}).click();
- await student.frame.locator('.sofia-meeting-stage video').first().waitFor({timeout:22000});
+ await student.frame.locator('.sofia-meeting-stage video').first().waitFor({state:'attached',timeout:22000});
  await student.page.waitForFunction(()=>{
   const v=document.querySelector('#mssofia-connected-room-fixture .sofia-meeting-stage video');
   return v&&v.videoWidth>0&&v.videoHeight>0&&v.readyState>=2;
