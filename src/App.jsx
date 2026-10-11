@@ -48,6 +48,21 @@ async function api(path,options={}){
  }
  return data;
 }
+// Only GET requests are bounded. Never automatically replay payment or
+// moderation mutations when a backend is unavailable.
+async function readSessionBootstrap(){
+ const controller=new AbortController();
+ const timeout=setTimeout(()=>controller.abort(),18000);
+ try{
+  const [session,health]=await Promise.allSettled([
+   api('/auth/me',{signal:controller.signal}),
+   api('/health',{signal:controller.signal})
+  ]);
+  const reportedMode=health.status==='fulfilled'&&health.value?.ok!==false?health.value?.mode:null;
+  const mode=['full','admin','preview'].includes(reportedMode)?reportedMode:'offline';
+  return {user:session.status==='fulfilled'?session.value.user??null:null,mode};
+ }finally{clearTimeout(timeout)}
+}
 function RoutePortal(){
  const {user,setUser,show}=useApp(),{pathname}=useLocation();
  if(!user)return <Navigate to="/login" replace/>;
@@ -189,7 +204,9 @@ function LessonRoom(){
  </div></main>;
 }
 function PublicUnavailable(){
- return <main className="sofia-site sofia-page-bg"><div className="sofia-container sofia-no-results"><LockKeyhole size={43}/><h1>التسجيل هيفتح قريبًا</h1><p>الموقع متاح حاليًا للتعرّف على مُدرِّسة العلوم وعرض أول شهر. بنجهز تأمين حسابات الطلاب والبث المباشر قبل فتح الاشتراك.</p><Link className="sofia-cta" to="/">شوف عرض أول شهر <ArrowLeft size={17}/></Link></div></main>;
+ const {launchMode,retryBootstrap,reconnecting}=useApp();
+ const temporary=launchMode==='offline';
+ return <main className="sofia-site sofia-page-bg"><div className="sofia-container sofia-no-results"><LockKeyhole size={43}/><h1>{temporary?'خدمة الحسابات غير متاحة مؤقتًا':'التسجيل هيفتح قريبًا'}</h1><p>{temporary?'يمكنك تصفح معلومات الموقع. تعذر الوصول إلى خادم تسجيل الدخول مؤقتًا؛ نحاول إعادة الاتصال دون التأثير على حسابك أو اشتراكك.':'الموقع متاح حاليًا للتعرّف على مُدرِّسة العلوم وعرض أول شهر. بنجهز تأمين حسابات الطلاب والبث المباشر قبل فتح الاشتراك.'}</p>{temporary&&<button type="button" className="portal-soft-btn" disabled={reconnecting} onClick={()=>void retryBootstrap()}>{reconnecting?'جارٍ فحص الاتصال...':'إعادة محاولة الاتصال'}</button>}<Link className="sofia-cta" to="/">شوف عرض أول شهر <ArrowLeft size={17}/></Link></div></main>;
 }
 function NotFound(){
  return <main className="sofia-site sofia-page-bg"><div className="sofia-container sofia-no-results"><h1>الصفحة دي مش موجودة</h1><p>يمكن الرابط اتغير، لكن تقدر ترجع تكتشف كورسات العلوم.</p><Link className="sofia-cta" to="/">الرجوع للرئيسية <ArrowLeft size={17}/></Link></div></main>;
@@ -225,8 +242,38 @@ function PageTitle(){
 }
 export default function App(){
  const [user,setUser]=useState(undefined),[toast,setToast]=useState(''),[launchMode,setLaunchMode]=useState('checking');
+ const [reconnecting,setReconnecting]=useState(false),retryInFlight=useRef(false);
  const navigate=useNavigate(),{pathname}=useLocation();
- useEffect(()=>{let active=true;Promise.allSettled([api('/auth/me'),api('/health')]).then(([session,health])=>{if(!active)return;setUser(session.status==='fulfilled'?session.value.user:null);setLaunchMode(health.status==='fulfilled'?(health.value.mode==='preview'?'preview':health.value.mode==='admin'?'admin':'full'):'offline')});return()=>{active=false}},[]);
+ useEffect(()=>{
+  let active=true;
+  readSessionBootstrap().then(result=>{
+   if(!active)return;
+   setUser(result.user);setLaunchMode(result.mode);
+  }).catch(()=>{if(active){setUser(null);setLaunchMode('offline')}});
+  return()=>{active=false};
+ },[]);
+ const retryBootstrap=useCallback(async()=>{
+  if(retryInFlight.current)return;
+  retryInFlight.current=true;setReconnecting(true);
+  try{
+   const state=await readSessionBootstrap();
+   if(state.mode!=='offline'){
+    setUser(state.user);
+    setLaunchMode(state.mode);
+   }
+  }catch{/* Keep public browsing available until the backend recovers. */}
+  finally{retryInFlight.current=false;setReconnecting(false)}
+ },[]);
+ useEffect(()=>{
+  if(launchMode!=='offline')return;
+  // Avoid a surge of simultaneous probes from parents on the same slow network.
+  const interval=setInterval(()=>{
+   if(document.visibilityState==='visible'&&navigator.onLine)void retryBootstrap();
+  },18000+Math.floor(Math.random()*9000));
+  const online=()=>{if(document.visibilityState==='visible')void retryBootstrap()};
+  window.addEventListener('online',online);
+  return()=>{clearInterval(interval);window.removeEventListener('online',online)};
+ },[launchMode,retryBootstrap]);
  useEffect(()=>{if(!toast)return;const timeout=setTimeout(()=>setToast(''),4600);return()=>clearTimeout(timeout)},[toast]);
  const show=useCallback(message=>setToast(message),[]);
  const logout=async()=>{try{await api('/auth/logout',{method:'POST'});setUser(null);navigate('/')}catch(e){show(e.message)}};
@@ -238,10 +285,11 @@ export default function App(){
  const bootstrapping=user===undefined||launchMode==='checking';
  const routeReady=!bootstrapping||isPublicBootstrapRoute(pathname);
  const previewNavigation=publicOnly||launchMode==='checking';
- return <Context.Provider value={{user,setUser,show,logout}}>
+ return <Context.Provider value={{user,setUser,show,logout,launchMode,retryBootstrap,reconnecting}}>
   <PageTitle/>
   <BrandHeader user={user} logout={logout} previewMode={previewNavigation} adminOnly={adminOnly}/>
-  {(publicOnly)&&<div className="sofia-public-preview-notice" role="status">موقع Miss Sofia متاح للتعرّف على المُدرِّسة والعروض. تسجيل الطلاب والبث المباشر هيفتحوا بعد اكتمال التجهيز الآمن.</div>}
+  {launchMode==='preview'&&<div className="sofia-public-preview-notice" role="status">موقع Miss Sofia متاح للتعرّف على المُدرِّسة والعروض. تسجيل الطلاب والبث المباشر هيفتحوا بعد اكتمال التجهيز الآمن.</div>}
+  {launchMode==='offline'&&<div className="sofia-public-preview-notice" role="alert">المحتوى التعريفي متاح، لكن خدمة الحسابات غير متصلة مؤقتًا. نحاول استعادة الاتصال تلقائيًا. <button type="button" className="portal-soft-btn" onClick={()=>void retryBootstrap()} disabled={reconnecting}>{reconnecting?'جارٍ الاتصال...':'إعادة الاتصال'}</button></div>
   {!routeReady?<div className="loading" role="status">جارٍ تجهيز موقع Miss Sofia...</div>:
    <Suspense fallback={<div className="loading">جارٍ تحميل الصفحة...</div>}>
     <Routes>
