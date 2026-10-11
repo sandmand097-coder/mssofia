@@ -1,0 +1,135 @@
+/* Premium, zero-dependency WhatsApp click-to-chat.
+   Floats only on public/signon routes, never over the streaming classroom. */
+.sofia-wa-contact{
+ position:fixed;
+ z-index:55;
+ inset-inline-end:auto;
+ left:max(18px,env(safe-area-inset-left));
+ bottom:max(20px,env(safe-area-inset-bottom));
+ width:min(286px,calc(100vw - 34px));
+ direction:rtl;
+ pointer-events:none;
+}
+.sofia-wa-contact-link{
+ position:relative;
+ pointer-events:auto;
+ display:flex;
+ align-items:center;
+ gap:12px;
+ min-height:77px;
+ width:100%;
+ padding:10px 12px;
+ text-decoration:none;
+ color:#16453e;
+ background:linear-gradient(130deg,rgba(255,255,255,.99),rgba(248,255,251,.99));
+ border:1px solid rgba(23,158,102,.24);
+ border-radius:22px;
+ box-shadow:0 18px 60px rgba(16,81,65,.14),0 3px 13px rgba(15,68,53,.07);
+ transition:transform .22s ease,box-shadow .22s ease,border-color .22s ease;
+ -webkit-tap-highlight-color:transparent;
+}
+.sofia-wa-contact-link:focus-visible,
+.sofia-footer-wa-link:focus-visible{
+ outline:3px solid #135fbb;
+ outline-offset:4px;
+}
+.sofia-wa-contact-icon{
+ position:relative;
+ flex:0 0 54px;
+ width:54px;
+ height:54px;
+ display:grid;
+ place-items:center;
+ border-radius:17px;
+ color:white;
+ background:linear-gradient(145deg,#31d675,#0caa5b);
+ box-shadow:inset 0 1px 0 #ffffff70,0 8px 17px rgba(15,165,79,.24);
+}
+.sofia-wa-contact-icon:after{
+ content:"";
+ position:absolute;
+ top:-2px;
+ right:-2px;
+ width:9px;
+ height:9px;
+ border-radius:50%;
+ background:#e9b976;
+ border:2px solid white;
+ box-shadow:0 1px 3px #16533a25;
+}
+.sofia-wa-contact-copy{
+ display:grid;
+ min-width:0;
+ flex:1;
+ gap:3px;
+ text-align:right;
+}
+.sofia-wa-contact-kicker{
+ color:#16a05f;
+ font:800 8px/1.3 Arial,sans-serif;
+ letter-spacing:1.45px;
+ direction:ltr;
+ text-align:right;
+}
+.sofia-wa-contact-copy strong{font-size:14px;line-height:1.5;font-weight:900}
+.sofia-wa-contact-description{color:#597b6f;font-size:10px;line-height:1.6;font-weight:750}
+.sofia-wa-contact-arrow{
+ display:grid;
+ flex:0 0 25px;
+ place-items:center;
+ color:#0b9870;
+}
+@media (hover:hover) and (pointer:fine){
+ .sofia-wa-contact-link:hover{
+  transform:translateY(-4px);
+  border-color:#20af74;
+  box-shadow:0 23px 67px rgba(13,104,69,.18),0 5px 15px rgba(15,68,53,.08);
+ }
+ .sofia-footer-wa-link:hover{background:#1a9c65;color:white;border-color:#1a9c65}
+}
+.sofia-footer-wa-link{
+ display:inline-flex;
+ align-items:center;
+ justify-content:flex-start;
+ gap:9px;
+ width:fit-content;
+ max-width:100%;
+ border:1px solid rgba(191,239,214,.38);
+ border-radius:11px;
+ padding:11px 14px;
+ margin:7px 0 11px;
+ font-weight:850;
+ font-size:12px;
+ line-height:1.8;
+ color:#e8fff1;
+ background:rgba(31,150,92,.34);
+ text-decoration:none;
+ transition:background .2s ease,border-color .2s ease;
+}
+.sofia-footer-wa-link svg{flex-shrink:0}
+.sofia-footer-wa-link span{white-space:nowrap}
+.sofia-footer-wa-link small{font:700 11px/1.6 Arial,sans-serif;direction:ltr;unicode-bidi:isolate}
+@media(max-width:740px){
+ .sofia-wa-contact{
+  left:max(12px,env(safe-area-inset-left));
+  bottom:max(13px,env(safe-area-inset-bottom));
+  width:190px;
+ }
+ .sofia-wa-contact-link{min-height:62px;padding:8px 10px;border-radius:18px;gap:9px}
+ .sofia-wa-contact-icon{flex-basis:43px;width:43px;height:43px;border-radius:14px}
+ .sofia-wa-contact-icon svg{width:25px;height:25px}
+ .sofia-wa-contact-copy strong{font-size:12px}
+ .sofia-wa-contact-kicker{font-size:7px;letter-spacing:1px}
+ .sofia-wa-contact-description{font-size:9px}
+ .sofia-wa-contact-arrow{display:none}
+}
+@media(max-width:375px){
+ .sofia-wa-contact{width:170px}
+ .sofia-wa-contact-link{gap:7px}
+ .sofia-wa-contact-copy strong{font-size:11px}
+}
+@media(prefers-reduced-motion:reduce){
+ .sofia-wa-contact-link,.sofia-footer-wa-link{transition:none!important}
+ .sofia-wa-contact-link:hover{transform:none!important}
+}
+@media print{.sofia-wa-contact{display:none!important}}
