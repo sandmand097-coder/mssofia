@@ -26,7 +26,8 @@
     "test:launch:browser": "node qa-classroom-entry-browser.mjs && node qa-admin-operations-browser.mjs && node qa-responsive-media-browser.mjs && node qa-guardian-browser.mjs && node qa-lesson-scheduling-browser.mjs && node qa-brand-home-browser.mjs",
     "test:surge:api": "node tests/live-admission.mjs && node tests/live-resilience.mjs && node tests/classroom-surge-http.mjs",
     "test:seo:build": "node tests/seo-static-build.mjs",
-    "test:mobile:browser": "node qa-mobile-studio-browser.mjs"
+    "test:mobile:browser": "node qa-mobile-studio-browser.mjs",
+    "test:bootstrap:browser": "node qa-backend-recovery-browser.mjs"
   },
   "dependencies": {
     "@livekit/components-react": "^2.9.0",
