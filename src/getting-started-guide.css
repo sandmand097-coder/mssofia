@@ -1,0 +1,148 @@
+/* Miss Sofia first-visit guide: responsive, accessible, standalone public route. */
+.sofia-guide-page{background:#fff;color:#16393d}
+.sofia-guide-page *{box-sizing:border-box}
+.sofia-guide-hero{background:radial-gradient(ellipse at 8% 18%,#d6f1e633,transparent 42%),linear-gradient(120deg,#f2faf6 0%,#fcfdf9 68%,#fff7eb 100%);border-bottom:1px solid #e5eee7;padding:28px 0 76px}
+.sofia-guide-breadcrumb{display:flex;align-items:center;gap:9px;color:#657f7b;font-size:12px;font-weight:700;margin-bottom:54px}
+.sofia-guide-breadcrumb a{color:#148d76}
+.sofia-guide-hero-grid{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr);align-items:center;gap:56px}
+.sofia-guide-eyebrow{display:inline-flex;align-items:center;gap:9px;padding:9px 15px;border:1px solid #ccead8;border-radius:100px;color:#117d6d;background:#fff;font-size:12px;font-weight:900}
+.sofia-guide-hero h1{font-size:clamp(34px,4.25vw,57px);font-weight:900;line-height:1.55;letter-spacing:-1.9px;margin:17px 0 16px;color:#173940}
+.sofia-guide-hero h1 em{color:#098777;font-style:normal}
+.sofia-guide-hero-grid>div:first-child>p{font-size:15px;line-height:2.15;color:#617b7a;max-width:630px;font-weight:600}
+.sofia-guide-hero-actions{display:flex;align-items:center;flex-wrap:wrap;gap:18px;margin-top:29px}
+.sofia-guide-secondary{color:#128471;font-weight:900;border-bottom:1px solid #54ba9e;font-size:13px;padding:8px 0}
+.sofia-guide-hero-art{min-height:282px;display:flex;flex-direction:column;justify-content:space-between;border:8px solid #fff;border-radius:27px;padding:22px;background:radial-gradient(circle at 30% 5%,#228675,#113f46 76%);box-shadow:0 28px 75px #06534224;color:#e4f9f1;transform:rotate(-2deg);max-width:490px;width:100%;margin-inline:auto}
+.sofia-guide-art-top{display:flex;align-items:center;gap:9px;font:800 11px Arial,sans-serif;letter-spacing:1px;color:#bce8d8}
+.sofia-guide-art-top>span:last-child{margin-right:auto;color:#f5c691}
+.sofia-guide-pulse{height:8px;width:8px;border-radius:50%;background:#8fe7bc;box-shadow:0 0 0 5px #8fe7bc26}
+.sofia-guide-art-center{display:flex;justify-content:space-around;align-items:center;gap:9px;padding:17px 0}
+.sofia-guide-art-center>div{display:flex;flex:1;flex-direction:column;align-items:center;gap:11px;border:1px solid #bce2d329;background:#ffffff0c;padding:21px 9px;border-radius:18px;min-width:0}
+.sofia-guide-art-center>div svg{color:#fbd4a1}
+.sofia-guide-art-center>div strong{font-size:13px}
+.sofia-guide-art-center>svg{color:#a4d8c7;flex-shrink:0}
+.sofia-guide-art-bottom{border-top:1px solid #ffffff30;padding-top:17px;display:flex;gap:10px;align-items:center;font-size:12px;font-weight:700;color:#c6eddf}
+.sofia-guide-section{padding:82px 0 60px;background:linear-gradient(#fff,#fbfdfc);scroll-margin-top:110px}
+.sofia-guide-intro{margin-bottom:36px}
+.sofia-guide-intro h2{font-size:clamp(28px,3vw,39px);line-height:1.6;letter-spacing:-1px;margin:7px 0 6px}
+.sofia-guide-intro h2 em{font-style:normal;color:#0a907e}
+.sofia-guide-intro p{color:#6a8180;font-size:13px;line-height:2}
+.sofia-guide-step-grid{display:grid;grid-template-columns:318px minmax(0,1fr);gap:25px;align-items:start}
+.sofia-guide-step-nav{background:#f2f8f5;border:1px solid #dfebe4;border-radius:20px;padding:12px;display:grid;gap:6px;min-width:0}
+.sofia-guide-step-tab{width:100%;appearance:none;display:flex;align-items:center;gap:12px;text-align:right;background:transparent;border:1px solid transparent;border-radius:12px;padding:13px 12px;color:#294750;cursor:pointer;min-height:71px;transition:background .2s,border-color .2s,box-shadow .2s}
+.sofia-guide-step-tab:hover{background:#ffffffa8}
+.sofia-guide-step-tab.is-active{background:#fff;border-color:#c6e7d8;box-shadow:0 8px 22px #28664c0d}
+.sofia-guide-step-icon{width:43px;height:43px;border-radius:12px;flex-shrink:0;background:#fff;color:#0d8675;display:grid;place-items:center;box-shadow:0 2px 7px #0b5b3d10}
+.sofia-guide-step-tab.is-active .sofia-guide-step-icon{background:#087d70;color:white}
+.sofia-guide-step-tab>span:nth-child(2){min-width:0;display:grid;gap:3px}
+.sofia-guide-step-tab small{color:#8ba19b;font-size:10px;font-weight:800}
+.sofia-guide-step-tab strong{font-size:12px;font-weight:900;color:#20444a}
+.sofia-guide-step-chevron{margin-right:auto;flex-shrink:0;color:#96b4aa}
+.sofia-guide-step-tab:focus-visible,.sofia-guide-step-controls button:focus-visible,.sofia-guide-faqs summary:focus-visible{outline:3px solid #138f78;outline-offset:3px}
+.sofia-guide-step-detail{background:#fff;border:1px solid #e4eee8;border-radius:22px;padding:34px 39px;box-shadow:0 15px 60px #1f57450b;min-width:0;scroll-margin-top:114px}
+.sofia-guide-detail-head{display:flex;align-items:center;gap:12px;color:#6a8b86;font-size:12px;font-weight:900}
+.sofia-guide-detail-icon{width:49px;height:49px;border-radius:14px;background:#edf8f2;color:#0b907b;display:grid;place-items:center}
+.sofia-guide-step-detail h3{font-size:clamp(25px,2.8vw,32px);font-weight:900;color:#173c42;margin:18px 0 5px}
+.sofia-guide-detail-description{font-size:13px;line-height:2;color:#647e7b;margin:0 0 17px}
+.sofia-guide-instructions{list-style:none;padding:0;margin:10px 0 22px;display:grid;gap:14px;counter-reset:step}
+.sofia-guide-instructions li{display:flex;align-items:flex-start;gap:14px}
+.sofia-guide-instructions li>span{width:33px;height:33px;min-width:33px;border:1px solid #cce7dc;border-radius:10px;color:#088671;display:grid;place-items:center;font:900 11px Arial,sans-serif}
+.sofia-guide-instructions li p{font-size:13px;line-height:2.12;color:#38575a;margin:0;flex:1}
+.sofia-guide-screen{background:#f5faf8;border:1px solid #e1efea;border-radius:15px;overflow:hidden;margin:26px 0 18px}
+.sofia-guide-screen-bar{background:#e9f4ee;border-bottom:1px solid #d8e8e0;display:flex;align-items:center;gap:12px;padding:13px 16px}
+.sofia-guide-screen-bar strong{font-size:12px;color:#245550}
+.sofia-guide-screen-bar small{margin-right:auto;font-size:10px;color:#6f9990}
+.sofia-guide-screen-dots{display:flex;gap:4px;direction:ltr}.sofia-guide-screen-dots i{display:block;width:7px;height:7px;background:#f0b280;border-radius:50%}.sofia-guide-screen-dots i:nth-child(2){background:#7bc3a7}.sofia-guide-screen-dots i:nth-child(3){background:#b7d4bc}
+.sofia-guide-screen-body{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;padding:16px}
+.sofia-guide-screen-body>div{border:1px solid #e0eeea;border-radius:12px;padding:12px 10px;background:white;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center;min-width:0}
+.sofia-guide-screen-body svg{color:#148e7e}
+.sofia-guide-screen-body span{font-size:10px;font-weight:900;color:#3c6460;line-height:1.8}
+.sofia-guide-screen-body b{font:700 9px Arial,sans-serif;color:#90b1a6}
+.sofia-guide-tip{border-right:3px solid #e8b780;background:#fff9ed;color:#795c36;border-radius:11px;padding:13px 16px;display:flex;align-items:flex-start;gap:11px}
+.sofia-guide-tip svg{flex-shrink:0;margin-top:4px;color:#b7894f}
+.sofia-guide-tip p{margin:0;font-size:12px;line-height:2}
+.sofia-guide-detail-bottom{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:25px}
+.sofia-guide-detail-bottom .sofia-cta{padding:13px 19px;font-size:12px}
+.sofia-guide-step-controls{display:flex;align-items:center;gap:12px;color:#748e88;font-size:12px;font-weight:800;direction:ltr}
+.sofia-guide-step-controls button{display:grid;place-items:center;width:40px;height:40px;color:#116f65;background:#eef7f3;border:1px solid #d9ebe3;border-radius:11px}
+.sofia-guide-step-controls button:disabled{opacity:.32;cursor:default}
+.sofia-guide-preview-note{margin-top:23px;border:1px solid #d9e9de;background:#f6faf7;border-radius:14px;padding:14px 18px;display:flex;align-items:flex-start;gap:12px;color:#436e65}
+.sofia-guide-preview-note svg{color:#168d70;flex-shrink:0;margin-top:2px}
+.sofia-guide-preview-note p{font-size:11px;line-height:1.9;margin:0}
+.sofia-guide-ready-section{background:#f3f9f5;padding:67px 0 80px}
+.sofia-guide-ready-head h2{font-size:clamp(26px,3vw,36px);margin:9px 0 29px}
+.sofia-guide-ready-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}
+.sofia-guide-ready-grid>div{border:1px solid #e3efe6;background:#fff;border-radius:18px;padding:22px;min-width:0}
+.sofia-guide-ready-grid svg{color:#0b957e;margin-bottom:15px}
+.sofia-guide-ready-grid strong{display:block;font-size:13px;color:#25474b}
+.sofia-guide-ready-grid p{font-size:11px;color:#78918a;line-height:1.9;margin:8px 0 0}
+.sofia-guide-faq-section{background:#fff;padding:90px 0}
+.sofia-guide-faq-grid{display:grid;grid-template-columns:minmax(0,.83fr) minmax(0,1.17fr);gap:60px;align-items:start}
+.sofia-guide-faq-grid h2{font-size:clamp(29px,3vw,40px);margin:8px 0 8px}
+.sofia-guide-faq-grid>div:first-child>p{font-size:13px;line-height:2;color:#77918b}
+.sofia-guide-support{margin-top:23px;display:inline-flex;align-items:center;gap:9px;color:#0b826e;font-size:12px;font-weight:900}
+.sofia-guide-faqs{display:grid;gap:10px}
+.sofia-guide-faqs details{border:1px solid #e3ede7;border-radius:13px;background:#fbfdfc;padding:14px 18px}
+.sofia-guide-faqs details[open]{background:#f3faf5;border-color:#cde6d7}
+.sofia-guide-faqs summary{list-style:none;display:flex;align-items:center;justify-content:space-between;gap:15px;cursor:pointer;font-size:13px;font-weight:900;color:#2c5553}
+.sofia-guide-faqs summary::-webkit-details-marker{display:none}
+.sofia-guide-faqs summary span{font:700 20px Arial;color:#068577}
+.sofia-guide-faqs details[open] summary span{transform:rotate(45deg)}
+.sofia-guide-faqs details p{margin:12px 0 2px;color:#55736e;font-size:12px;line-height:2}
+.sofia-guide-last-cta{background:#0e4e4a;color:white;padding:32px 0}
+.sofia-guide-last-inner{display:flex;align-items:center;justify-content:space-between;gap:20px}
+.sofia-guide-last-inner h2{font-size:22px;margin:0 0 5px}
+.sofia-guide-last-inner p{color:#c2e7db;font-size:12px;margin:0}
+.sofia-guide-last-inner .sofia-cta{background:#f3c28c;color:#24534b;border-color:#f3c28c;white-space:nowrap}
+@media(max-width:1040px){
+ .sofia-guide-hero-grid{gap:25px}
+ .sofia-guide-step-grid{grid-template-columns:260px minmax(0,1fr);gap:16px}
+ .sofia-guide-step-detail{padding:27px}
+ .sofia-guide-step-tab{gap:8px;padding:11px 8px}
+ .sofia-guide-ready-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:760px){
+ .sofia-guide-hero{padding-bottom:50px}
+ .sofia-guide-breadcrumb{margin-bottom:27px}
+ .sofia-guide-hero-grid{grid-template-columns:1fr;gap:29px}
+ .sofia-guide-hero-art{min-height:210px;transform:none;max-width:470px}
+ .sofia-guide-hero h1{font-size:clamp(31px,6.5vw,43px)}
+ .sofia-guide-section{padding:54px 0 42px}
+ .sofia-guide-step-grid{grid-template-columns:1fr;gap:15px}
+ .sofia-guide-step-nav{display:flex;gap:8px;overflow-x:auto;scroll-snap-type:x mandatory;overscroll-behavior-inline:contain;padding:9px;scrollbar-width:thin}
+ .sofia-guide-step-tab{flex:0 0 191px;min-height:68px;scroll-snap-align:start;padding:10px;gap:9px}
+ .sofia-guide-step-tab strong{font-size:11px}
+ .sofia-guide-step-icon{width:38px;height:38px}
+ .sofia-guide-step-chevron{display:none}
+ .sofia-guide-step-detail{padding:25px}
+ .sofia-guide-faq-section{padding:63px 0}
+ .sofia-guide-faq-grid{grid-template-columns:1fr;gap:25px}
+}
+@media(max-width:480px){
+ .sofia-guide-page .sofia-container{width:calc(100% - 32px)}
+ .sofia-guide-hero h1{letter-spacing:-.7px;font-size:32px}
+ .sofia-guide-hero-grid>div:first-child>p{font-size:13px}
+ .sofia-guide-hero-actions{gap:12px}
+ .sofia-guide-hero-actions .sofia-cta{width:100%}
+ .sofia-guide-art-center{gap:3px}
+ .sofia-guide-art-center>div{padding:14px 4px}
+ .sofia-guide-art-center>div strong{font-size:11px}
+ .sofia-guide-art-center>svg{width:15px}
+ .sofia-guide-art-bottom{font-size:10px}
+ .sofia-guide-intro h2{font-size:27px}
+ .sofia-guide-step-detail{padding:18px 16px;border-radius:15px}
+ .sofia-guide-step-detail h3{font-size:25px}
+ .sofia-guide-screen-body{padding:10px;gap:5px}
+ .sofia-guide-screen-body>div{padding:10px 5px}
+ .sofia-guide-screen-body span{font-size:9px}
+ .sofia-guide-screen-bar{flex-wrap:wrap;gap:7px}
+ .sofia-guide-screen-bar small{font-size:9px}
+ .sofia-guide-detail-bottom>.sofia-cta{width:100%}
+ .sofia-guide-detail-bottom{justify-content:center}
+ .sofia-guide-ready-grid{grid-template-columns:1fr 1fr;gap:9px}
+ .sofia-guide-ready-grid>div{padding:16px 12px}
+ .sofia-guide-last-inner{flex-direction:column;align-items:stretch;text-align:center}
+ .sofia-guide-last-inner .sofia-cta{width:100%}
+}
+@media(prefers-reduced-motion:reduce){
+ .sofia-guide-page *, .sofia-guide-page *:before, .sofia-guide-page *:after{scroll-behavior:auto!important;animation:none!important;transition:none!important}
+}
