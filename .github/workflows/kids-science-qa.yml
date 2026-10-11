@@ -43,5 +43,13 @@ jobs:
         run: npx --yes playwright@1.64.0 install --with-deps chromium
       - name: Test visitor interactions and mobile motion accessibility
         run: npm run test:discovery:browser
+      - name: Save design review screenshots even on failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: miss-sofia-kids-science-mobile-desktop-preview
+          path: qa-artifacts/sofia-*.png
+          if-no-files-found: warn
+          retention-days: 14
       - name: Audit shipped runtime libraries
         run: npm audit --omit=dev --audit-level=high
