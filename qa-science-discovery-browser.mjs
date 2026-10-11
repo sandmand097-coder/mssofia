@@ -56,9 +56,21 @@ try{
   assert.equal(info.lab,1,'one science lab on home');
   assert.ok(info.scroll<=info.width+2,'no horizontal overflow at '+width+'px: '+JSON.stringify(info));
   assert.equal(info.pictures,0,'no heavy external images/video');
+  if(width===390){
+   await page.locator('.sofia-hero-discovery-link').click();
+   await page.waitForFunction(()=>{
+    const header=document.querySelector('header.sofia-header')?.getBoundingClientRect();
+    const section=document.getElementById('sofia-discovery')?.getBoundingClientRect();
+    return header&&section&&section.top>=header.bottom-8&&section.top<=header.bottom+70;
+   },null,{timeout:7000});
+   console.log('PASS science anchor scrolls below sticky mobile header');
+  }
   if(width===390||width===1366){
    const folder=path.join(root,'qa-artifacts');
    mkdirSync(folder,{recursive:true});
+   // Screenshot only: disable sticky overlap caused by Playwright auto-scroll.
+   // Real anchor scrolling was verified separately above.
+   await page.addStyleTag({content:'header.sofia-header{position:static !important}'});
    await page.locator('.sofia-hero').screenshot({path:path.join(folder,'sofia-hero-'+width+'.png'),animations:'disabled'});
    await section.screenshot({path:path.join(folder,'sofia-discovery-'+width+'.png'),animations:'disabled'});
   }
