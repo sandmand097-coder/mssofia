@@ -21,9 +21,15 @@ const component=readFileSync(new URL('../src/components/WhatsAppContact.jsx',imp
 const brand=readFileSync(new URL('../src/components/MrsSofiaBrand.jsx',import.meta.url),'utf8');
 const app=readFileSync(new URL('../src/App.jsx',import.meta.url),'utf8');
 const css=readFileSync(new URL('../src/whatsapp-contact.css',import.meta.url),'utf8');
+const exampleEnv=readFileSync(new URL('../.env.example',import.meta.url),'utf8');
 assert.match(component,/target="_blank" rel="noopener noreferrer"/,'safe external tab behavior');
 assert.match(component,/href=\{WHATSAPP_CONTACT_URL\}/,'click direct to link, no delayed popup');
 assert.match(brand,/href=\{WHATSAPP_CONTACT_URL\}/,'same direct link in footer');
+assert.ok(brand.includes("href={'tel:'+WHATSAPP_CONTACT_E164}"),'footer calls internationally dialable, centralized support number');
+assert.ok(brand.includes('>{WHATSAPP_CONTACT_LOCAL}</a>'),'footer displays the exact user-approved number');
+assert.ok(!brand.includes('01027661546'),'obsolete support phone removed from publicly rendered footer');
+assert.match(exampleEnv,/^SCHOOL_SUPPORT_PHONE=01027662546$/m,'local support phone default is updated');
+assert.match(exampleEnv,/^VODAFONE_CASH_NUMBER=01027661546$/m,'payment wallet deliberately unchanged until explicitly verified');
 assert.ok(app.includes('<WhatsAppContact pathname={pathname}/>'),'app mounts floating contact with route guard');
 assert.match(app,/showWhatsApp=\{showWhatsAppContact\(pathname\)\}/,'footer is restricted too');
 assert.match(css,/@media\(prefers-reduced-motion:reduce\)/,'motion accessibility');
