@@ -2,6 +2,7 @@
 // prompts, keyboard-friendly controls, reduced motion and no API access.
 // All API calls are mocked: no student sessions, payment writes or LiveKit minutes.
 import assert from 'node:assert/strict';
+import {mkdirSync} from 'node:fs';
 import {spawn} from 'node:child_process';
 import net from 'node:net';
 import path from 'node:path';
@@ -55,6 +56,12 @@ try{
   assert.equal(info.lab,1,'one science lab on home');
   assert.ok(info.scroll<=info.width+2,'no horizontal overflow at '+width+'px: '+JSON.stringify(info));
   assert.equal(info.pictures,0,'no heavy external images/video');
+  if(width===390||width===1366){
+   const folder=path.join(root,'qa-artifacts');
+   mkdirSync(folder,{recursive:true});
+   await page.locator('.sofia-hero').screenshot({path:path.join(folder,'sofia-hero-'+width+'.png'),animations:'disabled'});
+   await section.screenshot({path:path.join(folder,'sofia-discovery-'+width+'.png'),animations:'disabled'});
+  }
 
   const quiz=section.locator('.sofia-discovery-card');
   const choices=quiz.locator('button.sofia-discovery-answer');
