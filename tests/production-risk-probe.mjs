@@ -52,6 +52,16 @@ const exposed=await checkProductionRisk({
 });
 assert.equal(exposed.ok,false,'unexpected anonymous access is a critical failure');
 assert.equal(exposed.results.find(x=>x.path==='/api/auth/me').code,'PRIVATE_API_ACCESS_EXPOSED');
+const wronglyCached=await checkProductionRisk({
+ fetchImpl:(input,opts)=>{
+  const path=requestedUrl(input,opts);
+  return Promise.resolve(path==='/api/auth/me'
+   ?new Response('{"error":"Login required"}',{status:401,headers:{'content-type':'application/json','cache-control':'public,max-age=300'}})
+   :baseline(path));
+ },
+ sleep:()=>Promise.resolve(),maxAttempts:1
+});
+assert.equal(wronglyCached.results.find(x=>x.path==='/api/auth/me').code,'PRIVATE_API_CACHE_POLICY_MISSING');
 const down=await checkProductionRisk({
  fetchImpl:(input,opts)=>{
   const path=requestedUrl(input,opts);
