@@ -57,7 +57,7 @@ export async function enqueueUpcomingReminders({db={all,run},clock=new Date(),en
   const result=await insertOutbox(db,{
    type:'lesson_reminder',studentId:row.student_id,
    bookingId:row.booking_id,lessonId:row.lesson_id,
-   eventKey:'lesson-reminder:'+row.lesson_id+':'+row.student_id,
+   eventKey:'lesson-reminder:'+row.lesson_id+':'+row.student_id+':'+iso(row.starts_at),
    scheduledAt:new Date(at),clock
   });
   inserted+=Number(result.changes||0);
@@ -98,6 +98,7 @@ async function readRecipient(job,{db={get},clock=new Date()}={}){
   const lesson=await db.get("SELECT title,starts_at,status,course_id FROM lessons WHERE id=?",job.lesson_id);
   const when=Date.parse(lesson?.starts_at||'');
   if(!lesson||lesson.status!=='scheduled'||!Number.isFinite(when)
+   ||iso(when-15*60000)!==iso(job.scheduled_at)
    ||when<=clock.getTime()+2*60000||when>clock.getTime()+16*60000)return null;
   lessonTitle=lesson.title;
   lessonDate=new Intl.DateTimeFormat('ar-EG',{
