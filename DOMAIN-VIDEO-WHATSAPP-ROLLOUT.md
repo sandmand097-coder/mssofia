@@ -24,7 +24,7 @@ Cloudflare Pages `API_ORIGIN` is restricted to two exact upstream addresses
 (`mssofia.onrender.com` or `api.mssofia.com`); it cannot become an open proxy.
 Existing `FULL_BACKEND_READY` and `PUBLIC_LAUNCH_MODE` release gates remain.
 The Express API responds to credentialed CORS only from `mssofia.pages.dev`,
-`mssofia.com`, In development, localhost is allowed.
+and `mssofia.com`. In development, localhost is allowed.
 Rejected browser origins cannot read responses; unsafe methods remain rejected.
 
 For cookies, login and Google login now share the same **HttpOnly**, 7-day,
