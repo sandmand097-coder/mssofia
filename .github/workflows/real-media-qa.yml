@@ -10,6 +10,8 @@ on:
       - ".github/workflows/real-media-qa.yml"
       - "package-lock.json"
       - "package.json"
+      - "qa-real-room-ui.mjs"
+      - "src/qa/ConnectedRoomSandbox.jsx"
   workflow_dispatch:
 
 permissions:
@@ -49,6 +51,10 @@ jobs:
         run: |
           node --check qa-real-local-webrtc-browser.mjs
           node --check src/qa/livekit-real-media-probe.js
+          node --check qa-real-room-ui.mjs
       - name: Measure actual camera frames and audio bytes at 2, 10, 25 and 50 viewers
         run: node qa-real-local-webrtc-browser.mjs
         timeout-minutes: 9
+      - name: Verify actual React presenter and learner media on simulated phone
+        run: node qa-real-room-ui.mjs
+        timeout-minutes: 3
