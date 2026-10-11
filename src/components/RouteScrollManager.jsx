@@ -15,9 +15,13 @@ export default function RouteScrollManager(){
   }
   let id;
   try{id=decodeURIComponent(hash.slice(1))}catch{id=hash.slice(1)}
+  let completed=false;
   const toAnchor=()=>{
+   if(completed)return true;
    const element=id?document.getElementById(id):null;
    if(!element)return false;
+   completed=true;
+   for(const timer of timers)clearTimeout(timer);
    element.scrollIntoView({block:'start',behavior:'instant'});
    return true;
   };
