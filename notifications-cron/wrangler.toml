@@ -1,0 +1,7 @@
+name = "mssofia-notifications-cron"
+main = "src/index.js"
+compatibility_date = "2026-10-11"
+# NOTIFICATION_TICK_URL must be set in Worker settings to the trusted API.
+# NOTIFICATION_CRON_SECRET must be added as a Worker secret, NEVER here.
+[triggers]
+crons = ["* * * * *"]
