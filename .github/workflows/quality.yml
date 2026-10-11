@@ -47,5 +47,7 @@ jobs:
         run: node qa-classroom-entry-browser.mjs
       - name: Verify touch-first presenter controls on mobile browser
         run: npm run test:mobile:browser
+      - name: Verify public paint and Render cold-start recovery
+        run: npm run test:bootstrap:browser
       - name: Audit runtime dependencies
         run: npm audit --omit=dev --audit-level=high
