@@ -3,6 +3,7 @@ import {Link,useNavigate,useParams,useSearchParams} from 'react-router-dom';
 import {ArrowLeft,ArrowUpLeft,Atom,BookOpen,CalendarDays,CheckCircle2,ChevronLeft,CircleHelp,ClipboardCheck,Clock3,Dna,FlaskConical,GraduationCap,Heart,Lightbulb,LockKeyhole,Microscope,PlayCircle,Gift,Search,ShieldCheck,Sparkles,Target,Users,Video,Beaker,XCircle,Eye,EyeOff,Send,Filter,School} from 'lucide-react';
 import {ScienceScene,ScienceCourseCard,scienceSubject,scienceSubjects,currency,formatDateTime,dashboardPath} from '../components/MrsSofiaBrand.jsx';
 import {LaunchOffer} from '../components/LaunchOffer.jsx';
+import {ScienceDiscoveryLab} from '../components/ScienceDiscoveryLab.jsx';
 
 const categories=[
  {name:'علوم',icon:FlaskConical,eng:'SCIENCE',desc:'اكتشف العلوم في حياتنا اليومية',tone:'mint'},
@@ -21,11 +22,13 @@ export function MrsHome({api}){
    <div className="sofia-hero-copy"><span className="sofia-hero-eyebrow"><span>✦</span> مس صوفيا للعلوم | MISS SOFIA</span><h1>العلوم مش حفظ...<br/><span>العلوم حكاية</span><br/>بتتفهم!</h1><p>مع مس صوفيا للعلوم، كل سؤال ليه إجابة، وكل درس وراه اكتشاف. شرح مبسّط، أمثلة من الحياة، وحصص منظمة تخليك تحب العلوم وتفهمها بجد.</p>
     <div className="sofia-hero-actions"><Link className="sofia-cta" to="/courses">اكتشف كورسات العلوم <ArrowLeft size={19}/></Link><a href="#offer" className="sofia-ghost"><Gift size={21}/> عرض أول شهر 100 جنيه</a></div>
     <div className="sofia-hero-proof"><div><span><CheckCircle2 size={17}/></span> شرح خطوة بخطوة</div><div><span><CheckCircle2 size={17}/></span> حصص تفاعلية</div><div><span><CheckCircle2 size={17}/></span> متابعة المواعيد</div></div>
+    <a className="sofia-hero-discovery-link" href="#sofia-discovery"><Sparkles size={17}/> جرب سؤال علمي ممتع في مختبر الفضول <ArrowLeft size={16}/></a>
    </div>
    <ScienceScene/>
   </div><div className="sofia-hero-decoration" aria-hidden="true">SCIENCE IS EVERYWHERE</div></section>
   <LaunchOffer/>
   <section className="sofia-trust-strip"><div className="sofia-container sofia-trust-grid"><div><span><Lightbulb size={23}/></span><b>افهم الفكرة الأول</b><small>الأساس قبل الحفظ</small></div><div><span><Microscope size={23}/></span><b>تعلّم بالاكتشاف</b><small>تجارب وأمثلة واقعية</small></div><div><span><CalendarDays size={23}/></span><b>نظّم وقتك</b><small>جدول حصص واضح</small></div><div><span><ShieldCheck size={23}/></span><b>حسابك ومساحتك</b><small>دوراتك وطلباتك في مكان واحد</small></div></div></section>
+  <ScienceDiscoveryLab/>
   <section className="sofia-section sofia-subjects-section"><div className="sofia-container"><Heading eyebrow="اختار اللي بتحب تكتشفه" title={<>العلم كبير.. <em>تعالى نستكشفه!</em></>} description="مجالات علمية متنوعة بشرح مبسّط يربط المعلومة بالعالم اللي حوالينا." center/>
    <div className="sofia-subject-grid">{categories.map(c=>{const Icon=c.icon;return <Link className={'sofia-subject-card tone-'+c.tone} to={'/courses?subject='+encodeURIComponent(c.name)} key={c.name}><div className="sofia-subject-top"><span>{c.eng}</span><ArrowUpLeft size={19}/></div><div className="sofia-subject-icon"><Icon size={45} strokeWidth={1.5}/></div><h3>{c.name}</h3><p>{c.desc}</p></Link>})}</div>
   </div></section>
