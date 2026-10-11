@@ -8,7 +8,6 @@ import {BrandHeader,BrandFooter,dashboardPath} from './components/MrsSofiaBrand.
 import {WhatsAppContact} from './components/WhatsAppContact.jsx';
 import {showWhatsAppContact} from './components/whatsapp-contact.js';
 import {publicSeoMeta,SEO_ORIGIN} from './public-seo.js';
-import {publicSeoMeta,SEO_ORIGIN} from './public-seo.js';
 
 const MrsHome=lazy(()=>import('./pages/MrsSofiaSite.jsx').then(m=>({default:m.MrsHome})));
 const MrsCourses=lazy(()=>import('./pages/MrsSofiaSite.jsx').then(m=>({default:m.MrsCourses})));
