@@ -4,7 +4,7 @@ const prod={NODE_ENV:'production',APP_ORIGIN:'https://mssofia.pages.dev',COOKIE_
 const origins=allowedApiOrigins(prod);
 assert.ok(origins.has('https://mssofia.pages.dev'));
 assert.ok(origins.has('https://mssofia.com'));
-assert.ok(origins.has('https://www.mssofia.com'));
+assert.ok(!origins.has('https://www.mssofia.com'));
 assert.ok(!origins.has('https://evil.mssofia.com'));
 assert.ok(!origins.has('https://mssofia.com.evil.test'));
 assert.ok(!origins.has('http://127.0.0.1:5173'));
