@@ -1,6 +1,7 @@
 import express from 'express';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
+import {corsForRequest,sessionCookieOptions} from './origin-security.js';
 import rateLimit from 'express-rate-limit';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
@@ -73,13 +74,7 @@ app.use(express.json({
   limit: '100kb'
 }));
 app.use(cookieParser());
-const allowedOrigins = new Set([process.env.APP_ORIGIN, 'http://127.0.0.1:5173', 'http://localhost:5173', 'http://127.0.0.1:' + PORT].filter(Boolean));
-app.use('/api', (req, res, next) => {
-  if (!['GET', 'HEAD', 'OPTIONS'].includes(req.method) && req.headers.origin && !allowedOrigins.has(req.headers.origin)) return res.status(403).json({
-    error: 'مصدر الطلب غير مسموح'
-  });
-  next();
-});
+app.use('/api',corsForRequest);
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   limit: 30,
@@ -341,22 +336,13 @@ app.post('/api/auth/login', asyncRoute(async (req, res) => {
     algorithm: 'HS256',
     expiresIn: '7d'
   });
-  res.cookie('session', token, {
-    httpOnly: true,
-    sameSite: 'strict',
-    secure: process.env.NODE_ENV === 'production',
-    maxAge: 7 * 24 * 3600 * 1000,
-    path: '/'
-  });
+  res.cookie('session',token,sessionCookieOptions(req));
   res.json({
     user: publicUser(user)
   });
 }));
 app.post('/api/auth/logout', (req, res) => {
-  res.clearCookie('session', {
-    path: '/',
-    sameSite: 'strict'
-  });
+  res.clearCookie('session',sessionCookieOptions(req,{clear:true}));
   res.json({
     ok: true
   });
