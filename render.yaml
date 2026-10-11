@@ -15,6 +15,25 @@ services:
         value: preview
       - key: APP_ORIGIN
         sync: false
+      # Restrict to custom domain only after TLS and Pages cutover.
+      - key: COOKIE_DOMAIN
+        sync: false
+      - key: WHATSAPP_ENABLED
+        value: "false"
+      - key: WHATSAPP_GRAPH_VERSION
+        value: "v25.0"
+      - key: WHATSAPP_PHONE_NUMBER_ID
+        sync: false
+      - key: WHATSAPP_ACCESS_TOKEN
+        sync: false
+      - key: WHATSAPP_BOOKING_TEMPLATE
+        sync: false
+      - key: WHATSAPP_REMINDER_TEMPLATE
+        sync: false
+      - key: SCHOOL_PUBLIC_URL
+        value: "https://mssofia.pages.dev"
+      - key: NOTIFICATION_CRON_SECRET
+        sync: false
       - key: DATABASE_URL
         sync: false
       - key: JWT_SECRET
