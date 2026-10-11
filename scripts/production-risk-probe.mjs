@@ -32,7 +32,9 @@ function safeTimeout(timeoutMs){
 function delayFor(attempt,retryHeader){
  const seconds=Number(retryHeader);
  const explicit=Number.isFinite(seconds)&&seconds>0?Math.min(seconds*1000,10000):0;
- return Math.max(explicit,[2200,4600,9200][Math.min(attempt-1,2)]);
+ // Render can take longer than one Cloudflare request deadline to wake up.
+ // Spread only GET retries across a full bounded warm-up window.
+ return Math.max(explicit,[6000,12000,20000,20000][Math.min(attempt-1,3)]);
 }
 function validateBody(spec,response,body,{expectedMode}){
  const contentType=response.headers?.get('content-type')||'';
@@ -67,11 +69,11 @@ export async function checkProductionRisk({
  fetchImpl=fetch,
  sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms)),
  timeoutMs=21000,
- maxAttempts=3
+ maxAttempts=5
 }={}){
  const site=validateSiteOrigin(origin);
  if(!['full','preview','admin'].includes(expectedMode))throw Error('Invalid EXPECTED_LAUNCH_MODE');
- const attemptsLimit=Math.max(1,Math.min(4,Math.floor(Number(maxAttempts)||3)));
+ const attemptsLimit=Math.max(1,Math.min(5,Math.floor(Number(maxAttempts)||5)));
  const results=[];
  let upstreamUnavailable=false;
  for(const spec of PROBES){
