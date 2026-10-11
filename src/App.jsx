@@ -3,6 +3,7 @@ import {joinWithBackoff} from './components/live-resilience.js';
 import {Routes,Route,Link,Navigate,useLocation,useNavigate,useParams} from 'react-router-dom';
 import {LockKeyhole,ChevronLeft,ShieldCheck,Video,Play,ArrowLeft} from 'lucide-react';
 import {BrandHeader,BrandFooter,dashboardPath} from './components/MrsSofiaBrand.jsx';
+import {isPublicBootstrapRoute} from './public-bootstrap.js';
 
 const MrsHome=lazy(()=>import('./pages/MrsSofiaSite.jsx').then(m=>({default:m.MrsHome})));
 const MrsCourses=lazy(()=>import('./pages/MrsSofiaSite.jsx').then(m=>({default:m.MrsCourses})));
@@ -214,18 +215,24 @@ function PageTitle(){
 }
 export default function App(){
  const [user,setUser]=useState(undefined),[toast,setToast]=useState(''),[launchMode,setLaunchMode]=useState('checking');
- const navigate=useNavigate();
+ const navigate=useNavigate(),{pathname}=useLocation();
  useEffect(()=>{let active=true;Promise.allSettled([api('/auth/me'),api('/health')]).then(([session,health])=>{if(!active)return;setUser(session.status==='fulfilled'?session.value.user:null);setLaunchMode(health.status==='fulfilled'?(health.value.mode==='preview'?'preview':health.value.mode==='admin'?'admin':'full'):'offline')});return()=>{active=false}},[]);
  useEffect(()=>{if(!toast)return;const timeout=setTimeout(()=>setToast(''),4600);return()=>clearTimeout(timeout)},[toast]);
  const show=useCallback(message=>setToast(message),[]);
  const logout=async()=>{try{await api('/auth/logout',{method:'POST'});setUser(null);navigate('/')}catch(e){show(e.message)}};
  const publicOnly=launchMode==='preview'||launchMode==='offline';
  const adminOnly=launchMode==='admin';
+ // The home, catalogue and policies are public content. Never block their
+ // first render on /auth/me or /health while Render wakes from a cold start.
+ // Every protected route still waits for both checks (fail closed).
+ const bootstrapping=user===undefined||launchMode==='checking';
+ const routeReady=!bootstrapping||isPublicBootstrapRoute(pathname);
+ const previewNavigation=publicOnly||launchMode==='checking';
  return <Context.Provider value={{user,setUser,show,logout}}>
   <PageTitle/>
-  <BrandHeader user={user} logout={logout} previewMode={publicOnly} adminOnly={adminOnly}/>
+  <BrandHeader user={user} logout={logout} previewMode={previewNavigation} adminOnly={adminOnly}/>
   {(publicOnly)&&<div className="sofia-public-preview-notice" role="status">موقع Miss Sofia متاح للتعرّف على المُدرِّسة والعروض. تسجيل الطلاب والبث المباشر هيفتحوا بعد اكتمال التجهيز الآمن.</div>}
-  {user===undefined?<div className="loading">جارٍ تجهيز موقع Miss Sofia...</div>:
+  {!routeReady?<div className="loading" role="status">جارٍ تجهيز موقع Miss Sofia...</div>:
    <Suspense fallback={<div className="loading">جارٍ تحميل الصفحة...</div>}>
     <Routes>
      <Route path="/" element={<MrsHome api={api}/>}/>
@@ -246,7 +253,7 @@ export default function App(){
      <Route path="*" element={<NotFound/>}/>
     </Routes>
    </Suspense>}
-  <BrandFooter previewMode={publicOnly||adminOnly}/>
+  <BrandFooter previewMode={previewNavigation||adminOnly}/>
   {toast&&<div className="toast" role="status" aria-live="polite"><ShieldCheck size={18}/>{toast}</div>}
  </Context.Provider>;
 }
