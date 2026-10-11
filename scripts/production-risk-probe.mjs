@@ -71,7 +71,14 @@ export async function checkProductionRisk({
  if(!['full','preview','admin'].includes(expectedMode))throw Error('Invalid EXPECTED_LAUNCH_MODE');
  const attemptsLimit=Math.max(1,Math.min(4,Math.floor(Number(maxAttempts)||3)));
  const results=[];
+ let upstreamUnavailable=false;
  for(const spec of PROBES){
+  // A failed health probe means private/API probes cannot safely establish readiness.
+  // Report them as blocked instead of waking a sleeping backend six more times.
+  if(upstreamUnavailable&&spec.path.startsWith('/api/')){
+   results.push({path:spec.path,status:null,attempts:0,ok:false,code:'UPSTREAM_HEALTH_FAILED',critical:spec.critical});
+   continue;
+  }
   let attempt=0,status=null,issue='UNKNOWN',lastRetryAfter=null,passed=false;
   for(;attempt<attemptsLimit;){
    attempt++;
@@ -104,6 +111,7 @@ export async function checkProductionRisk({
    if(problem){issue=problem;break}
    issue=null;passed=true;break;
   }
+  if(spec.path==='/api/health'&&!passed)upstreamUnavailable=true;
   results.push({
    path:spec.path,
    status,attempts:attempt,ok:passed,
