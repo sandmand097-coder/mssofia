@@ -62,6 +62,31 @@ const wronglyCached=await checkProductionRisk({
  sleep:()=>Promise.resolve(),maxAttempts:1
 });
 assert.equal(wronglyCached.results.find(x=>x.path==='/api/auth/me').code,'PRIVATE_API_CACHE_POLICY_MISSING');
+// A service that takes ~40 seconds to recover must not be reported as
+// permanently down; the real production check has a finite 5-attempt cap.
+let slowHealthCalls=0;
+const slowWarm=await checkProductionRisk({
+ fetchImpl:(input,opts)=>{
+  const path=requestedUrl(input,opts);
+  if(path==='/api/health'&&++slowHealthCalls<=4)return Promise.resolve(json({code:'UPSTREAM_UNAVAILABLE'},503));
+  return Promise.resolve(baseline(path));
+ },
+ sleep:()=>Promise.resolve(),maxAttempts:5
+});
+assert.equal(slowWarm.ok,true,'bounded warm-up must tolerate recoverable 503s');
+assert.equal(slowWarm.results.find(x=>x.path==='/api/health').attempts,5);
+let persistentCalls=0;
+const persistentlyDown=await checkProductionRisk({
+ fetchImpl:(input,opts)=>{
+  const path=requestedUrl(input,opts);
+  if(path==='/api/health'){persistentCalls++;return Promise.resolve(json({code:'UPSTREAM_UNAVAILABLE'},503))}
+  return Promise.resolve(baseline(path));
+ },
+ sleep:()=>Promise.resolve(),maxAttempts:5
+});
+assert.equal(persistentCalls,5,'retry cap is finite');
+assert.equal(persistentlyDown.ok,false,'a genuinely persistent outage must fail');
+assert.equal(persistentlyDown.results.find(x=>x.path==='/api/courses').code,'UPSTREAM_HEALTH_FAILED');
 const down=await checkProductionRisk({
  fetchImpl:(input,opts)=>{
   const path=requestedUrl(input,opts);
