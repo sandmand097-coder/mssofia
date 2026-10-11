@@ -7,6 +7,7 @@ export function schoolReadiness(env=process.env){
  const admin=googleAdminConfig(env),guardian=googleStudentConfig(env);
  const privacyApproved=env.SCHOOL_PRIVACY_APPROVED==='true';
  const registrationFlag=env.REGISTRATION_ENABLED==='true';
+ const refundPolicyApproved=env.SCHOOL_REFUND_POLICY_APPROVED==='true';
  const ownerContactConfigured=schoolContactConfigured(env);
  const senderConfigured=Boolean(env.MAIL_FROM&&(env.RESEND_API_KEY||env.SMTP_HOST));
  const walletNumberConfigured=/^01[0125]\d{8}$/.test(env.VODAFONE_CASH_NUMBER||'');
@@ -26,11 +27,12 @@ export function schoolReadiness(env=process.env){
   passwordEmailSignupEnabled:senderConfigured&&privacyApproved&&registrationFlag&&ownerContactConfigured,
   guardianPrivacyApproved:privacyApproved,
   registrationAllowedBySchool:registrationFlag,
+  refundPolicyApproved,
   schoolContactConfigured:ownerContactConfigured,
   outboundMailConfigured:senderConfigured,
   paymentWalletConfigured:walletNumberConfigured,
   privateReceiptStorageConfigured:receiptStorageConfigured,
-  paymentUploadConfigured:walletNumberConfigured&&receiptStorageConfigured,
+  paymentUploadConfigured:walletNumberConfigured&&receiptStorageConfigured&&refundPolicyApproved,
   livekitCredentialsConfigured:livestreamConfigured,
   // These flags describe activation, not evidence of a successful real payment.
   monthlyRenewalsEnabled:env.MONTHLY_RENEWALS_ENABLED==='true',
