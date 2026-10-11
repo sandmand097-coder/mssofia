@@ -1,6 +1,7 @@
 import React,{useCallback,useEffect,useMemo,useRef,useState} from 'react';
 import {videoPresentation} from './video-presentation.js';
 import {CAMERA_PRESETS,initialCameraQuality,nextFacingMode,canShareScreen,cameraCaptureOptions,restartPublishedCamera} from './mobile-broadcast.js';
+import {enablePresenterMedia} from './broadcast-preflight.js';
 import {
  LiveKitRoom,RoomAudioRenderer,StartAudio,VideoTrack,useTracks,
  useParticipants,useRoomContext,useLocalParticipant,useLocalParticipantPermissions,useChat
@@ -307,14 +308,15 @@ export function MeetingStudio({connection,onDisconnected,onTimingChange}){
   setBusy(true);setError('');
   // These two explicit enable calls request permission from the director's
   // own browser; students' devices can never be switched on remotely.
-  const requests=[localParticipant.setMicrophoneEnabled(true)];
-  if(!audioOnly)requests.push(localParticipant.setCameraEnabled(true,cameraCaptureOptions(cameraQuality,cameraFacing)));
-  const results=await Promise.allSettled(requests);
-  if(results.every(r=>r.status==='rejected'))
-   setError(audioOnly?'تعذر تشغيل الميكروفون. تحققي من إذن الصوت في إعدادات الهاتف.':'تعذر تشغيل الميكروفون والكاميرا؛ تحققي من الأذونات أو ابدئي بالصوت فقط.');
-  else if(results.some(r=>r.status==='rejected'))
-   setError('بدأ جزء من البث؛ تحققي من السماح بالكاميرا والميكروفون. يمكنك متابعة الشرح بالصوت أو الشاشة.');
-  setBusy(false);
+  try{
+   const result=await enablePresenterMedia(localParticipant,cameraCaptureOptions(cameraQuality,cameraFacing),{audioOnly});
+   if(!result.microphone&&!result.camera)
+    setError(audioOnly?'تعذر تشغيل الميكروفون. تحققي من إذن الصوت في إعدادات الهاتف.':'تعذر تشغيل الميكروفون والكاميرا؛ تحققي من الأذونات أو ابدئي بالصوت فقط.');
+   else if(!result.microphone||(!audioOnly&&!result.camera))
+    setError('بدأ جزء من البث؛ تحققي من أذونات الكاميرا والميكروفون. يمكنك متابعة الشرح بالصوت أو الصورة.');
+  }catch{
+   setError('تعذر بدء بث الأجهزة؛ أعيدي فتح الاستوديو أو تحققي من أذونات الهاتف.');
+  }finally{setBusy(false)}
  };
  const changeHand=async()=>{
   if(busy)return;
