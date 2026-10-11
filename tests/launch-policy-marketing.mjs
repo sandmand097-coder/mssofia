@@ -32,7 +32,7 @@ assert.match(renewal,/SCHOOL_REFUND_POLICY_APPROVED/,'manual renewals must not b
 assert.match(readiness,/refundPolicyApproved/,'admin setup status reports approval gate');
 assert.match(env,/^SCHOOL_REFUND_POLICY_APPROVED=false$/m,'refund policy is off by default');
 assert.match(offer,/لا تحوّل أي مبلغ/,'visitor still sees clear payment safety notice');
-assert.match(cards,/sofia-footer-bottom[\\s\\S]*?<Link to="\\/terms"/,'full legal terms remain linked unobtrusively at the bottom');
+assert.ok(cards.slice(cards.indexOf('sofia-footer-bottom')).includes('<Link to="/terms"'),'full legal terms remain linked unobtrusively at the bottom');
 assert.ok(!catalogue.includes('<h3>حقوق واضحة</h3>'),'course marketing does not prominently advertise refund policy');
 assert.match(catalogue,/تجربة رقمية متطورة/,'course marketing emphasizes digital learning improvement');
 assert.match(catalogue,/بنطوّر تجربة تعليم العلوم/,'homepage uses a technology development message');
