@@ -1,5 +1,7 @@
 import React,{useCallback,useEffect,useMemo,useRef,useState} from 'react';
 import {videoPresentation} from './video-presentation.js';
+import {CAMERA_PRESETS,initialCameraQuality,nextFacingMode,canShareScreen,cameraCaptureOptions,restartPublishedCamera} from './mobile-broadcast.js';
+import {enablePresenterMedia} from './broadcast-preflight.js';
 import {
  LiveKitRoom,RoomAudioRenderer,StartAudio,VideoTrack,useTracks,
  useParticipants,useRoomContext,useLocalParticipant,useLocalParticipantPermissions,useChat
@@ -23,11 +25,6 @@ const api=async(path,opts={})=>{
  return data;
 };
 const modes={microphone:'مسموح بالصوت',camera:'مسموح بالصوت والكاميرا'};
-const CAMERA_PRESETS={
- balanced:{label:'متوازنة HD',resolution:{width:1280,height:720},frameRate:24},
- high:{label:'عالية Full HD',resolution:{width:1920,height:1080},frameRate:30},
- economical:{label:'اقتصادية',resolution:{width:640,height:360},frameRate:20}
-};
 function gentleArrivalChime(context){
  const at=context.currentTime+.015;
  for(const [frequency,offset] of [[660,0],[880,.13]]){
@@ -87,7 +84,12 @@ export function MeetingStudio({connection,onDisconnected,onTimingChange}){
  const [networkState,setNetworkState]=useState('connected'),[networkQuality,setNetworkQuality]=useState('unknown');
  const [viewerMode,setViewerMode]=useState('auto'),[mediaWarning,setMediaWarning]=useState('');
  const videoChoiceManual=useRef(false),weakSamples=useRef(0),goodSamples=useRef(0);
- const [durationDraft,setDurationDraft]=useState(''),[cameraQuality,setCameraQuality]=useState('balanced');
+ const touchscreen=typeof navigator!=='undefined'&&(navigator.maxTouchPoints>0||window.matchMedia?.('(pointer: coarse)')?.matches);
+ const screenShareSupported=typeof navigator!=='undefined'&&canShareScreen(navigator.mediaDevices);
+ const [durationDraft,setDurationDraft]=useState('');
+ const [cameraQuality,setCameraQuality]=useState(()=>initialCameraQuality({touchscreen,saveData:typeof navigator!=='undefined'&&navigator.connection?.saveData}));
+ const [cameraFacing,setCameraFacing]=useState('user');
+ const wakeLockRef=useRef(null);
  const [exposureRange,setExposureRange]=useState(null),[exposureValue,setExposureValue]=useState(0);
  const hostId=host?localParticipant.identity:broadcasterIdentity(peers,connection.teacherId);
  const camera=videoTracks.find(t=>t.participant.identity===hostId&&t.source===Track.Source.Camera);
@@ -210,15 +212,49 @@ export function MeetingStudio({connection,onDisconnected,onTimingChange}){
   const range=track?.getCapabilities?.()?.exposureCompensation;
   setExposureRange(Number.isFinite(range?.min)&&Number.isFinite(range?.max)&&range.max>range.min?range:null);
  },[host,isCameraEnabled,localParticipant]);
+ // Where supported, prevent the teacher's phone from sleeping mid-lesson.
+ // Browsers and operating systems may still revoke this lock.
+ useEffect(()=>{
+  if(!host||!liveNow||typeof navigator==='undefined'||!navigator.wakeLock?.request)return;
+  let active=true;
+  const keepAwake=async()=>{
+   if(document.visibilityState!=='visible'||wakeLockRef.current)return;
+   try{
+    const lock=await navigator.wakeLock.request('screen');
+    if(!active){await lock.release();return}
+    wakeLockRef.current=lock;
+    lock.addEventListener?.('release',()=>{if(wakeLockRef.current===lock)wakeLockRef.current=null});
+   }catch{/* Wake Lock is optional. */}
+  };
+  void keepAwake();
+  document.addEventListener('visibilitychange',keepAwake);
+  return()=>{
+   active=false;document.removeEventListener('visibilitychange',keepAwake);
+   const lock=wakeLockRef.current;wakeLockRef.current=null;
+   if(lock)void lock.release().catch(()=>{});
+  };
+ },[host,liveNow]);
  const setQuality=async(next)=>{
   if(!host||!CAMERA_PRESETS[next]||busy)return;
-  setCameraQuality(next);
-  if(!isCameraEnabled)return;
+  if(!isCameraEnabled){setCameraQuality(next);return}
   setBusy(true);setError('');
   try{
-   await localParticipant.setCameraEnabled(false);
-   await localParticipant.setCameraEnabled(true,{resolution:CAMERA_PRESETS[next].resolution,frameRate:CAMERA_PRESETS[next].frameRate});
-  }catch(e){setError('تعذّر تغيير الجودة. يمكنك تجربة المستوى المتوازن: '+(e.message||''))}
+   const track=localParticipant.getTrackPublication(Track.Source.Camera)?.track;
+   await restartPublishedCamera(track,cameraCaptureOptions(next,cameraFacing));
+   setCameraQuality(next);
+  }catch{setError('تعذر تغيير دقة الكاميرا على هذا الجهاز. جربي جودة اقتصادية أو متوازنة.')}
+  finally{setBusy(false)}
+ };
+ const flipCamera=async()=>{
+  if(!host||busy||!touchscreen)return;
+  const target=nextFacingMode(cameraFacing);
+  if(!isCameraEnabled){setCameraFacing(target);return}
+  setBusy(true);setError('');
+  try{
+   const track=localParticipant.getTrackPublication(Track.Source.Camera)?.track;
+   await restartPublishedCamera(track,cameraCaptureOptions(cameraQuality,target));
+   setCameraFacing(target);
+  }catch{setError('تعذر التبديل بين الكاميرا الأمامية والخلفية. تحققي من أذونات المتصفح على الهاتف.')}
   finally{setBusy(false)}
  };
  const changeExposure=async(next)=>{
@@ -260,24 +296,27 @@ export function MeetingStudio({connection,onDisconnected,onTimingChange}){
   setBusy(true);setError('');
   try{
    if(type==='mic')await localParticipant.setMicrophoneEnabled(!isMicrophoneEnabled);
-   if(type==='camera')await localParticipant.setCameraEnabled(!isCameraEnabled,isCameraEnabled?undefined:{resolution:cameraOptions.resolution,frameRate:cameraOptions.frameRate});
-   if(type==='share')await localParticipant.setScreenShareEnabled(!isScreenShareEnabled,{audio:true});
+   if(type==='camera')await localParticipant.setCameraEnabled(!isCameraEnabled,isCameraEnabled?undefined:cameraCaptureOptions(cameraQuality,cameraFacing));
+   if(type==='share'){
+    if(!screenShareSupported)throw Error('مشاركة الشاشة غير متاحة على هذا المتصفح. استخدمي الكاميرا الخلفية لتصوير السبورة أو افتحي الدرس من كمبيوتر.');
+    await localParticipant.setScreenShareEnabled(!isScreenShareEnabled,{audio:true});
+   }
   }catch(e){setError('تعذر تشغيل الجهاز: '+(e.message||'تحقق من الأذونات'))}finally{setBusy(false)}
  };
- const startTeaching=async()=>{
+ const startTeaching=async(audioOnly=false)=>{
   if(!host||busy)return;
   setBusy(true);setError('');
   // These two explicit enable calls request permission from the director's
   // own browser; students' devices can never be switched on remotely.
-  const results=await Promise.allSettled([
-   localParticipant.setMicrophoneEnabled(true),
-   localParticipant.setCameraEnabled(true,{resolution:cameraOptions.resolution,frameRate:cameraOptions.frameRate})
-  ]);
-  if(results.every(r=>r.status==='rejected'))
-   setError('تعذر تشغيل الميكروفون والكاميرا؛ تحققي من أذونات المتصفح أو استخدمي مشاركة الشاشة.');
-  else if(results.some(r=>r.status==='rejected'))
-   setError('بدأ جزء من البث؛ تحققي من السماح بالكاميرا والميكروفون. يمكنك متابعة الشرح بالصوت أو الشاشة.');
-  setBusy(false);
+  try{
+   const result=await enablePresenterMedia(localParticipant,cameraCaptureOptions(cameraQuality,cameraFacing),{audioOnly});
+   if(!result.microphone&&!result.camera)
+    setError(audioOnly?'تعذر تشغيل الميكروفون. تحققي من إذن الصوت في إعدادات الهاتف.':'تعذر تشغيل الميكروفون والكاميرا؛ تحققي من الأذونات أو ابدئي بالصوت فقط.');
+   else if(!result.microphone||(!audioOnly&&!result.camera))
+    setError('بدأ جزء من البث؛ تحققي من أذونات الكاميرا والميكروفون. يمكنك متابعة الشرح بالصوت أو الصورة.');
+  }catch{
+   setError('تعذر بدء بث الأجهزة؛ أعيدي فتح الاستوديو أو تحققي من أذونات الهاتف.');
+  }finally{setBusy(false)}
  };
  const changeHand=async()=>{
   if(busy)return;
@@ -331,7 +370,7 @@ export function MeetingStudio({connection,onDisconnected,onTimingChange}){
      {screen&&camera&&<div className="sofia-meeting-picture" style={{'--sofia-pip-aspect':pictureLayout.ratio}}><VideoSurface refTrack={camera} onDimensions={setPictureVideoDimensions} small emptyText="المعلمة"/></div>}
      <div className="sofia-meeting-stage-bottom"><span><Radio size={15}/> {screen?'مشاركة شاشة المعلمة':camera?'فيديو المعلمة':'جاهز للدرس'}</span><span>{connection.isHost?'أنتِ تديرين الفصل':'تستمع إلى درس Miss Sofia'}</span></div>
     </div>
-    {host&&<div className="sofia-director-broadcast" role="status"><div><strong>{liveNow?'البث قيد التشغيل':'أنتِ المعلمة المسؤولة عن البث'}</strong><small>{liveNow?'يمكنك تغيير الكاميرا أو الصوت أو مشاركة الشاشة، والطلاب يشاهدون ما تنشرينه فقط.':'اضغطي «بدء البث» لتشغيل الكاميرا والميكروفون بموافقتك. ويمكنك استخدام مشاركة الشاشة بدل الكاميرا.'}</small></div>{!liveNow&&<button type="button" className="sofia-director-start" onClick={startTeaching} disabled={busy}><Radio size={17}/>{busy?'جارٍ تشغيل الأجهزة...':'ابدئي البث الآن'}</button>}</div>}
+    {host&&<div className="sofia-director-broadcast" role="status"><div><strong>{liveNow?'البث قيد التشغيل':'أنتِ المعلمة المسؤولة عن البث'}</strong><small>{liveNow?'يمكنك تغيير الكاميرا أو الصوت أو مشاركة الشاشة، والطلاب يشاهدون ما تنشرينه فقط.':'اضغطي «بدء البث» لتشغيل الكاميرا والميكروفون بموافقتك. ويمكنك استخدام مشاركة الشاشة بدل الكاميرا.'}</small></div>{!liveNow&&<div className="sofia-director-start-actions"><button type="button" className="sofia-director-start" onClick={()=>void startTeaching(false)} disabled={busy}><Radio size={17}/>{busy?'جارٍ تشغيل الأجهزة...':'ابدئي البث الآن'}</button><button type="button" className="sofia-director-audio-start" onClick={()=>void startTeaching(true)} disabled={busy}><Mic size={17}/> البدء بالصوت فقط</button></div>}</div>}
     {host&&<div className="sofia-meeting-professional">
       <div className="sofia-meeting-settings-head">
        <strong><SlidersHorizontal size={18}/> إعدادات الاستوديو</strong>
@@ -356,6 +395,8 @@ export function MeetingStudio({connection,onDisconnected,onTimingChange}){
        </div>
        {roomInfo?.ends_at&&<small>النهاية المجدولة: {new Intl.DateTimeFormat('ar-EG',{hour:'numeric',minute:'2-digit',timeZone:'Africa/Cairo'}).format(new Date(roomInfo.ends_at))} بتوقيت القاهرة</small>}
       </form>
+      {touchscreen&&<p className="sofia-mobile-host-hint" role="note"><Camera size={16}/> استوديو الهاتف: يمكنك استخدام الكاميرا الخلفية لتصوير السبورة واختيار جودة اقتصادية للإنترنت الضعيف. ثبّتي الهاتف ولا تنتقلي لتطبيق آخر أثناء البث.</p>}
+      {!screenShareSupported&&<p className="sofia-mobile-host-hint" role="note"><MonitorUp size={16}/> مشاركة الشاشة غير مدعومة في متصفحك الحالي. استخدمي الكاميرا أو افتحي الاستوديو من كمبيوتر يدعم مشاركة الشاشة.</p>}
       <div className="sofia-meeting-camera-controls">
        <label htmlFor="sofia-camera-quality">جودة الكاميرا</label>
        <select id="sofia-camera-quality" value={cameraQuality} disabled={busy} onChange={e=>void setQuality(e.target.value)}>
@@ -375,7 +416,8 @@ export function MeetingStudio({connection,onDisconnected,onTimingChange}){
      {!host&&micAllowed&&<ClassButton icon={isMicrophoneEnabled?Mic:MicOff} onClick={()=>toggle('mic')} active={isMicrophoneEnabled} disabled={busy}>{isMicrophoneEnabled?'إغلاق ميكروفوني':'تشغيل ميكروفوني'}</ClassButton>}
      {!host&&!micAllowed&&<ClassButton icon={LockKeyhole} disabled>الميكروفون بإذن المعلمة</ClassButton>}
      {(host||cameraAllowed)&&<ClassButton icon={isCameraEnabled?Video:VideoOff} onClick={()=>toggle('camera')} active={isCameraEnabled} disabled={busy}>{isCameraEnabled?'إغلاق الكاميرا':'تشغيل الكاميرا'}</ClassButton>}
-     {host&&<ClassButton icon={MonitorUp} onClick={()=>toggle('share')} active={isScreenShareEnabled} disabled={busy}>{isScreenShareEnabled?'إيقاف العرض':'مشاركة الشاشة'}</ClassButton>}
+     {host&&touchscreen&&<ClassButton icon={RefreshCw} onClick={flipCamera} disabled={busy} title="التبديل بين الكاميرا الأمامية والخلفية">{cameraFacing==='environment'?'الكاميرا الأمامية':'الكاميرا الخلفية'}</ClassButton>}
+     {host&&screenShareSupported&&<ClassButton icon={MonitorUp} onClick={()=>toggle('share')} active={isScreenShareEnabled} disabled={busy}>{isScreenShareEnabled?'إيقاف العرض':'مشاركة الشاشة'}</ClassButton>}
      {!host&&<ClassButton icon={Hand} onClick={changeHand} active={Boolean(roomInfo?.handRaised)} disabled={busy||Boolean(roomInfo?.speakerMode)}>{roomInfo?.handRaised?'إلغاء رفع اليد':'ارفع إيدك'}</ClassButton>}
     </div><ClassButton icon={LogOut} danger onClick={()=>{room.disconnect();onDisconnected?.()}}>مغادرة الحصة</ClassButton></div>
     {!host&&<div className="sofia-meeting-student-hint"><ShieldCheck size={18}/>{micAllowed?'المعلمة سمحت لك بالمشاركة. اضغط تشغيل ميكروفوني للتحدث بعد موافقتك ومنح المتصفح الإذن.':'هتشوف شرح المعلمة وتسمع صوتها. ارفع إيدك لو حابب تسأل.'}</div>}
@@ -400,7 +442,7 @@ export function MeetingStudio({connection,onDisconnected,onTimingChange}){
    </aside>
   </div>
  );
- return <section className={'sofia-meeting '+(expanded?'expanded':'')} dir="rtl"><div className="sofia-meeting-heading"><div><span><ShieldCheck size={16}/> فصل آمن تحت إدارة المعلمة</span><strong>Miss Sofia — قاعة العلوم المباشرة</strong></div><button type="button" onClick={()=>setExpanded(!expanded)}><Expand size={17}/> {expanded?'العرض العادي':'توسيع العرض'}</button></div>{error&&<div role="alert" className="sofia-meeting-error"><AlertTriangle size={17}/>{error}<button onClick={()=>setError('')}>إغلاق</button></div>}{view}</section>;
+ return <section className={'sofia-meeting '+(expanded?'expanded':'')+(host&&touchscreen?' mobile-host':'')} dir="rtl"><div className="sofia-meeting-heading"><div><span><ShieldCheck size={16}/> فصل آمن تحت إدارة المعلمة</span><strong>Miss Sofia — قاعة العلوم المباشرة</strong></div><button type="button" onClick={()=>setExpanded(!expanded)}><Expand size={17}/> {expanded?'العرض العادي':'توسيع العرض'}</button></div>{error&&<div role="alert" className="sofia-meeting-error"><AlertTriangle size={17}/>{error}<button onClick={()=>setError('')}>إغلاق</button></div>}{view}</section>;
 }
 export function ClassroomPreview({isHost=false}){
  return <div className="sofia-class-preview" dir="rtl"><div className="sofia-class-preview-top"><span><span className="sofia-live-led"/> معاينة التصميم — البث غير مفعل</span><strong>Miss Sofia • الفصل الافتراضي</strong></div><div className="sofia-class-preview-body"><div className="sofia-class-preview-stage"><span><Video size={52}/></span><h3>شاشة شرح المعلمة</h3><p>ستُعرض هنا كاميرا المعلمة أو الشاشة التي تشاركها مع الطلاب.</p></div><aside><h3>{isHost?'لوحة تحكم المعلمة':'مساحة الطالب'}</h3><p>{isHost?'رفع اليد • السماح بالصوت • قفل الجميع • استبعاد الطالب • إنهاء الحصة':'استمع للشرح، وشاهد الفيديو، وارفع يدك لطلب الكلام.'}</p><div><MicOff size={20}/><Users size={20}/><Hand size={20}/></div></aside></div></div>;

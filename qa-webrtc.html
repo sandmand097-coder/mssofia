@@ -1,0 +1,12 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Isolated local WebRTC acceptance</title></head>
+<body style="background:#10292e;color:white;font-family:sans-serif">
+<main><h1>Isolated media-only verification</h1><p>Test fixture: never serves production users or classrooms.</p><div id="remote-tracks"></div></main>
+<script type="module">
+ import * as media from '/src/qa/livekit-real-media-probe.js';
+ window.sofiaMediaProbe=media;
+ document.documentElement.dataset.ready='true';
+</script>
+</body>
+</html>

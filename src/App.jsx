@@ -3,6 +3,9 @@ import {joinWithBackoff} from './components/live-resilience.js';
 import {Routes,Route,Link,Navigate,useLocation,useNavigate,useParams} from 'react-router-dom';
 import {LockKeyhole,ChevronLeft,ShieldCheck,Video,Play,ArrowLeft} from 'lucide-react';
 import {BrandHeader,BrandFooter,dashboardPath} from './components/MrsSofiaBrand.jsx';
+import {isPublicBootstrapRoute} from './public-bootstrap.js';
+import {publicSeoMeta,SEO_ORIGIN} from './public-seo.js';
+import {inspectPresenterDevices,presenterPreflightMessage} from './components/broadcast-preflight.js';
 
 const MrsHome=lazy(()=>import('./pages/MrsSofiaSite.jsx').then(m=>({default:m.MrsHome})));
 const MrsCourses=lazy(()=>import('./pages/MrsSofiaSite.jsx').then(m=>({default:m.MrsCourses})));
@@ -44,6 +47,21 @@ async function api(path,options={}){
   throw issue;
  }
  return data;
+}
+// Only GET requests are bounded. Never automatically replay payment or
+// moderation mutations when a backend is unavailable.
+async function readSessionBootstrap(){
+ const controller=new AbortController();
+ const timeout=setTimeout(()=>controller.abort(),18000);
+ try{
+  const [session,health]=await Promise.allSettled([
+   api('/auth/me',{signal:controller.signal}),
+   api('/health',{signal:controller.signal})
+  ]);
+  const reportedMode=health.status==='fulfilled'&&health.value?.ok!==false?health.value?.mode:null;
+  const mode=['full','admin','preview'].includes(reportedMode)?reportedMode:'offline';
+  return {user:session.status==='fulfilled'?session.value.user??null:null,mode};
+ }finally{clearTimeout(timeout)}
 }
 function RoutePortal(){
  const {user,setUser,show}=useApp(),{pathname}=useLocation();
@@ -93,19 +111,14 @@ function LessonRoom(){
   return()=>{closed=true;clearInterval(timer)};
  },[id,isHost,Boolean(connection),Boolean(data),waitingRoom,Number.isFinite(opensAt)&&clock<opensAt,closesAt]);
  const checkDevices=async()=>{
-  if(!isHost)return;
-  if(!navigator.mediaDevices?.getUserMedia){setDeviceStatus('المتصفح لا يدعم اختبار الأجهزة؛ استخدمي Chrome أو Edge من رابط HTTPS.');return}
+  if(!isHost||deviceChecking)return;
   setDeviceChecking(true);setDeviceStatus('');
-  let stream;
   try{
-   stream=await navigator.mediaDevices.getUserMedia({audio:true,video:true});
-   setDeviceStatus('اختبار ناجح: الميكروفون والكاميرا متاحان. اضغطي «فتح استوديو البث» عندما يقترب موعد الحصة.');
+   const results=await inspectPresenterDevices(navigator.mediaDevices);
+   setDeviceStatus(presenterPreflightMessage(results));
   }catch{
-   setDeviceStatus('تعذر اختبار الكاميرا والميكروفون معًا. تحققي من صلاحيات المتصفح، ويمكنك بدء الشرح بالصوت فقط أو مشاركة الشاشة.');
-  }finally{
-   stream?.getTracks().forEach(track=>track.stop());
-   setDeviceChecking(false);
-  }
+   setDeviceStatus('تعذر إكمال فحص الأجهزة. تأكدي من أذونات المتصفح وحاولي مرة أخرى.');
+  }finally{setDeviceChecking(false)}
  };
  const join=async(auto=false)=>{
   if(!roomJoinable){setError(isHost?'انتهى وقت الاستوديو لهذه الحصة.':'لم يبدأ وقت دخول الحصة بعد، أو انتهت الحصة.');return}
@@ -191,7 +204,9 @@ function LessonRoom(){
  </div></main>;
 }
 function PublicUnavailable(){
- return <main className="sofia-site sofia-page-bg"><div className="sofia-container sofia-no-results"><LockKeyhole size={43}/><h1>التسجيل هيفتح قريبًا</h1><p>الموقع متاح حاليًا للتعرّف على مُدرِّسة العلوم وعرض أول شهر. بنجهز تأمين حسابات الطلاب والبث المباشر قبل فتح الاشتراك.</p><Link className="sofia-cta" to="/">شوف عرض أول شهر <ArrowLeft size={17}/></Link></div></main>;
+ const {launchMode,retryBootstrap,reconnecting}=useApp();
+ const temporary=launchMode==='offline';
+ return <main className="sofia-site sofia-page-bg"><div className="sofia-container sofia-no-results"><LockKeyhole size={43}/><h1>{temporary?'خدمة الحسابات غير متاحة مؤقتًا':'التسجيل هيفتح قريبًا'}</h1><p>{temporary?'يمكنك تصفح معلومات الموقع. تعذر الوصول إلى خادم تسجيل الدخول مؤقتًا؛ نحاول إعادة الاتصال دون التأثير على حسابك أو اشتراكك.':'الموقع متاح حاليًا للتعرّف على مُدرِّسة العلوم وعرض أول شهر. بنجهز تأمين حسابات الطلاب والبث المباشر قبل فتح الاشتراك.'}</p>{temporary&&<button type="button" className="portal-soft-btn" disabled={reconnecting} onClick={()=>void retryBootstrap()}>{reconnecting?'جارٍ فحص الاتصال...':'إعادة محاولة الاتصال'}</button>}<Link className="sofia-cta" to="/">شوف عرض أول شهر <ArrowLeft size={17}/></Link></div></main>;
 }
 function NotFound(){
  return <main className="sofia-site sofia-page-bg"><div className="sofia-container sofia-no-results"><h1>الصفحة دي مش موجودة</h1><p>يمكن الرابط اتغير، لكن تقدر ترجع تكتشف كورسات العلوم.</p><Link className="sofia-cta" to="/">الرجوع للرئيسية <ArrowLeft size={17}/></Link></div></main>;
@@ -199,33 +214,83 @@ function NotFound(){
 function PageTitle(){
  const {pathname}=useLocation();
  useEffect(()=>{
-  const path=pathname.endsWith('/')&&pathname!=='/'?pathname.slice(0,-1):pathname;
-  const label=path==='/privacy'?'الخصوصية':path==='/terms'?'شروط الاشتراك':path==='/courses'?'كورسات العلوم':path.startsWith('/courses/')?'تفاصيل كورس العلوم':path==='/login'?'تسجيل الدخول':path==='/register'?'إنشاء حساب':path==='/student'?'لوحة الطالب':path==='/admin'?'لوحة الإدارة':path==='/teacher'?'لوحة المعلم':path.startsWith('/lesson/')?'الفصل المباشر':'مُدرِّسة العلوم أونلاين';
-  document.title=path==='/'?'مس صوفيا للعلوم | مُدرِّسة العلوم أونلاين — Miss Sofia':label+' | مس صوفيا للعلوم';
-  const publicPage=path==='/'||path==='/courses'||path==='/privacy'||path==='/terms'||path.startsWith('/courses/');
+  const path=pathname.replace(/\/+$/,'')||'/';
+  const seo=publicSeoMeta(path);
+  const label=path.startsWith('/courses/')?'تفاصيل كورس العلوم':path==='/login'?'تسجيل الدخول':path==='/register'?'إنشاء حساب':path==='/student'?'لوحة الطالب':path==='/admin'?'لوحة الإدارة':path==='/teacher'?'لوحة المعلم':path.startsWith('/lesson/')?'الفصل المباشر':'مس صوفيا للعلوم';
+  document.title=seo?.title||label+' | مس صوفيا للعلوم';
+  const publicPage=Boolean(seo)||path.startsWith('/courses/');
   const canonical=document.querySelector('link[rel="canonical"]');
-  if(canonical)canonical.setAttribute('href','https://mssofia.pages.dev'+(publicPage?path:'/')+(publicPage&&path==='/'?'':''));
+  if(canonical)canonical.setAttribute('href',seo?.canonical||SEO_ORIGIN+(publicPage?path:'/'));
   const robots=document.querySelector('meta[name="robots"]');
   if(robots)robots.setAttribute('content',publicPage?'index, follow, max-image-preview:large':'noindex, nofollow');
   const ogUrl=document.querySelector('meta[property="og:url"]');
-  if(ogUrl)ogUrl.setAttribute('content','https://mssofia.pages.dev'+(publicPage?path:'/' ));
+  if(ogUrl)ogUrl.setAttribute('content',seo?.canonical||SEO_ORIGIN+(publicPage?path:'/'));
+  if(seo){
+   for(const [selector,value] of [
+    ['meta[name="description"]',seo.description],
+    ['meta[property="og:title"]',seo.title],
+    ['meta[property="og:description"]',seo.description],
+    ['meta[name="twitter:title"]',seo.title],
+    ['meta[name="twitter:description"]',seo.description]
+   ]){
+    const node=document.querySelector(selector);
+    if(node)node.setAttribute('content',value);
+   }
+  }
  },[pathname]);
  return null;
 }
 export default function App(){
  const [user,setUser]=useState(undefined),[toast,setToast]=useState(''),[launchMode,setLaunchMode]=useState('checking');
- const navigate=useNavigate();
- useEffect(()=>{let active=true;Promise.allSettled([api('/auth/me'),api('/health')]).then(([session,health])=>{if(!active)return;setUser(session.status==='fulfilled'?session.value.user:null);setLaunchMode(health.status==='fulfilled'?(health.value.mode==='preview'?'preview':health.value.mode==='admin'?'admin':'full'):'offline')});return()=>{active=false}},[]);
+ const [reconnecting,setReconnecting]=useState(false),retryInFlight=useRef(false);
+ const navigate=useNavigate(),{pathname}=useLocation();
+ useEffect(()=>{
+  let active=true;
+  readSessionBootstrap().then(result=>{
+   if(!active)return;
+   setUser(result.user);setLaunchMode(result.mode);
+  }).catch(()=>{if(active){setUser(null);setLaunchMode('offline')}});
+  return()=>{active=false};
+ },[]);
+ const retryBootstrap=useCallback(async()=>{
+  if(retryInFlight.current)return;
+  retryInFlight.current=true;setReconnecting(true);
+  try{
+   const state=await readSessionBootstrap();
+   if(state.mode!=='offline'){
+    setUser(state.user);
+    setLaunchMode(state.mode);
+   }
+  }catch{/* Keep public browsing available until the backend recovers. */}
+  finally{retryInFlight.current=false;setReconnecting(false)}
+ },[]);
+ useEffect(()=>{
+  if(launchMode!=='offline')return;
+  // Avoid a surge of simultaneous probes from parents on the same slow network.
+  const interval=setInterval(()=>{
+   if(document.visibilityState==='visible'&&navigator.onLine)void retryBootstrap();
+  },18000+Math.floor(Math.random()*9000));
+  const online=()=>{if(document.visibilityState==='visible')void retryBootstrap()};
+  window.addEventListener('online',online);
+  return()=>{clearInterval(interval);window.removeEventListener('online',online)};
+ },[launchMode,retryBootstrap]);
  useEffect(()=>{if(!toast)return;const timeout=setTimeout(()=>setToast(''),4600);return()=>clearTimeout(timeout)},[toast]);
  const show=useCallback(message=>setToast(message),[]);
  const logout=async()=>{try{await api('/auth/logout',{method:'POST'});setUser(null);navigate('/')}catch(e){show(e.message)}};
  const publicOnly=launchMode==='preview'||launchMode==='offline';
  const adminOnly=launchMode==='admin';
- return <Context.Provider value={{user,setUser,show,logout}}>
+ // The home, catalogue and policies are public content. Never block their
+ // first render on /auth/me or /health while Render wakes from a cold start.
+ // Every protected route still waits for both checks (fail closed).
+ const bootstrapping=user===undefined||launchMode==='checking';
+ const routeReady=!bootstrapping||isPublicBootstrapRoute(pathname);
+ const previewNavigation=publicOnly||launchMode==='checking';
+ return <Context.Provider value={{user,setUser,show,logout,launchMode,retryBootstrap,reconnecting}}>
   <PageTitle/>
-  <BrandHeader user={user} logout={logout} previewMode={publicOnly} adminOnly={adminOnly}/>
-  {(publicOnly)&&<div className="sofia-public-preview-notice" role="status">موقع Miss Sofia متاح للتعرّف على المُدرِّسة والعروض. تسجيل الطلاب والبث المباشر هيفتحوا بعد اكتمال التجهيز الآمن.</div>}
-  {user===undefined?<div className="loading">جارٍ تجهيز موقع Miss Sofia...</div>:
+  <BrandHeader user={user} logout={logout} previewMode={previewNavigation} adminOnly={adminOnly}/>
+  {launchMode==='preview'&&<div className="sofia-public-preview-notice" role="status">موقع Miss Sofia متاح للتعرّف على المُدرِّسة والعروض. تسجيل الطلاب والبث المباشر هيفتحوا بعد اكتمال التجهيز الآمن.</div>}
+  {launchMode==='offline'&&<div className="sofia-public-preview-notice" role="alert">المحتوى التعريفي متاح، لكن خدمة الحسابات غير متصلة مؤقتًا. نحاول استعادة الاتصال تلقائيًا. <button type="button" className="portal-soft-btn" onClick={()=>void retryBootstrap()} disabled={reconnecting}>{reconnecting?'جارٍ الاتصال...':'إعادة الاتصال'}</button></div>}
+  {!routeReady?<div className="loading" role="status">جارٍ تجهيز موقع Miss Sofia...</div>:
    <Suspense fallback={<div className="loading">جارٍ تحميل الصفحة...</div>}>
     <Routes>
      <Route path="/" element={<MrsHome api={api}/>}/>
@@ -246,7 +311,7 @@ export default function App(){
      <Route path="*" element={<NotFound/>}/>
     </Routes>
    </Suspense>}
-  <BrandFooter previewMode={publicOnly||adminOnly}/>
+  <BrandFooter previewMode={previewNavigation||adminOnly}/>
   {toast&&<div className="toast" role="status" aria-live="polite"><ShieldCheck size={18}/>{toast}</div>}
  </Context.Provider>;
 }
