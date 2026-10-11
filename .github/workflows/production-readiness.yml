@@ -1,0 +1,36 @@
+# Manual safety check for the *published* Miss Sofia website.
+# Safe to run before a real class: no school accounts, transactions, LiveKit
+# tokens or personal data; no secret variables are needed.
+# It does not replace a paid 24/7 uptime monitor or real backup restore drill.
+name: Miss Sofia production readiness (read-only)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: miss-sofia-readonly-risk-probe
+  cancel-in-progress: true
+
+jobs:
+  production-readiness:
+    name: Public API, visitor pages and anonymous-access protection
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Read-only API and visitor page health test
+        env:
+          SITE_ORIGIN: https://mssofia.pages.dev
+          EXPECTED_LAUNCH_MODE: full
+        run: node scripts/run-production-risk-probe.mjs
+      - name: Checklist note
+        if: always()
+        run: |
+          echo "This run performs GET-only checks and needs no logins or financial credentials." >> "$GITHUB_STEP_SUMMARY"
+          echo "Check failed steps before the next class. A passing check does not establish backup recovery, actual LiveKit capacity or payment readiness." >> "$GITHUB_STEP_SUMMARY"

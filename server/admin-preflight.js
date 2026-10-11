@@ -2,11 +2,13 @@ import {Pool} from 'pg';
 import {readFileSync} from 'node:fs';
 
 // Backend-only readiness gate. Diagnostics are intentionally non-sensitive.
-const PROJECT_REF='wnkewiulyobbjftckfqb';
+// Independent security invariant: reject emergency-mode DB URLs outside the
+// verified production Supabase project. Database role confirmed read-only.
+const PROJECT_REF='jtluslevdmcpxxkngomj';
 const SUPABASE_CA=readFileSync(new URL('../certs/supabase-prod-ca-2021.crt',import.meta.url),'utf8');
 const DATABASE_ROLE='mssofia_backend';
 const CLIENT_ID_PATTERN=/^[a-zA-Z0-9._-]+\.apps\.googleusercontent\.com$/;
-const HOST_PATTERN=/^aws-[0-9]+-eu-west-1\.pooler\.supabase\.com$/;
+const HOST_PATTERN=/^aws-[0-9]+-eu-central-1\.pooler\.supabase\.com$/;
 
 export function adminConfigurationStatus(env) {
  if(env.PUBLIC_LAUNCH_MODE!=='admin')return 'MODE_NOT_ADMIN';
