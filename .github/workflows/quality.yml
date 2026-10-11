@@ -41,6 +41,16 @@ jobs:
         run: npm run test:seo:build
       - name: Install isolated headless browser
         run: npx --yes playwright@1.64.0 install --with-deps chromium
+      - name: Verify first-visit guide, refresh and in-page navigation on mobile and desktop
+        run: npm run test:guide:browser
+      - name: Capture optional first-visit screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: miss-sofia-first-visit-responsive
+          path: qa-artifacts/first-visit/*.png
+          if-no-files-found: ignore
+          retention-days: 14
       - name: Verify transient classroom recovery and permanent denial in browser
         run: node qa-classroom-join-recovery-browser.mjs
       - name: Verify early live classroom entry on mobile and desktop
