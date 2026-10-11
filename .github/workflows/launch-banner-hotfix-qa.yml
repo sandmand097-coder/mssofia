@@ -1,0 +1,50 @@
+name: Miss Sofia launch notice hotfix QA
+
+on:
+  push:
+    branches: [fix/launch-banner-and-backend-recovery-20261011]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: launch-hotfix-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Public UX, offline safety, private route gates
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Install exact dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Check server and browser syntax
+        run: |
+          npm run check
+          node --check src/launch-mode.js
+          node --check src/public-bootstrap.js
+          node --check qa-launch-banner-recovery-browser.mjs
+      - name: Verify fail-closed health and route policy
+        run: node tests/launch-banner-recovery.mjs
+      - name: Run existing enrollment, payment and classroom tests
+        run: npm test
+        env:
+          NODE_ENV: test
+          PUBLIC_LAUNCH_MODE: preview
+          REGISTRATION_ENABLED: "false"
+      - name: Build production UI
+        run: npm run build
+      - name: Install Chromium browser
+        run: npx --yes playwright@1.64.0 install --with-deps chromium
+      - name: Verify no misleading banner and safe backend recovery
+        run: node qa-launch-banner-recovery-browser.mjs
+      - name: Audit runtime dependency vulnerabilities
+        run: npm audit --omit=dev --audit-level=high
