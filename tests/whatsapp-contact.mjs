@@ -24,7 +24,7 @@ const css=readFileSync(new URL('../src/whatsapp-contact.css',import.meta.url),'u
 assert.match(component,/target="_blank" rel="noopener noreferrer"/,'safe external tab behavior');
 assert.match(component,/href=\{WHATSAPP_CONTACT_URL\}/,'click direct to link, no delayed popup');
 assert.match(brand,/href=\{WHATSAPP_CONTACT_URL\}/,'same direct link in footer');
-assert.match(app,/<WhatsAppContact pathname=\{pathname\}/>, 'app mounts floating contact with route guard');
+assert.ok(app.includes('<WhatsAppContact pathname={pathname}/>'),'app mounts floating contact with route guard');
 assert.match(app,/showWhatsApp=\{showWhatsAppContact\(pathname\)\}/,'footer is restricted too');
 assert.match(css,/@media\(prefers-reduced-motion:reduce\)/,'motion accessibility');
 assert.match(css,/env\(safe-area-inset-bottom\)/,'phone safe-area spacing');
