@@ -79,6 +79,18 @@ try{
  const lateClock=()=>new Date(now.getTime()+3*60000);
  assert.equal((await processNotificationTick({db,env,clock:lateClock,sender,cloud:false})).sent,1);
  assert.equal((await db.get("SELECT status FROM notification_outbox WHERE lesson_id='lesson3'")).status,'sent');
+
+ // A timetable change invalidates the old reminder and generates exactly one
+ // new event for the updated start; no stale lesson links/time are sent.
+ await db.run('INSERT INTO lessons(id,course_id,title,starts_at,duration_minutes,status,room_key,created_at) VALUES(?,?,?,?,?,?,?,?)',
+  'lesson4','course','حصة تم تعديل موعدها',starts,60,'scheduled','room-local-4',ts);
+ assert.equal(await enqueueUpcomingReminders({db,clock:now,env}),1);
+ const rescheduled=new Date(now.getTime()+15*60000).toISOString();
+ await db.run('UPDATE lessons SET starts_at=? WHERE id=?',rescheduled,'lesson4');
+ assert.equal(await enqueueUpcomingReminders({db,clock:now,env}),1);
+ const changed=await processNotificationTick({db,env,clock:lateClock,sender,cloud:false});
+ assert.equal(changed.skipped,1,'obsolete lesson reminder suppressed');
+ assert.equal(changed.sent,1,'current rescheduled time reminder delivered');
  assert.equal((await processNotificationTick({db,env:{...env,WHATSAPP_ENABLED:'false'},clock:()=>now,sender})).enabled,false);
  console.log('PASS transactional WhatsApp outbox, guardian consent, paid approval, 15-min reminder, revocation and retry');
 }finally{
