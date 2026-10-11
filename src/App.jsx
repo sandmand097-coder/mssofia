@@ -8,6 +8,7 @@ import {BrandHeader,BrandFooter,dashboardPath} from './components/MrsSofiaBrand.
 import {WhatsAppContact} from './components/WhatsAppContact.jsx';
 import {showWhatsAppContact} from './components/whatsapp-contact.js';
 import {publicSeoMeta,SEO_ORIGIN} from './public-seo.js';
+import {publicSeoMeta,SEO_ORIGIN} from './public-seo.js';
 
 const MrsHome=lazy(()=>import('./pages/MrsSofiaSite.jsx').then(m=>({default:m.MrsHome})));
 const MrsCourses=lazy(()=>import('./pages/MrsSofiaSite.jsx').then(m=>({default:m.MrsCourses})));
@@ -206,7 +207,7 @@ function NotFound(){
 function PageTitle(){
  const {pathname}=useLocation();
  useEffect(()=>{
-  const path=pathname.replace(/\\/+$/,'')||'/';
+  const path=pathname.endsWith('/')&&pathname!=='/'?pathname.slice(0,-1):pathname;
   const meta=publicSeoMeta(path);
   const label=path==='/login'?'تسجيل الدخول':path==='/register'?'إنشاء حساب':path==='/student'?'لوحة الطالب':path==='/admin'?'لوحة الإدارة':path==='/teacher'?'لوحة المعلم':path.startsWith('/lesson/')?'الفصل المباشر':path.startsWith('/courses/')?'تفاصيل الدورة':'صفحة داخلية';
   document.title=meta?.title||label+' | مس صوفيا للعلوم — Miss Sofia';
