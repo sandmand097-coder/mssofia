@@ -1,0 +1,116 @@
+/* Miss Sofia — playful science discovery, restricted to public marketing pages.
+ * All motion is transform/opacity-only, subtle and non-blocking.
+ * No video, canvas, third-party animation library, requests or tracking. */
+.sofia-discovery-section{position:relative;isolation:isolate;overflow:hidden;scroll-margin-top:95px;padding:88px 0;background:radial-gradient(ellipse at 8% 12%,#fff8e9 0,transparent 38%),radial-gradient(ellipse at 90% 90%,#ddf4e7 0,transparent 45%),linear-gradient(115deg,#f0faf4,#f8faf7);border-block:1px solid #e3efe7}
+.sofia-discovery-section:before{content:"";position:absolute;inset:0;background-image:radial-gradient(#188e7522 1px,transparent 1px);background-size:30px 30px;mask-image:linear-gradient(90deg,transparent,#0003 55%,transparent);pointer-events:none}
+.sofia-discovery-grid{position:relative;display:grid;grid-template-columns:minmax(0,.87fr) minmax(0,1.13fr);align-items:center;gap:clamp(24px,6vw,75px)}
+.sofia-discovery-intro{min-width:0}
+.sofia-discovery-intro h2{max-width:520px;margin:15px 0 12px;font-size:clamp(31px,3.9vw,49px);font-weight:900;line-height:1.55;letter-spacing:-1.5px}
+.sofia-discovery-intro h2 em{font-style:normal;color:#087d70}
+.sofia-discovery-intro>p{max-width:460px;color:#54716c;font-size:14px;font-weight:600;line-height:2.2;margin:0}
+.sofia-discovery-art{position:relative;width:min(100%,370px);height:225px;margin:14px auto 7px;display:grid;place-items:center;isolation:isolate}
+.sofia-discovery-art:before{content:"";position:absolute;inset:16% 21%;border-radius:50%;background:radial-gradient(circle,#c2eedd 0,#d4f4e370 45%,transparent 76%);filter:blur(8px)}
+.sofia-discovery-orbits{position:relative;z-index:1;width:min(100%,340px);height:auto;overflow:visible;filter:drop-shadow(0 14px 24px #15826f18)}
+.sofia-discovery-orbits ellipse{stroke:#3baf9899;stroke-width:2.3;fill:none;stroke-linecap:round}
+.sofia-discovery-nucleus{fill:#ffc88f}.sofia-discovery-nucleus-light{fill:#ffeac9}
+.sofia-discovery-electron{fill:#118c7d;stroke:#e5fff2;stroke-width:3}.sofia-discovery-electron.second{fill:#f5ae6d}
+.sofia-discovery-art-icon{position:absolute;z-index:2;display:grid;place-items:center;width:72px;height:72px;border-radius:24px;color:#fff;background:linear-gradient(145deg,#158f7c,#0b615f);box-shadow:0 16px 35px #087d7033;transform:rotate(-8deg);pointer-events:none}
+.sofia-discovery-art-tag{position:absolute;bottom:3px;left:4%;z-index:2;display:flex;align-items:center;gap:7px;background:#fff;border:1px solid #e6eee5;border-radius:100px;padding:9px 13px;color:#0b806e;box-shadow:0 12px 28px #126b5521;font:800 10px Arial,sans-serif;letter-spacing:1.4px;direction:ltr}
+.sofia-discovery-note{display:flex;align-items:center;gap:10px;max-width:420px;color:#5d7a71;font-size:12px;font-weight:800;line-height:1.8}
+.sofia-discovery-note svg{color:#ce9655;flex-shrink:0}
+.sofia-discovery-card{position:relative;overflow:hidden;min-width:0;background:#fff;border:1px solid #dceee4;border-radius:28px;padding:clamp(22px,3vw,35px);box-shadow:0 25px 75px #0b5b4820,0 5px 14px #0b5b480b}
+.sofia-discovery-card:after{content:"";position:absolute;top:-105px;left:-100px;width:230px;height:230px;border-radius:50%;border:1px solid #0b856f14;box-shadow:0 0 0 34px #e7f8ef42,0 0 0 70px #e7f8ef21;pointer-events:none}
+.sofia-discovery-card-top{position:relative;z-index:1;display:flex;justify-content:space-between;align-items:center;gap:15px}
+.sofia-discovery-card-eyebrow{display:flex;align-items:center;gap:8px;font-weight:900;font-size:12px;color:#0c846f}
+.sofia-discovery-card-eyebrow svg{color:#d7904c}
+.sofia-discovery-count{white-space:nowrap;color:#0c7d6d;background:#eaf8f0;padding:8px 12px;border-radius:10px;font:900 13px Arial,sans-serif}
+.sofia-discovery-count span{color:#94c4af;padding:0 2px}
+.sofia-discovery-progress{display:flex;gap:7px;margin:17px 0 26px}
+.sofia-discovery-progress span{flex:1;height:5px;border-radius:4px;background:#e5f2ea;transition:background .25s}
+.sofia-discovery-progress span.active{background:#0f9f84}
+.sofia-discovery-subject{display:flex;align-items:center;gap:9px;font-size:12px;font-weight:800;color:#6b817c}
+.sofia-discovery-subject-icon{display:grid;place-items:center;width:41px;height:41px;background:#fff2e4;color:#bf7c39;border-radius:12px}
+.sofia-discovery-question{min-height:70px;font-size:clamp(20px,2.35vw,29px);line-height:1.6;color:#193b3e;font-weight:900;letter-spacing:-.4px;margin:14px 0 23px}
+.sofia-discovery-answers{display:grid;gap:12px}
+.sofia-discovery-answer{width:100%;display:flex;align-items:center;gap:13px;min-height:61px;padding:12px 15px;background:#f9fcfa;border:1.5px solid #dfece5;border-radius:15px;color:#294a48;font:800 13px/1.75 Cairo,Tahoma,sans-serif;text-align:right;cursor:pointer;transition:transform .22s,border-color .22s,background .22s,box-shadow .22s}
+.sofia-discovery-answer>span:nth-child(2){flex:1;min-width:0}
+.sofia-discovery-answer-mark{display:grid;place-items:center;flex-shrink:0;width:33px;height:33px;border-radius:10px;background:#ecf4ee;color:#4e8776;font:900 13px Arial}
+.sofia-discovery-answer.selected.right{border-color:#2dab88;background:#eaf9f1;color:#0d6c51}
+.sofia-discovery-answer.selected.right .sofia-discovery-answer-mark{background:#159a79;color:white}
+.sofia-discovery-answer.selected.try-again{border-color:#e3bd75;background:#fff9ef;color:#936123}
+.sofia-discovery-answer.selected.try-again .sofia-discovery-answer-mark{background:#f9e8c5;color:#966428}
+.sofia-discovery-answer:disabled{cursor:default}
+.sofia-discovery-answer:focus-visible,.sofia-discovery-next:focus-visible{outline:3px solid #f4b56b;outline-offset:3px}
+.sofia-discovery-feedback{display:flex;align-items:flex-start;gap:10px;min-height:89px;margin-top:17px;padding:15px 15px;background:#f2f8f5;color:#557a6d;border-radius:13px;font-size:12px;font-weight:750;line-height:1.9}
+.sofia-discovery-feedback svg{flex-shrink:0;margin-top:2px;color:#189b80}
+.sofia-discovery-feedback.is-correct{background:#eaf8ee;color:#235b49}
+.sofia-discovery-feedback.is-correct strong{display:block;font-size:13px;color:#076f5b}
+.sofia-discovery-feedback.is-correct p{font-size:12px;margin:2px 0 0;line-height:1.9;font-weight:650}
+.sofia-discovery-feedback.is-try-again{background:#fff8e9;color:#986529}
+.sofia-discovery-feedback.is-try-again svg{color:#be8844}
+.sofia-discovery-card-footer{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:20px}
+.sofia-discovery-card-footer>span{display:flex;align-items:center;gap:6px;color:#779389;font-size:10px;font-weight:900}
+.sofia-discovery-card-footer>span svg{color:#d69b63}
+.sofia-discovery-next{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:45px;padding:11px 16px;color:#fff;background:#087d70;border:1px solid #087d70;border-radius:12px;font:900 12px Cairo,Tahoma,sans-serif;cursor:pointer;transition:transform .2s,background .2s}
+.sofia-discovery-next:disabled{background:#eaf1ed;color:#8ba7a0;border-color:#eaf1ed;cursor:not-allowed}
+.sofia-hero-discovery-link{display:inline-flex;align-items:center;gap:8px;margin-top:21px;padding:10px 12px;border:1px solid #c8e7d5;border-radius:999px;color:#116f61;background:#ffffffb3;font-size:11px;font-weight:900;line-height:1.7;text-decoration:none;transition:background .2s,transform .2s}
+.sofia-hero-discovery-link>svg:first-child{color:#c78c50}
+.sofia-hero-discovery-link>svg:last-child{transition:transform .2s}
+@media (hover:hover) and (pointer:fine){
+ .sofia-discovery-answer:not(:disabled):hover{transform:translateY(-2px);border-color:#88c8b2;background:#f1faf5;box-shadow:0 6px 18px #0e856c0c}
+ .sofia-discovery-next:not(:disabled):hover{transform:translateY(-2px);background:#076a60}
+ .sofia-hero-discovery-link:hover{transform:translateY(-2px);background:white;color:#087d70}
+ .sofia-hero-discovery-link:hover svg:last-child{transform:translateX(-3px)}
+ .sofia-subject-card:focus-visible .sofia-subject-icon svg,.sofia-subject-card:hover .sofia-subject-icon svg{transform:rotate(-7deg) scale(1.08)}
+}
+.sofia-subject-icon svg{transition:transform .3s ease}
+
+/* Quiet, low-amplitude motion limited to the existing science illustration. */
+@keyframes sofia-float-lab{0%,100%{transform:translate3d(0,0,0) rotate(-3deg)}50%{transform:translate3d(0,-7px,0) rotate(-2deg)}}
+@keyframes sofia-float-upper{0%,100%{transform:translate3d(0,0,0) rotate(5deg)}50%{transform:translate3d(0,-8px,0) rotate(5deg)}}
+@keyframes sofia-float-lower{0%,100%{transform:translate3d(0,0,0) rotate(-4deg)}50%{transform:translate3d(0,6px,0) rotate(-4deg)}}
+@keyframes sofia-breathe-light{0%,100%{opacity:.84;transform:scale(.98)}50%{opacity:1;transform:scale(1.04)}}
+@keyframes sofia-spark-wander{0%,100%{transform:translate3d(0,0,0);opacity:.7}50%{transform:translate3d(0,-7px,0);opacity:1}}
+.sofia-hero .sofia-illustration{animation:sofia-float-lab 10s ease-in-out infinite}
+.sofia-hero .sofia-tag-top{animation:sofia-float-upper 8s ease-in-out infinite}
+.sofia-hero .sofia-tag-bottom{animation:sofia-float-lower 10s ease-in-out infinite}
+.sofia-hero .sofia-scene-ambient{animation:sofia-breathe-light 11s ease-in-out infinite}
+.sofia-hero .sofia-scene-spark{animation:sofia-spark-wander 7s ease-in-out infinite}
+.sofia-discovery-art-icon{animation:sofia-spark-wander 8s ease-in-out infinite alternate}
+.sofia-discovery-art-tag{animation:sofia-spark-wander 9s ease-in-out infinite}
+@media(max-width:960px){
+ .sofia-discovery-grid{grid-template-columns:1fr;gap:30px}
+ .sofia-discovery-intro{display:grid;grid-template-columns:1fr minmax(230px,.7fr);column-gap:20px;align-items:center}
+ .sofia-discovery-intro .sofia-kicker,.sofia-discovery-intro h2,.sofia-discovery-intro>p,.sofia-discovery-note{grid-column:1}
+ .sofia-discovery-art{grid-column:2;grid-row:1 / span 4;width:100%;max-width:340px;height:235px;margin:0 auto}
+}
+@media(max-width:680px){
+ .sofia-discovery-section{padding:63px 0;scroll-margin-top:74px}
+ .sofia-discovery-intro{display:block}
+ .sofia-discovery-intro h2{font-size:33px;margin:10px 0}
+ .sofia-discovery-intro>p{font-size:12px;line-height:2.1}
+ .sofia-discovery-art{height:165px;max-width:270px;margin:5px auto -3px}
+ .sofia-discovery-orbits{width:245px}
+ .sofia-discovery-art-icon{width:54px;height:54px;border-radius:18px}
+ .sofia-discovery-art-icon svg{width:30px}
+ .sofia-discovery-art-tag{font-size:8px;padding:7px 10px;left:0}
+ .sofia-discovery-note{font-size:11px}
+ .sofia-discovery-card{border-radius:19px;padding:19px}
+ .sofia-discovery-question{min-height:65px;font-size:21px;margin:13px 0 17px}
+ .sofia-discovery-answer{min-height:56px;font-size:12px;padding:10px 11px}
+ .sofia-discovery-feedback{min-height:102px;font-size:11px}
+ .sofia-discovery-card-footer>span{font-size:9px}
+ .sofia-discovery-next{padding:10px 12px;font-size:11px}
+ .sofia-hero-discovery-link{font-size:10px}
+ .sofia-hero .sofia-scene-tag,.sofia-hero .sofia-scene-ambient{animation:none}
+}
+@media(prefers-reduced-motion:reduce){
+ .sofia-hero .sofia-illustration,
+ .sofia-hero .sofia-scene-tag,
+ .sofia-hero .sofia-scene-spark,
+ .sofia-hero .sofia-scene-ambient,
+ .sofia-discovery-art-icon,
+ .sofia-discovery-art-tag{animation:none!important}
+ .sofia-discovery-section *, .sofia-hero-discovery-link{transition:none!important}
+ .sofia-discovery-answer:hover,.sofia-discovery-next:hover,.sofia-hero-discovery-link:hover{transform:none!important}
+}
