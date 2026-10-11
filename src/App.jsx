@@ -5,6 +5,8 @@ import {isPublicBootstrapRoute} from './public-bootstrap.js';
 import {Routes,Route,Link,Navigate,useLocation,useNavigate,useParams} from 'react-router-dom';
 import {LockKeyhole,ChevronLeft,ShieldCheck,Video,Play,ArrowLeft} from 'lucide-react';
 import {BrandHeader,BrandFooter,dashboardPath} from './components/MrsSofiaBrand.jsx';
+import {WhatsAppContact} from './components/WhatsAppContact.jsx';
+import {showWhatsAppContact} from './components/whatsapp-contact.js';
 
 const MrsHome=lazy(()=>import('./pages/MrsSofiaSite.jsx').then(m=>({default:m.MrsHome})));
 const MrsCourses=lazy(()=>import('./pages/MrsSofiaSite.jsx').then(m=>({default:m.MrsCourses})));
@@ -302,7 +304,8 @@ export default function App(){
      <Route path="*" element={<NotFound/>}/>
     </Routes>
    </Suspense>}
-  <BrandFooter previewMode={publicOnly||adminOnly}/>
+  <BrandFooter previewMode={publicOnly||adminOnly} showWhatsApp={showWhatsAppContact(pathname)}/>
+   <WhatsAppContact pathname={pathname}/>
   {toast&&<div className="toast" role="status" aria-live="polite"><ShieldCheck size={18}/>{toast}</div>}
  </Context.Provider>;
 }
