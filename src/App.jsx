@@ -4,6 +4,7 @@ import {Routes,Route,Link,Navigate,useLocation,useNavigate,useParams} from 'reac
 import {LockKeyhole,ChevronLeft,ShieldCheck,Video,Play,ArrowLeft} from 'lucide-react';
 import {BrandHeader,BrandFooter,dashboardPath} from './components/MrsSofiaBrand.jsx';
 import {isPublicBootstrapRoute} from './public-bootstrap.js';
+import {publicSeoMeta,SEO_ORIGIN} from './public-seo.js';
 
 const MrsHome=lazy(()=>import('./pages/MrsSofiaSite.jsx').then(m=>({default:m.MrsHome})));
 const MrsCourses=lazy(()=>import('./pages/MrsSofiaSite.jsx').then(m=>({default:m.MrsCourses})));
@@ -200,16 +201,29 @@ function NotFound(){
 function PageTitle(){
  const {pathname}=useLocation();
  useEffect(()=>{
-  const path=pathname.endsWith('/')&&pathname!=='/'?pathname.slice(0,-1):pathname;
-  const label=path==='/privacy'?'الخصوصية':path==='/terms'?'شروط الاشتراك':path==='/courses'?'كورسات العلوم':path.startsWith('/courses/')?'تفاصيل كورس العلوم':path==='/login'?'تسجيل الدخول':path==='/register'?'إنشاء حساب':path==='/student'?'لوحة الطالب':path==='/admin'?'لوحة الإدارة':path==='/teacher'?'لوحة المعلم':path.startsWith('/lesson/')?'الفصل المباشر':'مُدرِّسة العلوم أونلاين';
-  document.title=path==='/'?'مس صوفيا للعلوم | مُدرِّسة العلوم أونلاين — Miss Sofia':label+' | مس صوفيا للعلوم';
-  const publicPage=path==='/'||path==='/courses'||path==='/privacy'||path==='/terms'||path.startsWith('/courses/');
+  const path=pathname.replace(/\/+$/,'')||'/';
+  const seo=publicSeoMeta(path);
+  const label=path.startsWith('/courses/')?'تفاصيل كورس العلوم':path==='/login'?'تسجيل الدخول':path==='/register'?'إنشاء حساب':path==='/student'?'لوحة الطالب':path==='/admin'?'لوحة الإدارة':path==='/teacher'?'لوحة المعلم':path.startsWith('/lesson/')?'الفصل المباشر':'مس صوفيا للعلوم';
+  document.title=seo?.title||label+' | مس صوفيا للعلوم';
+  const publicPage=Boolean(seo)||path.startsWith('/courses/');
   const canonical=document.querySelector('link[rel="canonical"]');
-  if(canonical)canonical.setAttribute('href','https://mssofia.pages.dev'+(publicPage?path:'/')+(publicPage&&path==='/'?'':''));
+  if(canonical)canonical.setAttribute('href',seo?.canonical||SEO_ORIGIN+(publicPage?path:'/'));
   const robots=document.querySelector('meta[name="robots"]');
   if(robots)robots.setAttribute('content',publicPage?'index, follow, max-image-preview:large':'noindex, nofollow');
   const ogUrl=document.querySelector('meta[property="og:url"]');
-  if(ogUrl)ogUrl.setAttribute('content','https://mssofia.pages.dev'+(publicPage?path:'/' ));
+  if(ogUrl)ogUrl.setAttribute('content',seo?.canonical||SEO_ORIGIN+(publicPage?path:'/'));
+  if(seo){
+   for(const [selector,value] of [
+    ['meta[name="description"]',seo.description],
+    ['meta[property="og:title"]',seo.title],
+    ['meta[property="og:description"]',seo.description],
+    ['meta[name="twitter:title"]',seo.title],
+    ['meta[name="twitter:description"]',seo.description]
+   ]){
+    const node=document.querySelector(selector);
+    if(node)node.setAttribute('content',value);
+   }
+  }
  },[pathname]);
  return null;
 }
