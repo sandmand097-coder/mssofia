@@ -6,4 +6,5 @@ import './styles.css';
 import './portal.css';
 import './brand.css';
 import './science-discovery.css';
+import './whatsapp-contact.css';
 createRoot(document.getElementById('root')).render(<React.StrictMode><BrowserRouter><App/></BrowserRouter></React.StrictMode>);
