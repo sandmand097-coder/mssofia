@@ -27,7 +27,7 @@ export function BrandLogo({light=false}){
 export function BrandHeader({user,logout,previewMode=false,adminOnly=false}){
  const [open,setOpen]=useState(false),location=useLocation();
  useEffect(()=>setOpen(false),[location.pathname,location.hash]);
- const links=[{to:'/',label:'الرئيسية',end:true},{to:'/courses',label:'الكورسات'},{to:'/#method',label:'طريقة التعلم',anchor:true},{to:'/#about',label:'عن مس صوفيا',anchor:true}];
+ const links=[{to:'/',label:'الرئيسية',end:true},{to:'/courses',label:'الكورسات'},{to:'/guide',label:'ابدأ هنا'},{to:'/#method',label:'طريقة التعلم',anchor:true},{to:'/#about',label:'عن مس صوفيا',anchor:true}];
  return <header className="sofia-header"><div className="sofia-container sofia-nav">
   <BrandLogo/>
   <nav className={'sofia-nav-links '+(open?'is-open':'')} aria-label="القائمة الرئيسية">
@@ -45,7 +45,7 @@ export function BrandFooter({previewMode=false,showWhatsApp=true}){
  return <footer className="sofia-footer"><div className="sofia-container">
   <div className="sofia-footer-main">
    <div className="sofia-footer-about"><BrandLogo light/><p>مس صوفيا للعلوم منصة تعليمية رقمية نطوّرها باستمرار لتسهيل التعلم وتنظيم الكورسات والحصص.</p></div>
-   <div><h4>استكشف</h4><Link to="/">الرئيسية</Link><Link to="/courses">الكورسات المتاحة</Link><a href="/#method">طريقة التعلم</a><Link to="/privacy">الخصوصية وحماية الطلاب</Link></div>
+   <div><h4>استكشف</h4><Link to="/">الرئيسية</Link><Link to="/courses">الكورسات المتاحة</Link><Link to="/guide">دليل الاستخدام</Link><a href="/#method">طريقة التعلم</a><Link to="/privacy">الخصوصية وحماية الطلاب</Link></div>
    <div><h4>{previewMode?'الإطلاق التعريفي':'حسابك'}</h4>{previewMode?<><a href="/#offer">عرض الشهر الأول</a><Link to="/courses">المواد والدورات</Link><small>فتح حسابات الطلاب قريبًا</small></>:<><Link to="/login">تسجيل الدخول</Link><Link to="/register">إنشاء حساب</Link><Link to="/dashboard">لوحة التحكم</Link></>}</div>
    <div className="sofia-footer-note"><span className="sofia-footer-mini"><Atom size={20}/></span><b>التواصل مع المُدرِّسة</b><a href={'tel:'+WHATSAPP_CONTACT_E164} dir="ltr" style={{fontWeight:900,fontSize:20,color:'#d9f7ed',display:'inline-block',margin:'8px 0'}}>{WHATSAPP_CONTACT_LOCAL}</a>{showWhatsApp&&<a href={WHATSAPP_CONTACT_URL} target="_blank" rel="noopener noreferrer" className="sofia-footer-wa-link" aria-label="فتح واتساب مس صوفيا مباشرة في نافذة جديدة"><MessageCircle size={19}/><span>راسلنا على واتساب</span><small dir="ltr">{WHATSAPP_CONTACT_LOCAL}</small><ArrowUpLeft size={15}/></a>}<small>رقم التواصل والاستفسارات. لا ترسل أي تحويل مالي قبل ظهور طريقة دفع مفعّلة وآمنة داخل حساب الطالب؛ قبول الاشتراك بقرار الإدارة فقط.</small></div>
   </div>
