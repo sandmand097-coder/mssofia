@@ -1,7 +1,7 @@
 import React,{useEffect,useState} from 'react';
 import {Link,NavLink,useLocation} from 'react-router-dom';
 import {FlaskConical,Atom,BookOpen,Menu,X,ArrowUpLeft,ArrowLeft,MessageCircle,LogOut,UserCircle2,Instagram,Microscope,Dna,Beaker,Sparkles,Play,GraduationCap,Clock3,CalendarDays,ChevronLeft} from 'lucide-react';
-import {WHATSAPP_CONTACT_LOCAL,WHATSAPP_CONTACT_URL} from './whatsapp-contact.js';
+import {WHATSAPP_CONTACT_LOCAL,WHATSAPP_CONTACT_E164,WHATSAPP_CONTACT_URL} from './whatsapp-contact.js';
 
 export const scienceSubjects=['الكل','علوم','أحياء','فيزياء','كيمياء'];
 export const scienceSubject=name=>/(علوم|فيزياء|أحياء|كيمياء|science|physics|biology|chemistry)/i.test(name||'');
@@ -40,7 +40,7 @@ export function BrandFooter({previewMode=false,showWhatsApp=true}){
    <div className="sofia-footer-about"><BrandLogo light/><p>العلوم أسهل لما نفهمها. مكان واحد للتعلّم، التجربة، وتنظيم رحلتك مع مس صوفيا للعلوم.</p></div>
    <div><h4>استكشف</h4><Link to="/">الرئيسية</Link><Link to="/courses">الكورسات المتاحة</Link><a href="/#method">طريقة التعلم</a><Link to="/privacy">الخصوصية وحماية الطلاب</Link><Link to="/terms">شروط الاشتراك</Link></div>
    <div><h4>{previewMode?'الإطلاق التعريفي':'حسابك'}</h4>{previewMode?<><a href="/#offer">عرض الشهر الأول</a><Link to="/courses">المواد والدورات</Link><small>فتح حسابات الطلاب قريبًا</small></>:<><Link to="/login">تسجيل الدخول</Link><Link to="/register">إنشاء حساب</Link><Link to="/dashboard">لوحة التحكم</Link></>}</div>
-   <div className="sofia-footer-note"><span className="sofia-footer-mini"><Atom size={20}/></span><b>التواصل مع المُدرِّسة</b><a href="tel:01027661546" dir="ltr" style={{fontWeight:900,fontSize:20,color:'#d9f7ed',display:'inline-block',margin:'8px 0'}}>01027661546</a>{showWhatsApp&&<a href={WHATSAPP_CONTACT_URL} target="_blank" rel="noopener noreferrer" className="sofia-footer-wa-link" aria-label="فتح واتساب مس صوفيا مباشرة في نافذة جديدة"><MessageCircle size={19}/><span>راسلنا على واتساب</span><small dir="ltr">{WHATSAPP_CONTACT_LOCAL}</small><ArrowUpLeft size={15}/></a>}<small>رقم التواصل والاستفسارات. لا ترسل أي تحويل مالي قبل ظهور طريقة دفع مفعّلة وآمنة داخل حساب الطالب؛ قبول الاشتراك بقرار الإدارة فقط.</small></div>
+   <div className="sofia-footer-note"><span className="sofia-footer-mini"><Atom size={20}/></span><b>التواصل مع المُدرِّسة</b><a href={'tel:'+WHATSAPP_CONTACT_E164} dir="ltr" style={{fontWeight:900,fontSize:20,color:'#d9f7ed',display:'inline-block',margin:'8px 0'}}>{WHATSAPP_CONTACT_LOCAL}</a>{showWhatsApp&&<a href={WHATSAPP_CONTACT_URL} target="_blank" rel="noopener noreferrer" className="sofia-footer-wa-link" aria-label="فتح واتساب مس صوفيا مباشرة في نافذة جديدة"><MessageCircle size={19}/><span>راسلنا على واتساب</span><small dir="ltr">{WHATSAPP_CONTACT_LOCAL}</small><ArrowUpLeft size={15}/></a>}<small>رقم التواصل والاستفسارات. لا ترسل أي تحويل مالي قبل ظهور طريقة دفع مفعّلة وآمنة داخل حساب الطالب؛ قبول الاشتراك بقرار الإدارة فقط.</small></div>
   </div>
   <div className="sofia-footer-bottom"><span>© {new Date().getFullYear()} مس صوفيا للعلوم | Miss Sofia. جميع الحقوق محفوظة.</span><span>Made for curious minds <span aria-hidden="true">✦</span></span></div>
  </div></footer>;
