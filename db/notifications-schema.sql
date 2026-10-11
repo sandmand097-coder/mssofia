@@ -4,7 +4,7 @@
 -- during an approved maintenance window; never publish to the Data API.
 CREATE TABLE IF NOT EXISTS public.notification_contacts (
  student_id TEXT PRIMARY KEY REFERENCES public.users(id) ON DELETE CASCADE,
- phone_e164 TEXT NOT NULL CHECK (phone_e164 ~ '^\\+[1-9][0-9]{7,14}$'),
+ phone_e164 TEXT NOT NULL CHECK (phone_e164 ~ '^[+][1-9][0-9]{7,14}$'),
  whatsapp_opt_in_at TIMESTAMPTZ NOT NULL,
  whatsapp_verified_at TIMESTAMPTZ NOT NULL,
  consent_source TEXT NOT NULL CHECK (char_length(consent_source) BETWEEN 3 AND 100),
