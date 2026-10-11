@@ -1,7 +1,7 @@
 // After Vite builds the SPA, provide a distinct, crawlable HTML head at each
 // public extensionless URL. Cloudflare Pages maps /courses to /courses.html.
 // Private student, admin and lesson URLs are deliberately NOT generated here.
-import {readFile,writeFile,mkdir} from 'node:fs/promises';
+import {readFile,writeFile} from 'node:fs/promises';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import sharp from 'sharp';
@@ -17,7 +17,7 @@ function replaceRequired(html,pattern,value,label){
 }
 function setMeta(html,kind,key,value){
  const attr=kind==='property'?'property':'name';
- const pattern=new RegExp('<meta\\s+'+attr+'="'+key.replace(/[.*+?^${}()|[\\]\\]/g,'\\$&')+'"\\s+content="[^"]*"\\s*\\/?>','i');
+ const pattern=new RegExp('<meta\\s+'+attr+'="'+key+'"\\s+content="[^"]*"\\s*\\/?>','i');
  return replaceRequired(html,pattern,'<meta '+attr+'="'+key+'" content="'+escapeHtml(value)+'"/>',key);
 }
 function render(route,meta){
