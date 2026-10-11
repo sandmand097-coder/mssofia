@@ -2,7 +2,7 @@
 // No wildcard subdomains: an attacker controlling an unrelated subdomain must
 // not gain permission to read credentialed classroom or payment APIs.
 const CUSTOM_SITE='mssofia.com';
-const PROD_FRONTENDS=['https://mssofia.pages.dev','https://mssofia.com','https://www.mssofia.com'];
+const PROD_FRONTENDS=['https://mssofia.pages.dev','https://mssofia.com'];
 const DEV_FRONTENDS=['http://127.0.0.1:5173','http://localhost:5173'];
 
 export function allowedApiOrigins(env=process.env){
@@ -43,7 +43,7 @@ function requestIsCustomDomain(request){
  const origin=String(request?.get?.('origin')||request?.headers?.origin||'');
  // Domain scope is only safe when BOTH browser origin and server host belong
  // to our custom site; pages.dev must retain a host-only proxy cookie.
- return trustedCustomHost(host)&&['https://mssofia.com','https://www.mssofia.com'].includes(origin);
+ return trustedCustomHost(host)&&['https://mssofia.com'].includes(origin);
 }
 export function sessionCookieOptions(request,{env=process.env,clear=false}={}){
  const production=env.NODE_ENV==='production';
