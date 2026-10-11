@@ -62,3 +62,10 @@ jobs:
           wranglerVersion: '4.149.0'
           command: pages deploy dist --project-name=mssofia --branch=main
           gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+      - name: Verify production visitor pages, API and privacy gates (GET-only)
+        if: steps.credentials.outputs.enabled == 'true'
+        env:
+          SITE_ORIGIN: https://mssofia.pages.dev
+          EXPECTED_LAUNCH_MODE: full
+        run: node scripts/run-production-risk-probe.mjs
+
