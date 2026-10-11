@@ -1,0 +1,69 @@
+name: Miss Sofia 120-minute isolated LiveKit soak (50 real WebRTC receivers)
+
+# An explicitly isolated engineering test, NOT a production deployment.
+# On initial PR addition it starts once. On later commits this workflow runs
+# only if these test files change. A passing result proves only the stated
+# loopback 320x180 synthetic-media configuration.
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/soak-120-minute.yml"
+      - "qa-120-minute-soak.mjs"
+      - "src/qa/livekit-real-media-probe.js"
+      - "qa-webrtc.html"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sofia-120-minute-soak-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  soak:
+    name: 50 decoders, one real publisher, 120 full minutes
+    runs-on: ubuntu-latest
+    timeout-minutes: 155
+    env:
+      NODE_ENV: test
+      SOFIA_SOAK_VIEWERS: "50"
+      SOFIA_SOAK_INTERVAL_SECONDS: "30"
+    steps:
+      - name: Checkout test branch only
+        uses: actions/checkout@v4
+      - name: Pin Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+      - name: Install locked dependencies (no school credentials)
+        run: npm ci --no-audit --no-fund
+      - name: Install isolated Chromium and media dependencies
+        run: npx --yes playwright@1.64.0 install --with-deps chromium
+      - name: Install open-source LiveKit binary on ephemeral runner
+        run: |
+          curl --fail --location --silent --show-error https://get.livekit.io --output /tmp/sofia-livekit-install.sh
+          bash /tmp/sofia-livekit-install.sh
+          livekit-server --version
+      - name: Verify soak script syntax
+        run: node --check qa-120-minute-soak.mjs
+      - name: Calibrate measurements for 50 real receivers
+        env:
+          SOFIA_SOAK_MINUTES: "1"
+        run: node qa-120-minute-soak.mjs
+        timeout-minutes: 5
+      - name: Hold 50 real WebRTC audio/video subscribers for 120 elapsed minutes
+        env:
+          SOFIA_SOAK_MINUTES: "120"
+        run: node qa-120-minute-soak.mjs
+        timeout-minutes: 138
+      - name: Preserve sampling evidence even on failure
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: miss-sofia-50-viewer-120-minute-evidence
+          path: qa-artifacts/soak-*
+          if-no-files-found: warn
+          retention-days: 30
