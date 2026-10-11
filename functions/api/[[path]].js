@@ -4,6 +4,11 @@
 // (and the corresponding safe settings on the Render application).
 // All API calls remain same-origin to preserve HttpOnly session cookies.
 const RENDER_ORIGIN='https://mssofia.onrender.com';
+const APPROVED_API_ORIGINS=new Set([RENDER_ORIGIN,'https://api.mssofia.com']);
+function configuredUpstream(env){
+ const value=String(env?.API_ORIGIN||'').replace(/\/$/,'');
+ return APPROVED_API_ORIGINS.has(value)?value:null;
+}
 const JSON_HEADERS={
  'content-type':'application/json; charset=utf-8',
  'cache-control':'no-store, private',
@@ -17,7 +22,7 @@ function json(status,data){
 function inFullMode(env){
  return env?.PUBLIC_LAUNCH_MODE==='full'
   &&env?.FULL_BACKEND_READY==='true'
-  &&env?.API_ORIGIN===RENDER_ORIGIN;
+  &&Boolean(configuredUpstream(env));
 }
 function inAdminMode(env){
  return env?.PUBLIC_LAUNCH_MODE==='admin'
@@ -76,7 +81,8 @@ export async function onRequest(context){
  }
 
  // The upstream address is constant (no user-supplied host or open proxy).
- const upstream=new URL(pathname+url.search,RENDER_ORIGIN);
+ const origin=configuredUpstream(context.env);
+  const upstream=new URL(pathname+url.search,origin);
  const headers=new Headers(request.headers);
  for(const key of ['host','content-length','connection','transfer-encoding',
   'x-forwarded-host','x-forwarded-proto','x-forwarded-for','x-real-ip','forwarded']){
@@ -107,8 +113,8 @@ export async function onRequest(context){
   // Keep visitors on the Pages domain if the backend redirects to its own host.
   const destination=out.headers.get('location');
   if(destination){
-   const redirect=new URL(destination,RENDER_ORIGIN);
-   if(redirect.origin===RENDER_ORIGIN)
+   const redirect=new URL(destination,origin);
+   if(redirect.origin===origin)
     out.headers.set('location',url.origin+redirect.pathname+redirect.search+redirect.hash);
   }
   return out;
