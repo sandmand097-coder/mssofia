@@ -8,6 +8,7 @@ import {
 } from '@livekit/components-react';
 import {Track,RoomEvent,DisconnectReason,ConnectionQuality,VideoQuality} from 'livekit-client';
 import {shouldRecoverDisconnect} from './live-resilience.js';
+import {updateViewerSubscriptions} from './viewer-network.js';
 import {
  Video,VideoOff,Mic,MicOff,MonitorUp,Hand,Users,ShieldCheck,Radio,
  Volume2,LogOut,UserX,CheckCircle2,RefreshCw,LockKeyhole,MessageCircle,
@@ -70,7 +71,7 @@ function VideoSurface({refTrack,emptyText,icon:Icon=Video,small=false,onDimensio
 function ClassButton({icon:Icon,children,onClick,disabled=false,active=false,danger=false,title}){
  return <button title={title} type="button" disabled={disabled} onClick={onClick} className={'sofia-class-button '+(active?'is-active ':'')+(danger?'danger ':'')}><Icon size={19}/><span>{children}</span></button>;
 }
-export function MeetingStudio({connection,onDisconnected,onTimingChange}){
+export function MeetingStudio({connection,onDisconnected,onTimingChange,onManualReconnect}){
  const room=useRoomContext();
  const {localParticipant,isMicrophoneEnabled,isCameraEnabled,isScreenShareEnabled}=useLocalParticipant();
  const permission=useLocalParticipantPermissions();
@@ -142,22 +143,22 @@ export function MeetingStudio({connection,onDisconnected,onTimingChange}){
   const timeout=setTimeout(()=>setNetworkState('connected'),5200);
   return()=>clearTimeout(timeout);
  },[networkState]);
- // Student-only audio-first fallback. No microphone/camera is enabled by this.
+ // Student-only audio-first fallback. Never turns a pupil's devices on.
  useEffect(()=>{
   if(host)return;
-  const update=()=>{
-   for(const remote of room.remoteParticipants.values()){
-    for(const publication of remote.videoTrackPublications.values()){
-     publication.setEnabled(viewerMode!=='audio');
-     if(viewerMode==='low')publication.setVideoQuality(VideoQuality.LOW);
-     if(viewerMode==='auto')publication.setVideoQuality(VideoQuality.HIGH);
-    }
-   }
-  };
+  const update=()=>updateViewerSubscriptions(room,viewerMode,{
+   screenShareSource:Track.Source.ScreenShare,
+   lowQuality:VideoQuality.LOW,highQuality:VideoQuality.HIGH
+  });
   update();
   room.on(RoomEvent.TrackPublished,update);
   return()=>room.off(RoomEvent.TrackPublished,update);
  },[room,host,viewerMode,peers.length]);
+ useEffect(()=>{
+  if(host||viewerMode!=='audio'||!isCameraEnabled)return;
+  void localParticipant.setCameraEnabled(false)
+   .catch(()=>setMediaWarning('تعذر إيقاف الكاميرا؛ يمكنك إيقافها من أزرار الفصل.'));
+ },[host,viewerMode,isCameraEnabled,localParticipant]);
  const selectViewerMode=mode=>{videoChoiceManual.current=true;setViewerMode(mode);setMediaWarning('')};
  const cameraOptions=CAMERA_PRESETS[cameraQuality];
  const getCameraTrack=()=>localParticipant.getTrackPublication(Track.Source.Camera)?.track?.mediaStreamTrack;
@@ -349,10 +350,10 @@ export function MeetingStudio({connection,onDisconnected,onTimingChange}){
  const view=(
   <div className="sofia-meeting-layout">
    <section className={"sofia-meeting-main "+(stage?"has-video":"")}>
-    {networkState==='reconnecting'&&<div className="sofia-network-banner" role="status" aria-live="assertive"><Wifi size={16}/> جارٍ استعادة اتصال البث تلقائيًا؛ انتظر قليلًا ولا تُعد تحميل الصفحة.</div>}
+    {networkState==='reconnecting'&&<div className="sofia-network-banner" role="status" aria-live="assertive"><Wifi size={16}/> جارٍ استعادة اتصال البث تلقائيًا؛ انتظر قليلًا ولا تُعد تحميل الصفحة. <button type="button" className="sofia-network-action" onClick={onManualReconnect}>إعادة الاتصال يدويًا</button></div>}
     {networkState==='restored'&&<div className="sofia-network-banner restored" role="status"><CheckCircle2 size={16}/> تمت استعادة البث دون مغادرة الحصة.</div>}
     {(networkQuality==='poor'||networkQuality==='lost')&&networkState!=='reconnecting'&&
-     <div className="sofia-network-banner degraded" role="status"><Wifi size={16}/> الاتصال ضعيف. نخفض جودة الفيديو للمحافظة على صوت الشرح.</div>}
+     <div className="sofia-network-banner degraded" role="status"><Wifi size={16}/> الاتصال ضعيف. نخفض جودة الفيديو للمحافظة على صوت الشرح. {!host&&viewerMode!=='audio'&&<button type="button" className="sofia-network-action" onClick={()=>selectViewerMode('audio')}>تفعيل الصوت فقط</button>}</div>}
     {mediaWarning&&<div className="sofia-network-banner degraded" role="status"><AlertTriangle size={16}/>{mediaWarning}</div>}
     {host&&onlineCount>=35&&<div className="sofia-network-banner degraded" role="status"><AlertTriangle size={16}/> يوجد عدد كبير من الطلاب. اختاري جودة «اقتصادية» لتقليل بيانات الفيديو، وراجعي رصيد دقائق المشاركين في LiveKit؛ خفض الجودة لا يوفّر دقائق الاتصال.</div>}
     {!host&&<div className="sofia-viewer-recovery-tools">
@@ -360,8 +361,9 @@ export function MeetingStudio({connection,onDisconnected,onTimingChange}){
      <select id="sofia-viewer-mode" value={viewerMode} onChange={e=>selectViewerMode(e.target.value)}>
       <option value="auto">تلقائي — الجودة تتكيف مع الإنترنت</option>
       <option value="low">توفير الإنترنت — فيديو منخفض الجودة</option>
-      <option value="audio">الصوت فقط — عند ضعف الإنترنت جدًا</option>
+      <option value="audio">الصوت فقط — صوت المعلمة ومشاركة الشاشة</option>
      </select>
+     {viewerMode==='audio'&&<small role="status">فيديو الكاميرا متوقف لتوفير البيانات. صوت المعلمة ومشاركة الشاشة مستمران.</small>}
     </div>}
     {host&&arrivalNotice&&<div className="sofia-meeting-arrival" role="status" aria-live="polite"><Bell size={17}/>{arrivalNotice}</div>}
     <div className="sofia-meeting-info"><div className="sofia-meeting-live"><span className="sofia-live-led"/> {liveNow?'البث مباشر • Miss Sofia':host?'استوديو المعلمة جاهز':'في انتظار بدء بث المعلمة'}</div><div className="sofia-meeting-count"><Users size={16}/> {onlineCount.toLocaleString('ar-EG')} مشارك</div></div>
@@ -465,7 +467,7 @@ export default function Classroom({connection,onDisconnected,onConnectionError,o
  return <div className="live-frame sofia-classroom-live">
   <LiveKitRoom token={connection.token} serverUrl={connection.serverUrl} connect audio={false} video={false}
    options={{adaptiveStream:true,dynacast:true}} onDisconnected={disconnected} onError={failed} data-lk-theme="default">
-   <MeetingStudio connection={connection} onDisconnected={leave} onTimingChange={onTimingChange}/>
+   <MeetingStudio connection={connection} onDisconnected={leave} onTimingChange={onTimingChange} onManualReconnect={()=>{if(done.current)return;done.current=true;void room.disconnect();onRecover?.()}}/>
   </LiveKitRoom>
  </div>;
 }

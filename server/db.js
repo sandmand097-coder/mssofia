@@ -62,6 +62,36 @@ CREATE TABLE IF NOT EXISTS lesson_questions (
 CREATE INDEX IF NOT EXISTS idx_lesson_questions_lesson_time ON lesson_questions(lesson_id,created_at);
 CREATE INDEX IF NOT EXISTS idx_lesson_questions_student ON lesson_questions(student_id,lesson_id);
 `);
+// Local-only notification fixtures; the production PostgreSQL schema is
+// prepared separately in db/notifications-schema.sql and is NOT auto-applied.
+db.exec(`
+CREATE TABLE IF NOT EXISTS notification_contacts(
+ student_id TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+ phone_e164 TEXT NOT NULL,
+ whatsapp_opt_in_at TEXT NOT NULL,
+ whatsapp_verified_at TEXT NOT NULL,
+ consent_source TEXT NOT NULL,
+ revoked_at TEXT
+);
+CREATE TABLE IF NOT EXISTS notification_outbox(
+ id TEXT PRIMARY KEY,
+ event_key TEXT NOT NULL UNIQUE,
+ type TEXT NOT NULL CHECK(type IN ('booking_approved','lesson_reminder')),
+ student_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+ booking_id TEXT NOT NULL REFERENCES bookings(id) ON DELETE CASCADE,
+ lesson_id TEXT REFERENCES lessons(id) ON DELETE CASCADE,
+ scheduled_at TEXT NOT NULL,
+ status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','processing','sent','skipped','dead')),
+ attempts INTEGER NOT NULL DEFAULT 0,
+ next_attempt_at TEXT NOT NULL,
+ locked_until TEXT,
+ sent_at TEXT,
+ provider_message_id TEXT,
+ last_error TEXT,
+ created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_notification_outbox_pending ON notification_outbox(status,next_attempt_at);
+`);
 const columns=new Set(db.prepare('PRAGMA table_info(users)').all().map(x=>x.name));
 if(!columns.has('email_verified_at'))db.exec('ALTER TABLE users ADD COLUMN email_verified_at TEXT');
 if(!columns.has('guardian_email'))db.exec('ALTER TABLE users ADD COLUMN guardian_email TEXT');

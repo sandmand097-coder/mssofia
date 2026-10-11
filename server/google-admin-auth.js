@@ -1,4 +1,5 @@
 import jwt from 'jsonwebtoken';
+import {sessionCookieOptions} from './origin-security.js';
 import bcrypt from 'bcryptjs';
 import {randomBytes} from 'node:crypto';
 import {OAuth2Client} from 'google-auth-library';
@@ -122,7 +123,7 @@ export function attachGoogleAdminAuth(app,{get,run,uid,now,publicUser,secret,lim
     user=result.user;
    }
    const token=jwt.sign({sub:user.id,role:user.role,version:user.session_version||0},secret,{algorithm:'HS256',expiresIn:'7d'});
-   res.cookie('session',token,{httpOnly:true,sameSite:'strict',secure:process.env.NODE_ENV==='production',maxAge:7*24*3600*1000,path:'/'});
+   res.cookie('session',token,sessionCookieOptions(req));
    return res.json({user:publicUser(user)});
   }catch(error){
    // Never log Google credentials, Google subject IDs or session tokens.

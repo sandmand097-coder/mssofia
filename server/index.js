@@ -1,6 +1,8 @@
 import express from 'express';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
+import {corsForRequest,sessionCookieOptions} from './origin-security.js';
+import {enqueueApprovedBooking,processNotificationTick} from './notifications/outbox.js';
 import rateLimit from 'express-rate-limit';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
@@ -8,7 +10,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { AccessToken, WebhookReceiver } from 'livekit-server-sdk';
 import { getRoomService, participantPermission, videoGrant, MAX_ACTIVE_SPEAKERS } from './classroom.js';
-import { randomBytes, createHash } from 'node:crypto';
+import { randomBytes, createHash, timingSafeEqual } from 'node:crypto';
 import { sendAccountEmail, canRegister, mailMode } from './email.js';
 import {attachGoogleAdminAuth,googleAdminConfig,googleStudentConfig} from './google-admin-auth.js';
 import {schoolReadiness} from './release-readiness.js';
@@ -73,13 +75,25 @@ app.use(express.json({
   limit: '100kb'
 }));
 app.use(cookieParser());
-const allowedOrigins = new Set([process.env.APP_ORIGIN, 'http://127.0.0.1:5173', 'http://localhost:5173', 'http://127.0.0.1:' + PORT].filter(Boolean));
-app.use('/api', (req, res, next) => {
-  if (!['GET', 'HEAD', 'OPTIONS'].includes(req.method) && req.headers.origin && !allowedOrigins.has(req.headers.origin)) return res.status(403).json({
-    error: 'مصدر الطلب غير مسموح'
-  });
-  next();
-});
+app.use('/api',corsForRequest);
+ // Scheduler-only route: invoked by a separate Cloudflare Cron Worker.
+ // No website user can schedule messages; no cookie/session authentication.
+ app.post('/api/internal/notifications/tick',async(req,res)=>{
+  const expected=process.env.NOTIFICATION_CRON_SECRET||'';
+  const supplied=String(req.get('authorization')||'').replace(/^Bearer\s+/i,'');
+  const a=Buffer.from(supplied),b=Buffer.from(expected);
+  if(expected.length<40||a.length!==b.length||!timingSafeEqual(a,b))
+   return res.status(401).json({error:'Unauthorized scheduler'});
+  if(process.env.WHATSAPP_ENABLED!=='true')
+   return res.status(503).json({error:'Notification service not enabled'});
+  try{
+   const result=await processNotificationTick();
+   res.set('Cache-Control','no-store').json(result);
+  }catch{
+   // Do not echo phone numbers, students, provider responses or tokens.
+   res.status(503).json({error:'Notification worker temporarily unavailable'});
+  }
+ });
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   limit: 30,
@@ -341,22 +355,13 @@ app.post('/api/auth/login', asyncRoute(async (req, res) => {
     algorithm: 'HS256',
     expiresIn: '7d'
   });
-  res.cookie('session', token, {
-    httpOnly: true,
-    sameSite: 'strict',
-    secure: process.env.NODE_ENV === 'production',
-    maxAge: 7 * 24 * 3600 * 1000,
-    path: '/'
-  });
+  res.cookie('session',token,sessionCookieOptions(req));
   res.json({
     user: publicUser(user)
   });
 }));
 app.post('/api/auth/logout', (req, res) => {
-  res.clearCookie('session', {
-    path: '/',
-    sameSite: 'strict'
-  });
+  res.clearCookie('session',sessionCookieOptions(req,{clear:true}));
   res.json({
     ok: true
   });
@@ -653,6 +658,7 @@ app.patch('/api/bookings/:id',auth,role('teacher','admin'),async(req,res)=>{
   }
   const updated=await tx.run("UPDATE bookings SET status=?,reviewed_at=? WHERE id=? AND status='pending'",status,now(),booking.id);
   if(!updated.changes)throw Error('Concurrent booking moderation conflict');
+   if(status==='approved')await enqueueApprovedBooking(tx,booking.id);
   return{http:200,ok:true,status};
  });
  return send(res,outcome.http,outcome.error?{error:outcome.error}:{ok:true,status:outcome.status});

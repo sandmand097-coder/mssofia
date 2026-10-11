@@ -1,0 +1,27 @@
+name: Miss Sofia domain & notifications isolated tests
+on:
+  push:
+    branches: [feature/domain-resilience-whatsapp-20261011]
+  pull_request:
+    branches: [feature/mobile-studio-seo-20261011]
+permissions:
+  contents: read
+concurrency:
+  group: domain-whatsapp-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+      - run: npm ci --no-fund --no-audit
+      - name: Real SQLite outbox and fake-only provider tests
+        run: npm run test:notifications
+        env:
+          NODE_ENV: test
+          WHATSAPP_ENABLED: "false"

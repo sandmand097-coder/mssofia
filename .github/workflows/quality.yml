@@ -2,7 +2,7 @@ name: Miss Sofia quality gate
 
 on:
   push:
-    branches: [main]
+    branches: [main, feature/domain-resilience-whatsapp-20261011]
   pull_request:
     branches: [main]
   workflow_dispatch:

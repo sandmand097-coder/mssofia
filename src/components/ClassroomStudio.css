@@ -297,3 +297,11 @@
  .sofia-meeting.mobile-host .sofia-class-button{width:100%;min-height:48px;padding:10px 8px;font-size:11px;white-space:normal}
  .sofia-meeting.mobile-host .sofia-meeting-tools>.sofia-class-button{width:100%;min-height:48px}
 }
+
+/* Audio-only access and manual reconnection must remain touch-accessible. */
+.sofia-network-banner{flex-wrap:wrap}
+.sofia-network-action{margin-inline-start:auto;min-height:42px;padding:7px 12px;border:1px solid currentColor;border-radius:9px;color:inherit;background:transparent;cursor:pointer;font:800 12px Cairo,Tahoma,sans-serif}
+.sofia-network-action:hover{background:rgba(255,255,255,.38)}
+.sofia-network-action:focus-visible{outline:3px solid #26c6a4;outline-offset:2px}
+.sofia-viewer-recovery-tools small{display:block;line-height:1.9;margin-top:7px;color:#095f51}
+@media(max-width:640px){.sofia-network-action{width:100%;margin-inline-start:0}.sofia-network-banner{align-items:flex-start}}
