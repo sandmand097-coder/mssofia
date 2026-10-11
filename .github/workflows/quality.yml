@@ -45,5 +45,7 @@ jobs:
         run: node qa-classroom-join-recovery-browser.mjs
       - name: Verify early live classroom entry on mobile and desktop
         run: node qa-classroom-entry-browser.mjs
+      - name: Verify touch-first presenter controls on mobile browser
+        run: npm run test:mobile:browser
       - name: Audit runtime dependencies
         run: npm audit --omit=dev --audit-level=high
