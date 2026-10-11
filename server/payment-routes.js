@@ -9,6 +9,7 @@ import {withTransaction,isCloudDatabase} from './db-adapter.js';
 import {verifyPrivateStorage} from './deployment-diagnostics.js';
 import {createPaymentStorageGate} from './payment-storage-gate.js';
 import {countCurrentMembers} from './monthly-access.js';
+import {enqueueApprovedBooking} from './notifications/outbox.js';
 import {attachSubscriptionRenewalRoutes} from './subscription-renewals.js';
 
 export const FIRST_MONTH_EGP=100;
@@ -163,6 +164,7 @@ export function attachPaymentRoutes(app,{auth,role,get,all,run,uid,now}){
      isCloudDatabase?true:1);
     const updated=await tx.run("UPDATE bookings SET status='approved',reviewed_at=? WHERE id=? AND status='pending'",paidAt,booking.id);
     if(!updated.changes)throw Error('Concurrent manual payment review conflict');
+    await enqueueApprovedBooking(tx,booking.id);
     return{status:201,ok:true,booking_id:booking.id,amount_egp:due};
    });
    res.set('Cache-Control','no-store, private').status(outcome.status).json(outcome.error?{error:outcome.error}:outcome);
@@ -200,6 +202,7 @@ export function attachPaymentRoutes(app,{auth,role,get,all,run,uid,now}){
      if(!evidence.changes)throw Error('Concurrent payment review conflict');
      const booking=await tx.run("UPDATE bookings SET status='approved',reviewed_at=? WHERE id=? AND status='pending'",now(),row.booking_id);
      if(!booking.changes)throw Error('Concurrent booking review conflict');
+      await enqueueApprovedBooking(tx,row.booking_id);
     }else{
      const note=String(req.body?.reason||'').trim().slice(0,500);
      if(note.length<5)return{http:400,error:'اكتب سبب الرفض للطالب (5 أحرف على الأقل)'};
