@@ -1,0 +1,54 @@
+name: Miss Sofia isolated real WebRTC media test
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "qa-real-local-webrtc-browser.mjs"
+      - "qa-webrtc.html"
+      - "src/qa/livekit-real-media-probe.js"
+      - ".github/workflows/real-media-qa.yml"
+      - "package-lock.json"
+      - "package.json"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: real-media-qa-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  local-media:
+    name: 50 isolated WebRTC subscribers with real RTP
+    runs-on: ubuntu-latest
+    timeout-minutes: 14
+    env:
+      NODE_ENV: test
+      SOFIA_REAL_MEDIA_TARGET: "50"
+      SOFIA_REAL_MEDIA_HOLD_MS: "25000"
+    steps:
+      - name: Checkout isolated test branch
+        uses: actions/checkout@v4
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+      - name: Install exact dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Install local Chrome and Linux media runtime
+        run: npx --yes playwright@1.64.0 install --with-deps chromium
+      - name: Install official open-source LiveKit media server
+        run: |
+          curl --fail --location --silent --show-error https://get.livekit.io --output /tmp/mssofia-install-livekit.sh
+          bash /tmp/mssofia-install-livekit.sh
+          livekit-server --version
+      - name: Verify test syntax
+        run: |
+          node --check qa-real-local-webrtc-browser.mjs
+          node --check src/qa/livekit-real-media-probe.js
+      - name: Measure actual camera frames and audio bytes at 2, 10, 25 and 50 viewers
+        run: node qa-real-local-webrtc-browser.mjs
+        timeout-minutes: 9
