@@ -123,29 +123,43 @@ async function completeJob(job,{db={run},status,providerId=null,reason=null,cloc
 }
 export async function processNotificationTick({
  db={all,get,run,withTransaction},clock=()=>new Date(),
- env=process.env,sender=sendWhatsAppTemplate,cloud=isCloudDatabase,limit=8
+ env=process.env,sender=sendWhatsAppTemplate,cloud=isCloudDatabase,limit=30
 }={}){
  if(!notificationsEnabled(env))return{enabled:false,queued:0,processed:0,sent:0,skipped:0,retry:0};
  const queued=await enqueueUpcomingReminders({db,clock:clock(),env});
  const result={enabled:true,queued,processed:0,sent:0,skipped:0,retry:0};
- for(let n=0;n<Math.min(15,Math.max(1,Number(limit)||8));n++){
+ const jobs=[],maxJobs=Math.min(30,Math.max(1,Math.trunc(Number(limit)||30)));
+ // Claim with short transactions BEFORE performing any provider network I/O.
+ // Ten parallel deliveries avoid serially delaying a 50-parent lesson reminder.
+ for(let n=0;n<maxJobs;n++){
   const job=await claimNext({db,clock:clock(),cloud});
   if(!job)break;
-  result.processed++;
-  const recipient=await readRecipient(job,{db,clock:clock()});
-  if(!recipient){
-   await completeJob(job,{db,status:'skipped',reason:'INELIGIBLE_OR_OPTED_OUT',clock:clock()});
-   result.skipped++;continue;
-  }
+  jobs.push(job);
+ }
+ result.processed=jobs.length;
+ const sendJob=async job=>{
   try{
-   const delivered=await sender(recipient,{env});
-   await completeJob(job,{db,status:'sent',providerId:delivered.providerId,clock:clock()});
-   result.sent++;
-  }catch(error){
-   const reason=cleanError(error);
-   await completeJob(job,{db,status:error instanceof WhatsAppDeliveryError&&error.retryable?'retry':'dead',reason,clock:clock()});
+   const recipient=await readRecipient(job,{db,clock:clock()});
+   if(!recipient){
+    await completeJob(job,{db,status:'skipped',reason:'INELIGIBLE_OR_OPTED_OUT',clock:clock()});
+    result.skipped++;return;
+   }
+   try{
+    const delivery=await sender(recipient,{env});
+    await completeJob(job,{db,status:'sent',providerId:delivery.providerId,clock:clock()});
+    result.sent++;
+   }catch(error){
+    await completeJob(job,{db,status:error instanceof WhatsAppDeliveryError&&error.retryable?'retry':'dead',
+     reason:cleanError(error),clock:clock()});
+    result.retry++;
+   }
+  }catch{
+   // A database outage must NOT trigger an unhandled promise rejection.
+   // The locked job expires after 4 minutes and is safely re-claimed later.
    result.retry++;
   }
- }
+ };
+ for(let index=0;index<jobs.length;index+=10)
+  await Promise.all(jobs.slice(index,index+10).map(sendJob));
  return result;
 }
