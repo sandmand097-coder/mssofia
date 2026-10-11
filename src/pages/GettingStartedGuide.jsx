@@ -155,6 +155,10 @@ export default function GettingStartedGuide(){
       <div className="sofia-guide-detail-head"><span className="sofia-guide-detail-icon"><Icon size={25}/></span><span>الخطوة {String(active+1).padStart(2,'0')} من {STEPS.length}</span></div>
       <h3>{step.title}</h3><p className="sofia-guide-detail-description">{step.subtitle}</p>
       <ol className="sofia-guide-instructions">{step.points.map((point,i)=><li key={i}><span>{String(i+1).padStart(2,'0')}</span><p>{point}</p></li>)}</ol>
+      <div className="sofia-guide-screen" aria-label="توضيح مبسط لأسماء أقسام الموقع في هذه الخطوة">
+       <div className="sofia-guide-screen-bar"><span className="sofia-guide-screen-dots"><i/><i/><i/></span><strong>{step.preview}</strong><small>أسماء الأقسام داخل الموقع</small></div>
+       <div className="sofia-guide-screen-body">{step.previewItems.map((item,i)=><div key={item}><CheckCircle2 size={17}/><span>{item}</span><b>{String(i+1).padStart(2,'0')}</b></div>)}</div>
+      </div>
       <div className="sofia-guide-tip"><HelpCircle size={19}/><p>{step.tip}</p></div>
       <div className="sofia-guide-detail-bottom">
        <Link className="sofia-cta" to={step.to}>{step.action}<ArrowLeft size={17}/></Link>
