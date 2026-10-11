@@ -6,7 +6,7 @@ import {spawn} from 'node:child_process';
 import {randomUUID} from 'node:crypto';
 import net from 'node:net';
 import {chromium} from 'playwright-core';
-import {AccessToken} from 'livekit-server-sdk';
+import {AccessToken,RoomServiceClient} from 'livekit-server-sdk';
 
 const room='sofia-live-react-ui-'+randomUUID();
 const teacherId='director-'+randomUUID();
@@ -35,6 +35,17 @@ async function waitReady(url,check){
   await pause(170);
  }
  throw Error('Timed out starting '+url);
+}
+const roomService=new RoomServiceClient('http://127.0.0.1:7880','devkey','secret');
+async function waitForConnectedParticipant(identity){
+ for(let attempt=0;attempt<110;attempt++){
+  try{
+   const joined=await roomService.listParticipants(room);
+   if(joined.some(item=>item.identity===identity))return;
+  }catch{/* Room may not exist until the first LiveKit join. */}
+  await pause(160);
+ }
+ throw Error('React LiveKit connection did not reach the actual SFU for '+identity);
 }
 async function connectPage(id,host){
  const page=await browser.newPage({
@@ -79,9 +90,17 @@ try{
   '--disable-renderer-backgrounding','--disable-backgrounding-occluded-windows'
  ]});
  teacher=await connectPage(teacherId,true);
+ await waitForConnectedParticipant(teacherId);
+ await pause(300);
  await teacher.frame.getByRole('button',{name:'البدء بالصوت فقط'}).waitFor();
  await teacher.frame.getByRole('button',{name:'البدء بالصوت فقط'}).click();
- await teacher.frame.getByText('البث مباشر • Miss Sofia').waitFor({timeout:14000});
+ try{
+  await teacher.frame.getByText('البث مباشر • Miss Sofia').waitFor({timeout:18000});
+ }catch(e){
+  const state=await teacher.frame.locator('.sofia-meeting').innerText().catch(()=>'(unavailable)');
+  console.error('SOFIA_REACT_HOST_STATE '+state.slice(0,520).replace(/\s+/g,' '));
+  throw e;
+ }
  console.log('PASS React mobile teacher publishes real microphone-only track');
  student=await connectPage(studentId,false);
  await student.frame.getByRole('button',{name:'الميكروفون بإذن المعلمة'}).waitFor();
