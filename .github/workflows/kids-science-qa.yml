@@ -1,0 +1,47 @@
+name: Miss Sofia children's science experience QA
+
+# Runs on a separate review branch only. Never deploys the public site.
+on:
+  push:
+    branches: [feature/kids-science-discovery-20261011]
+  pull_request:
+    branches: [feature/domain-resilience-whatsapp-20261011]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: science-lab-qa-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Safe interactive science lab and production regression
+    runs-on: ubuntu-latest
+    timeout-minutes: 17
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Install locked packages
+        run: npm ci --no-audit --no-fund
+      - name: Verify source and server syntax
+        run: npm run check
+      - name: Run existing security, enrollment and new science tests
+        run: npm test
+        env:
+          NODE_ENV: test
+          PUBLIC_LAUNCH_MODE: preview
+          REGISTRATION_ENABLED: 'false'
+      - name: Build production assets
+        run: npm run build
+      - name: Verify existing SEO snapshots
+        run: npm run test:seo:build
+      - name: Install standalone test browser
+        run: npx --yes playwright@1.64.0 install --with-deps chromium
+      - name: Test visitor interactions and mobile motion accessibility
+        run: npm run test:discovery:browser
+      - name: Audit shipped runtime libraries
+        run: npm audit --omit=dev --audit-level=high
