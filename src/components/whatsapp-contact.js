@@ -9,7 +9,7 @@ export const WHATSAPP_CONTACT_URL='https://wa.me/'+WHATSAPP_CONTACT_E164.slice(1
  + '?text='+encodeURIComponent(WHATSAPP_CONTACT_MESSAGE);
 
 const PUBLIC_CONTACT_PAGES=new Set([
- '/', '/courses', '/privacy', '/terms', '/login', '/register',
+ '/', '/courses', '/guide', '/privacy', '/terms', '/login', '/register',
  '/forgot-password', '/reset-password', '/verify-email'
 ]);
 /** Marketing and sign-up only. Never float over a live lesson or dashboard. */
