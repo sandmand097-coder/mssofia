@@ -1,4 +1,4 @@
-import React from 'react';
+import React,{useEffect,useState} from 'react';
 import {ArrowUpLeft} from 'lucide-react';
 import {showWhatsAppContact,WHATSAPP_CONTACT_URL} from './whatsapp-contact.js';
 
@@ -15,7 +15,20 @@ export function WhatsAppMark({size=26}){
 
 /** One-tap direct link, intentionally hidden from dashboards and live lessons. */
 export function WhatsAppContact({pathname}){
- if(!showWhatsAppContact(pathname))return null;
+ const [footerVisible,setFooterVisible]=useState(false);
+ useEffect(()=>{
+  if(!showWhatsAppContact(pathname)||typeof IntersectionObserver==='undefined')return;
+  const footer=document.querySelector('.sofia-footer');
+  if(!footer)return;
+  const observer=new IntersectionObserver(entries=>{
+   setFooterVisible(Boolean(entries[0]?.isIntersecting));
+  },{threshold:0.05});
+  observer.observe(footer);
+  return()=>observer.disconnect();
+ },[pathname]);
+ // The footer has the same direct contact action; hide the floating widget
+ // while it's visible so there aren't two competing CTAs on screen.
+ if(!showWhatsAppContact(pathname)||footerVisible)return null;
  return <aside className="sofia-wa-contact" aria-label="التواصل عبر واتساب">
   <a className="sofia-wa-contact-link"
    href={WHATSAPP_CONTACT_URL} target="_blank" rel="noopener noreferrer"
