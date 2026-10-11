@@ -289,7 +289,7 @@ export default function App(){
   <PageTitle/>
   <BrandHeader user={user} logout={logout} previewMode={previewNavigation} adminOnly={adminOnly}/>
   {launchMode==='preview'&&<div className="sofia-public-preview-notice" role="status">موقع Miss Sofia متاح للتعرّف على المُدرِّسة والعروض. تسجيل الطلاب والبث المباشر هيفتحوا بعد اكتمال التجهيز الآمن.</div>}
-  {launchMode==='offline'&&<div className="sofia-public-preview-notice" role="alert">المحتوى التعريفي متاح، لكن خدمة الحسابات غير متصلة مؤقتًا. نحاول استعادة الاتصال تلقائيًا. <button type="button" className="portal-soft-btn" onClick={()=>void retryBootstrap()} disabled={reconnecting}>{reconnecting?'جارٍ الاتصال...':'إعادة الاتصال'}</button></div>
+  {launchMode==='offline'&&<div className="sofia-public-preview-notice" role="alert">المحتوى التعريفي متاح، لكن خدمة الحسابات غير متصلة مؤقتًا. نحاول استعادة الاتصال تلقائيًا. <button type="button" className="portal-soft-btn" onClick={()=>void retryBootstrap()} disabled={reconnecting}>{reconnecting?'جارٍ الاتصال...':'إعادة الاتصال'}</button></div>}
   {!routeReady?<div className="loading" role="status">جارٍ تجهيز موقع Miss Sofia...</div>:
    <Suspense fallback={<div className="loading">جارٍ تحميل الصفحة...</div>}>
     <Routes>
