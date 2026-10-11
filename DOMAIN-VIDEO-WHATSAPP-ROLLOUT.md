@@ -24,7 +24,7 @@ Cloudflare Pages `API_ORIGIN` is restricted to two exact upstream addresses
 (`mssofia.onrender.com` or `api.mssofia.com`); it cannot become an open proxy.
 Existing `FULL_BACKEND_READY` and `PUBLIC_LAUNCH_MODE` release gates remain.
 The Express API responds to credentialed CORS only from `mssofia.pages.dev`,
-`mssofia.com`, or `www.mssofia.com`. In development, localhost is allowed.
+`mssofia.com`, In development, localhost is allowed.
 Rejected browser origins cannot read responses; unsafe methods remain rejected.
 
 For cookies, login and Google login now share the same **HttpOnly**, 7-day,
@@ -49,7 +49,7 @@ without an audited refresh-token database and revocation mechanism.
 ### Rollout
 
 1. Set up and verify `mssofia.com` as a Cloudflare Pages Custom Domain
-   (with redirect from `www` if appropriate); confirm HTTPS and DNS.
+   (with a redirect from `www` if appropriate); confirm HTTPS and DNS.
 2. Verify `api.mssofia.com` in Render Custom Domains, valid TLS certificate
    and correct origin routing before changing Cloudflare `API_ORIGIN`.
 3. Update Render `APP_ORIGIN=https://mssofia.com` only after cutover. Leave
@@ -95,6 +95,18 @@ body placeholders in this precise order:
 |---|---|---|---|---|---|
 | `WHATSAPP_BOOKING_TEMPLATE` | Booking confirmed | Student name | Course title | `https://.../dashboard` | Confirmation phrase |
 | `WHATSAPP_REMINDER_TEMPLATE` | 15-min lesson reminder | Student name | Lesson title | Cairo lesson time | `https://.../lesson/{id}` |
+
+Suggested Arabic **approved Utility template text** (review wording, then submit
+for Meta approval before sending):
+
+```text
+Booking: مرحبًا بولي أمر {{1}}. نؤكد تفعيل اشتراك الطالب/الطالبة
+في كورس {{2}} لدى مس صوفيا للعلوم. يمكنك متابعة الاشتراك والحصص
+من لوحة التحكم: {{3}}. {{4}}.
+
+Lesson reminder: تذكير لولي أمر {{1}}: ستبدأ حصة {{2}} في {{3}}
+بتوقيت القاهرة. افتح رابط الحصة الآمن بعد تسجيل الدخول: {{4}}.
+```
 
 The link leads to protected pages; it is **NOT** a session token or an
 unauthenticated classroom entrance. The recipient must still log in and pass
