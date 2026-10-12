@@ -1,8 +1,9 @@
 import React,{useEffect,useState} from 'react';
-import {Link,useNavigate,useSearchParams} from 'react-router-dom';
+import {Link,useNavigate,useSearchParams,useLocation} from 'react-router-dom';
 import {FlaskConical,ArrowLeft,Eye,EyeOff,ShieldCheck,MailCheck,Mail,LockKeyhole,Send} from 'lucide-react';
 import {dashboardPath} from '../components/MrsSofiaBrand.jsx';
 import GoogleAdminButton from '../components/GoogleAdminButton.jsx';
+import {safeAdminRedirect} from '../components/manual-review-redirect.js';
 
 function AuthLayout({tag,title,description,children}){
  return <main className="sofia-site sofia-auth-bg"><div className="sofia-container sofia-auth-layout"><section className="sofia-auth-card">
@@ -17,10 +18,10 @@ function PasswordInput({label,value,onChange,autoComplete='new-password'}){
  return <label>{label}<div className="sofia-password-field"><input required minLength={autoComplete==='current-password'?1:10} maxLength={128} value={value} onChange={e=>onChange(e.target.value)} type={visible?'text':'password'} autoComplete={autoComplete} placeholder="••••••••••"/><button type="button" aria-label={visible?'إخفاء كلمة المرور':'إظهار كلمة المرور'} onClick={()=>setVisible(v=>!v)}>{visible?<EyeOff size={19}/>:<Eye size={19}/>}</button></div></label>;
 }
 export function SignInPage({api,user,setUser,adminOnly=false}){
- const navigate=useNavigate(),[email,setEmail]=useState(''),[password,setPassword]=useState(''),[error,setError]=useState(''),[busy,setBusy]=useState(false);
- useEffect(()=>{if(user)navigate(dashboardPath(user),{replace:true})},[user,navigate]);
- const submit=async e=>{e.preventDefault();setBusy(true);setError('');try{const r=await api('/auth/login',{method:'POST',body:JSON.stringify({email,password})});setUser(r.user);navigate(dashboardPath(r.user),{replace:true})}catch(err){setError(err.message)}finally{setBusy(false)}};
- return <AuthLayout tag={adminOnly?'SCHOOL ADMINISTRATOR':'WELCOME TO MISS SOFIA'} title={adminOnly?'دخول المُدرِّسة Miss Sofia':'أهلاً بيك في مُدرِّسة العلوم'} description={adminOnly?'تسجيل الدخول متاح لالمُدرِّسة بحساب Google المعتمد فقط. تسجيل الطلاب ما زال مغلقًا.':'سجّل بحساب Google الخاص بولي الأمر أو بالبريد الإلكتروني للوصول إلى مساحة الطالب، أما المديرة فتدخل بحسابها المعتمد.'}>
+ const navigate=useNavigate(),location=useLocation(),[email,setEmail]=useState(''),[password,setPassword]=useState(''),[error,setError]=useState(''),[busy,setBusy]=useState(false);
+ useEffect(()=>{if(user)navigate(safeAdminRedirect(location.search,user)||dashboardPath(user),{replace:true})},[user,navigate,location.search]);
+ const submit=async e=>{e.preventDefault();setBusy(true);setError('');try{const r=await api('/auth/login',{method:'POST',body:JSON.stringify({email,password})});setUser(r.user);navigate(safeAdminRedirect(location.search,r.user)||dashboardPath(r.user),{replace:true})}catch(err){setError(err.message)}finally{setBusy(false)}};
+ return <AuthLayout tag={adminOnly?'SCHOOL ADMINISTRATOR':'WELCOME TO MISS SOFIA'} title={adminOnly?'دخول المُدرِّسة Miss Sofia':'أهلاً بيك في مُدرِّسة العلوم'} description={adminOnly?'تسجيل الدخول متاح لالمُدرِّسة بحساب Google المعتمد فقط. تسجيل الطلاب ما زال مغلقًا.':'سجّل بحساب Google الخاص بولي الأمر للوصول إلى مساحة الطالب، وأدخلي لوحة الإدارة بحسابك المعتمد لمراجعة طلبات الاشتراك يدويًا.'}>
   <ErrorMessage message={error}/>
   {!adminOnly&&<form className="sofia-auth-form" onSubmit={submit}>
    <label>البريد الإلكتروني<input type="email" autoComplete="email" required value={email} onChange={e=>setEmail(e.target.value)} placeholder="example@gmail.com"/></label>
