@@ -5,7 +5,7 @@ import {onRequest} from '../functions/api/[[path]].js';
 const site='https://mssofia.pages.dev';
 const origin='https://mssofia.onrender.com/api/courses';
 const r=(path='/api/courses',options={})=>new Request(site+path,options);
-const sample={courses:[{id:'science-1',title:'علوم ابتدائي',subject:'علوم',level:'الصف الأول',price:100,capacity:50,enrolled:13,teacher_name:'Miss Sofia',description:'علوم تفاعلية',next_date:'2026-10-18T13:00:00Z',guardian_phone:'SECRET-PHONE',student_email:'private@example.com',teacher_id:'private-id'}]};
+const sample={courses:[{id:'science-1',status:'published',title:'علوم ابتدائي',subject:'علوم',level:'الصف الأول',price:100,capacity:50,enrolled:13,teacher_name:'Miss Sofia',description:'علوم تفاعلية',next_date:'2026-10-18T13:00:00Z',guardian_phone:'SECRET-PHONE',student_email:'private@example.com',teacher_id:'private-id'}]};
 
 assert.equal(publicCatalogRequest(r()),true);
 assert.equal(publicCatalogRequest(r('/api/courses?q=abc')),false);
@@ -20,6 +20,7 @@ assert.equal(cleaned.courses[0].student_email,undefined);
 assert.equal(cleaned.courses[0].guardian_phone,undefined);
 assert.equal(cleaned.courses[0].teacher_id,undefined);
 assert.equal(sanitizeCatalog({courses:[null]}),null);
+assert.equal(sanitizeCatalog({courses:[{id:'c',title:'unpublished',status:'draft'}]}),null,'never cache unpublished catalogue rows');
 assert.equal(sanitizeCatalog({courses:'oops'}),null);
 assert.equal(sanitizeCatalog({courses:Array.from({length:151},()=>({id:'x',title:'x'}))}),null);
 
