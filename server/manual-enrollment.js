@@ -25,16 +25,16 @@ export function attachManualEnrollment(app,{auth,role,get,all,run,uid,now,withTr
    const phone=String(req.body?.phone||'').trim();
    if(!ID_RE.test(String(req.params.id))||!isPhone(phone)||req.body?.guardianConsent!==true)
     return send(res,400,{error:'اكتب رقم موبايل مصري صحيح ووافق على تواصل الإدارة مع ولي الأمر.'});
-   const row=await get(\`SELECT b.id,b.status,b.contact_requested_at,b.student_id,b.contact_status,c.title,c.price
-    FROM bookings b JOIN courses c ON c.id=b.course_id WHERE b.id=? AND b.student_id=?\`,
+   const row=await get(`SELECT b.id,b.status,b.contact_requested_at,b.student_id,b.contact_status,c.title,c.price
+    FROM bookings b JOIN courses c ON c.id=b.course_id WHERE b.id=? AND b.student_id=?`,
     req.params.id,req.user.id);
    if(!row)return send(res,404,{error:'طلب الاشتراك غير موجود في حساب الطالب'});
    if(row.status==='rejected')return send(res,409,{error:'هذا الحجز مرفوض؛ تواصل مع الإدارة لمراجعته'});
    const kind=row.status==='approved'?'renewal':'initial';
    if(row.status==='approved'){
-    const payment=await get(\`SELECT p.status,p.confirmed_on_phone,p.reviewed_at,
+    const payment=await get(`SELECT p.status,p.confirmed_on_phone,p.reviewed_at,
      (SELECT MAX(r.period_end) FROM subscription_renewals r WHERE r.booking_id=b.id AND r.status='approved' AND r.confirmed_on_phone=TRUE) AS last_end
-     FROM bookings b LEFT JOIN payment_submissions p ON p.booking_id=b.id WHERE b.id=?\`,row.id);
+     FROM bookings b LEFT JOIN payment_submissions p ON p.booking_id=b.id WHERE b.id=?`,row.id);
     const paid=payment?.status==='approved'&&(payment.confirmed_on_phone===true||payment.confirmed_on_phone===1);
     if(!paid)return send(res,409,{error:'التجديد يتطلب اشتراكًا أوليًا معتمدًا؛ تواصل مع الإدارة'});
     const first=Date.parse(payment.reviewed_at||''),last=Date.parse(payment.last_end||'');
@@ -45,8 +45,8 @@ export function attachManualEnrollment(app,{auth,role,get,all,run,uid,now,withTr
    if(row.contact_status==='pending'&&Number.isFinite(Date.parse(row.contact_requested_at))&&
     Date.now()-Date.parse(row.contact_requested_at)<5*60000)
     return send(res,429,{error:'طلب التواصل السابق ما زال قيد المراجعة. انتظر خمس دقائق قبل تحديث الرقم.'});
-   const saved=await run(\`UPDATE bookings SET guardian_phone=?,contact_requested_at=?,contact_kind=?,contact_status='pending',
-     contact_review_note=NULL WHERE id=? AND student_id=? AND status=?\`,
+   const saved=await run(`UPDATE bookings SET guardian_phone=?,contact_requested_at=?,contact_kind=?,contact_status='pending',
+     contact_review_note=NULL WHERE id=? AND student_id=? AND status=?`,
     phone,now(),kind,row.id,req.user.id,row.status);
    if(!saved.changes)return send(res,409,{error:'تغيرت حالة الحجز؛ أعد تحميل صفحة الطالب'});
    // The request is stored even if mail is disabled/unavailable. This MUST NOT
@@ -74,7 +74,7 @@ export function attachManualEnrollment(app,{auth,role,get,all,run,uid,now,withTr
  });
  app.get('/api/admin/manual-requests',auth,onlyAdmin,async(req,res,next)=>{
   try{
-   const items=await all(\`SELECT b.id AS booking_id,b.status AS booking_status,
+   const items=await all(`SELECT b.id AS booking_id,b.status AS booking_status,
       b.guardian_phone,b.contact_requested_at,b.contact_kind,b.contact_status,b.contact_review_note,
       u.name AS student_name,u.email AS guardian_email,c.title AS course_title,c.subject,c.price,
       p.status AS payment_status,p.confirmed_on_phone,
@@ -84,7 +84,7 @@ export function attachManualEnrollment(app,{auth,role,get,all,run,uid,now,withTr
       LEFT JOIN payment_submissions p ON p.booking_id=b.id
       WHERE (b.status='pending' OR b.contact_status='pending')
       ORDER BY CASE WHEN b.contact_status='pending' THEN 0 ELSE 1 END,
-       b.contact_requested_at DESC,b.created_at DESC LIMIT 200\`);
+       b.contact_requested_at DESC,b.created_at DESC LIMIT 200`);
    return send(res,200,{requests:items.map(item=>({
     ...item,amount_egp:item.contact_kind==='renewal'?170:initialDue(item)
    }))});
@@ -107,9 +107,9 @@ export function attachManualEnrollment(app,{auth,role,get,all,run,uid,now,withTr
    if(reference&&!/^[A-Z0-9][A-Z0-9./_-]{4,63}$/.test(reference))
     return send(res,400,{error:'رقم العملية غير صالح؛ اتركه فارغًا فقط إذا لم يوجد رقم مرجعي'});
    const result=await withTransaction(async tx=>{
-    const row=await tx.get(\`SELECT b.id,b.student_id,b.status,b.contact_kind,b.contact_status,b.course_id,
+    const row=await tx.get(`SELECT b.id,b.student_id,b.status,b.contact_kind,b.contact_status,b.course_id,
      c.capacity,c.price,c.subject FROM bookings b JOIN courses c ON c.id=b.course_id
-     WHERE b.id=?\`+bookLock(isCloudDatabase),req.params.id);
+     WHERE b.id=?`+bookLock(isCloudDatabase),req.params.id);
     if(!row)return{code:404,error:'الحجز غير موجود'};
     if(row.status==='approved'){
      if(decision==='rejected'){
@@ -122,7 +122,7 @@ export function attachManualEnrollment(app,{auth,role,get,all,run,uid,now,withTr
     const existing=await tx.get('SELECT id,status FROM payment_submissions WHERE booking_id=?'+(isCloudDatabase?' FOR UPDATE':''),row.id);
     if(existing)return{code:409,error:'يوجد سجل تحويل سابق؛ يجب مراجعته من سجل التحويلات القديمة أولًا لتجنب تكرار التحصيل'};
     if(decision==='rejected'){
-     await tx.run(\`UPDATE bookings SET contact_status='rejected',contact_review_note=? WHERE id=? AND status='pending'\`,
+     await tx.run(`UPDATE bookings SET contact_status='rejected',contact_review_note=? WHERE id=? AND status='pending'`,
       reason,row.id);
      return{code:200,ok:true,status:'rejected',message:'تم رفض طلب تأكيد الدفع؛ سيظل الحجز غير مفعّل ويمكن للطالب إعادة إرسال رقم التواصل.'};
     }
@@ -137,18 +137,18 @@ export function attachManualEnrollment(app,{auth,role,get,all,run,uid,now,withTr
      const token='MANUAL-'+(internal?'CONTACT-'+row.id:reference);
      const repeated=await tx.get('SELECT id FROM payment_submissions WHERE transfer_reference=?',token);
      if(repeated)return{code:409,error:'رقم العملية سبق استخدامه؛ راجع كشف التحويلات قبل إعادة الموافقة'};
-     await tx.run(\`INSERT INTO payment_submissions
+     await tx.run(`INSERT INTO payment_submissions
        (id,booking_id,student_id,course_id,amount_egp,transfer_reference,sender_phone,proof_key,status,
        submitted_at,reviewed_at,reviewed_by,review_note,confirmed_on_phone)
-       VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)\`,
+       VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       uid(),row.id,row.student_id,row.course_id,amount,token,phone,'manual:'+row.id,
       'approved',reviewedAt,reviewedAt,req.user.id,
       internal?'تأكيد يدوي من الإدارة بناءً على التحويل المستلم؛ رقم سجل داخلي وليس رقم عملية حقيقي':
        'تأكيد يدوي من الإدارة؛ رقم العملية مطابق للمرجع الخارجي الذي أدخلته',
       isCloudDatabase?true:1);
     }
-    const updated=await tx.run(\`UPDATE bookings SET status='approved',reviewed_at=?,guardian_phone=?,
-      contact_status='approved',contact_review_note=NULL WHERE id=? AND status='pending'\`,
+    const updated=await tx.run(`UPDATE bookings SET status='approved',reviewed_at=?,guardian_phone=?,
+      contact_status='approved',contact_review_note=NULL WHERE id=? AND status='pending'`,
      reviewedAt,phone,row.id);
     if(!updated.changes)throw Error('Concurrent manual booking change');
     return{code:200,ok:true,status:'approved',message:'تم قبول الحجز بعد تأكيد الإدارة، وأصبح الاشتراك صالحًا وفق نظام الحصص.'};
