@@ -237,12 +237,16 @@ export function attachPaymentRoutes(app,{auth,role,get,all,run,uid,now}){
       const duplicate=await tx.get('SELECT id FROM payment_submissions WHERE transfer_reference=? AND id<>?',transfer,row.id);
       const renewal=await tx.get('SELECT id FROM subscription_renewals WHERE transfer_reference=?',transfer);
       if(duplicate||renewal)return{http:409,error:'رقم التحويل مستخدم من قبل. لا يمكن تسجيل نفس المبلغ مرتين.'};
-      const changed=await tx.run('UPDATE payment_submissions SET transfer_reference=? WHERE id=? AND status=?',transfer,row.id,'pending');
-      if(!changed.changes)throw Error('Concurrent transfer reference conflict');
+
      }
      if(req.body?.confirmedOnPhone!==true)return{http:400,error:'يجب التأكيد بأن المبلغ وصل فعليًا إلى تطبيق فودافون كاش على هاتف المُدرِّسة'};
      const used=await countCurrentMembers(tx.all,row.course_id);
      if(Number(used)>=Number(row.capacity))return{http:409,error:'المقاعد اكتملت؛ تواصل مع ولي الأمر قبل الموافقة'};
+     if(row.proof_key==='manual:notice'){
+      const ref='MANUAL-'+String(req.body.transfer_reference).trim().toUpperCase();
+      const changed=await tx.run('UPDATE payment_submissions SET transfer_reference=? WHERE id=? AND status=?',ref,row.id,'pending');
+      if(!changed.changes)throw Error('Concurrent transfer reference conflict');
+     }
      const evidence=await tx.run("UPDATE payment_submissions SET status='approved',confirmed_on_phone=TRUE,reviewed_by=?,reviewed_at=?,review_note=? WHERE id=? AND status='pending'",req.user.id,now(),'تم التأكد من وصول المبلغ إلى هاتف المُدرِّسة',row.id);
      if(!evidence.changes)throw Error('Concurrent payment review conflict');
      const booking=await tx.run("UPDATE bookings SET status='approved',reviewed_at=? WHERE id=? AND status='pending'",now(),row.booking_id);
