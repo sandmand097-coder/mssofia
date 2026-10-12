@@ -126,7 +126,7 @@ export default function AdminPayments({onChanged}){
    <p>رقم الهاتف الذي صرّح الطالب بأنه أرسل منه: <strong dir="ltr">{payment.sender_phone||'غير مسجّل'}</strong></p>
    <small>وقت استلام الإيصال في الموقع: {dateTime(payment.submitted_at)} — ليس بالضرورة وقت التحويل</small>
    <div className="sofia-payment-proof">
-    {payment.proof_key==='manual:notice'?<small><ShieldCheck size={15}/> بلاغ برقم التواصل فقط، دون صورة إيصال. يرجى التحقق من كشف المحفظة.</small>:payment.transfer_reference?.startsWith('MANUAL-')?<small><ShieldCheck size={15}/> تم اعتماد التحويل يدويًا بعد مراجعة المحفظة — بدون صورة إيصال. رقم العملية: {payment.transfer_reference.slice(7)}</small>:<>
+    {(payment.proof_key==='manual:notice'||payment.proof_key?.startsWith('manual:notice:'))?<small><ShieldCheck size={15}/> بلاغ برقم التواصل فقط، دون صورة إيصال. يرجى التحقق من كشف المحفظة.</small>:payment.transfer_reference?.startsWith('MANUAL-')?<small><ShieldCheck size={15}/> تم اعتماد التحويل يدويًا بعد مراجعة المحفظة — بدون صورة إيصال. رقم العملية: {payment.transfer_reference.slice(7)}</small>:<>
      <a href={'/api/admin/payments/'+payment.id+'/proof'} target="_blank" rel="noopener noreferrer">عرض إيصال الطالب الخاص</a>
      {payment.status==='pending'&&<img src={'/api/admin/payments/'+payment.id+'/proof'} loading="lazy" alt={'إيصال مُرسل من '+payment.student_name}/>}
     </>}

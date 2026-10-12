@@ -8,6 +8,7 @@ import {mailMode,sendAccountEmail} from './email.js';
 
 const sha=s=>createHash('sha256').update(s).digest('hex');
 const tokenValid=s=>typeof s==='string'&&/^[a-f0-9]{64}$/.test(s);
+const isManualNotice=key=>key==='manual:notice'||(typeof key==='string'&&key.startsWith('manual:notice:'));
 const htmlSafe=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const adminAddress=()=>String(process.env.SCHOOL_ADMIN_EMAIL||'').trim().toLowerCase();
 const hours24=24*60*60*1000;
@@ -49,12 +50,12 @@ export function attachEmailReview(app,{get,run,uid,now,loadProof,withTransaction
     <p>الكورس: ${htmlSafe(record.course_title)}</p>
     <p>المبلغ: <strong>${Number(record.amount_egp)} جنيه</strong></p>
     <p>رقم الهاتف الذي أرسل التحويل: <strong dir="ltr">${htmlSafe(record.sender_phone||'إيصال قديم')}</strong></p></div>
-    ${record.proof_key==='manual:notice'?'<p>بلاغ برقم الهاتف فقط، بدون صورة إيصال.</p>':'<p>صورة الإيصال:</p><img alt="صورة التحويل" src="/payment-review/proof?token='+token+'">'}
+    ${isManualNotice(record.proof_key)?'<p>بلاغ برقم الهاتف فقط، بدون صورة إيصال.</p>':'<p>صورة الإيصال:</p><img alt="صورة التحويل" src="/payment-review/proof?token='+token+'">'}
     <small>راجع وصول المبلغ داخل تطبيق فودافون كاش قبل الضغط على الموافقة. إرسال صورة وحدها لا يعني وصول الأموال.</small>
     <form method="POST" action="/payment-review/decision">
      <input type="hidden" name="token" value="${token}">
      <label class="confirm"><input type="checkbox" name="confirmed_on_phone" value="yes"> تحققت بنفسي من وصول المبلغ المطلوب ومن رقم المُرسل على هاتف فودافون كاش الرسمي للمُدرِّسة.</label>
-     ${record.proof_key==='manual:notice'?'<label for="transfer_reference">رقم عملية التحويل الحقيقي من المحفظة (إلزامي عند القبول)</label><input id="transfer_reference" name="transfer_reference" type="text" minlength="5" maxlength="64" autocomplete="off" placeholder="رقم العملية">':''}
+     ${isManualNotice(record.proof_key)?'<label for="transfer_reference">رقم عملية التحويل الحقيقي من المحفظة (إلزامي عند القبول)</label><input id="transfer_reference" name="transfer_reference" type="text" minlength="5" maxlength="64" autocomplete="off" placeholder="رقم العملية">':''}
      <button name="decision" value="approved" class="accept" type="submit">قبول الدفع بعد التحقق من وصول المبلغ</button>
      <section><label for="reason">سبب الرفض (اختياري)</label><input id="reason" name="reason" type="text" maxlength="250" placeholder="المبلغ لم يصل أو الإيصال غير واضح"></section>
      <button name="decision" value="rejected" class="reject" type="submit">رفض الإيصال</button>
@@ -91,7 +92,7 @@ export function attachEmailReview(app,{get,run,uid,now,loadProof,withTransaction
     if(!admin)return {status:403,message:'هذا البريد غير مرتبط بحساب إدارة نشط.'};
     const nowValue=now();
     if(decision==='approved'){
-     if(row.proof_key==='manual:notice'){
+     if(isManualNotice(row.proof_key)){
       const reference=String(req.body?.transfer_reference||'').trim().toUpperCase();
       if(!/^[A-Z0-9][A-Z0-9./_-]{4,63}$/.test(reference))return{status:400,message:'اكتب رقم العملية الحقيقي كما يظهر في كشف محفظتك قبل اعتماد الدفع.'};
       const finalRef='MANUAL-'+reference;
@@ -102,7 +103,7 @@ export function attachEmailReview(app,{get,run,uid,now,loadProof,withTransaction
      }
      const capacity=await tx.get("SELECT COUNT(*) AS n FROM bookings WHERE course_id=(SELECT course_id FROM payment_submissions WHERE id=?) AND status='approved'",row.payment_id);
      if(Number(capacity?.n||0)>=Number(row.capacity))return{status:409,message:'الكورس مكتمل العدد؛ لم يتفعّل الحجز.'};
-     if(row.proof_key==='manual:notice'){
+     if(isManualNotice(row.proof_key)){
       const ref='MANUAL-'+String(req.body.transfer_reference).trim().toUpperCase();
       const updated=await tx.run('UPDATE payment_submissions SET transfer_reference=? WHERE id=? AND status=?',ref,row.payment_id,'pending');
       if(!updated.changes)throw Error('Concurrent manual transfer review conflict');
