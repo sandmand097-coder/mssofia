@@ -71,6 +71,12 @@ if(!columns.has('google_sub'))db.exec('ALTER TABLE users ADD COLUMN google_sub T
 db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_users_google_sub ON users(google_sub) WHERE google_sub IS NOT NULL');
 const paymentCols=new Set(db.prepare('PRAGMA table_info(payment_submissions)').all().map(x=>x.name));
 if(!paymentCols.has('sender_phone'))db.exec('ALTER TABLE payment_submissions ADD COLUMN sender_phone TEXT');
+// Contact requests are nullable, additive metadata on existing bookings. Legacy
+// student records are preserved when an older local database is opened.
+const contactColumns=new Set(db.prepare('PRAGMA table_info(bookings)').all().map(x=>x.name));
+for(const column of ['guardian_phone','contact_requested_at','contact_kind','contact_status','contact_review_note']){
+ if(!contactColumns.has(column))db.exec('ALTER TABLE bookings ADD COLUMN '+column+' TEXT');
+}
 const lessonCols=new Set(db.prepare('PRAGMA table_info(lessons)').all().map(x=>x.name));
 if(!lessonCols.has('meet_url'))db.exec('ALTER TABLE lessons ADD COLUMN meet_url TEXT');
 export const get=(sql,...p)=>db.prepare(sql).get(...p);
