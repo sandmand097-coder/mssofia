@@ -303,7 +303,7 @@ export default function App(){
      <Route path="/privacy" element={<PrivacyPolicy/>}/>
      <Route path="/terms" element={<SchoolTerms/>}/>
      <Route path="/guide" element={<GettingStartedGuide/>}/>
-     <Route path="/courses/:id" element={publicOnly||adminOnly?<PublicUnavailable/>:<MrsCourseDetails api={api} user={user} show={show}/>}/>
+     <Route path="/courses/:id" element={launchMode==='preview'||adminOnly?<PublicUnavailable/>:<MrsCourseDetails api={api} user={launchMode==='full'?user:null} show={show}/>}/>
      <Route path="/login" element={publicOnly?<PublicUnavailable/>:<SignInPage api={api} user={user} setUser={setUser} show={show} adminOnly={adminOnly}/>}/>
      <Route path="/register" element={publicOnly||adminOnly?<PublicUnavailable/>:<RegisterPage api={api} user={user} setUser={setUser}/>}/>
      <Route path="/verify-email" element={publicOnly||adminOnly?<PublicUnavailable/>:<VerifyEmailPage api={api}/>}/>
