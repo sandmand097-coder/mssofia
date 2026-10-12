@@ -39,8 +39,8 @@ export function attachManualEnrollment(app,{auth,role,get,all,run,uid,now,withTr
     if(!paid)return send(res,409,{error:'التجديد يتطلب اشتراكًا أوليًا معتمدًا؛ تواصل مع الإدارة'});
     const first=Date.parse(payment.reviewed_at||''),last=Date.parse(payment.last_end||'');
     const end=Math.max(first+30*86400000,Number.isFinite(last)?last:0);
-    if(Number.isFinite(end)&&end-Date.now()>7*86400000)
-     return send(res,409,{error:'يمكن طلب التجديد خلال الأسبوع الأخير من الاشتراك أو بعد انتهائه'});
+    if(Number.isFinite(end)&&end-Date.now()>5*86400000)
+     return send(res,409,{error:'يمكن طلب التجديد خلال آخر خمسة أيام من الاشتراك أو بعد انتهائه'});
    }
    if(row.contact_status==='pending'&&Number.isFinite(Date.parse(row.contact_requested_at))&&
     Date.now()-Date.parse(row.contact_requested_at)<5*60000)
@@ -111,7 +111,14 @@ export function attachManualEnrollment(app,{auth,role,get,all,run,uid,now,withTr
      c.capacity,c.price,c.subject FROM bookings b JOIN courses c ON c.id=b.course_id
      WHERE b.id=?\`+bookLock(isCloudDatabase),req.params.id);
     if(!row)return{code:404,error:'الحجز غير موجود'};
-    if(row.status!=='pending')return{code:409,error:'هذا الحجز ليس طلب قبول أولي. للتجديد استخدم قسم الاشتراكات.'};
+    if(row.status==='approved'){
+     if(decision==='rejected'){
+      await tx.run("UPDATE bookings SET contact_status='rejected',contact_review_note=? WHERE id=? AND contact_kind='renewal'",reason,row.id);
+      return{code:200,ok:true,status:'rejected',message:'تم تسجيل رفض طلب التجديد، مع الحفاظ على مدة الاشتراك المدفوع السابقة.'};
+     }
+     return{code:409,error:'قبول تجديد الاشتراك متاح عبر نظام التجديد الإداري اليدوي فقط.'};
+    }
+    if(row.status!=='pending')return{code:409,error:'هذا الحجز ليس طلب قبول أولي.'};
     const existing=await tx.get('SELECT id,status FROM payment_submissions WHERE booking_id=?'+(isCloudDatabase?' FOR UPDATE':''),row.id);
     if(existing)return{code:409,error:'يوجد سجل تحويل سابق؛ يجب مراجعته من سجل التحويلات القديمة أولًا لتجنب تكرار التحصيل'};
     if(decision==='rejected'){
