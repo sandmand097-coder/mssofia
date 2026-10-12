@@ -49,11 +49,12 @@ export function attachEmailReview(app,{get,run,uid,now,loadProof,withTransaction
     <p>الكورس: ${htmlSafe(record.course_title)}</p>
     <p>المبلغ: <strong>${Number(record.amount_egp)} جنيه</strong></p>
     <p>رقم الهاتف الذي أرسل التحويل: <strong dir="ltr">${htmlSafe(record.sender_phone||'إيصال قديم')}</strong></p></div>
-    <p>صورة الإيصال:</p><img alt="صورة التحويل" src="/payment-review/proof?token=${token}">
+    ${record.proof_key==='manual:notice'?'<p>بلاغ برقم الهاتف فقط، بدون صورة إيصال.</p>':'<p>صورة الإيصال:</p><img alt="صورة التحويل" src="/payment-review/proof?token='+token+'">'}
     <small>راجع وصول المبلغ داخل تطبيق فودافون كاش قبل الضغط على الموافقة. إرسال صورة وحدها لا يعني وصول الأموال.</small>
     <form method="POST" action="/payment-review/decision">
      <input type="hidden" name="token" value="${token}">
      <label class="confirm"><input type="checkbox" name="confirmed_on_phone" value="yes"> تحققت بنفسي من وصول المبلغ المطلوب ومن رقم المُرسل على هاتف فودافون كاش الرسمي للمُدرِّسة.</label>
+     ${record.proof_key==='manual:notice'?'<label for="transfer_reference">رقم عملية التحويل الحقيقي من المحفظة (إلزامي عند القبول)</label><input id="transfer_reference" name="transfer_reference" type="text" minlength="5" maxlength="64" autocomplete="off" placeholder="رقم العملية">':''}
      <button name="decision" value="approved" class="accept" type="submit">قبول الدفع بعد التحقق من وصول المبلغ</button>
      <section><label for="reason">سبب الرفض (اختياري)</label><input id="reason" name="reason" type="text" maxlength="250" placeholder="المبلغ لم يصل أو الإيصال غير واضح"></section>
      <button name="decision" value="rejected" class="reject" type="submit">رفض الإيصال</button>
@@ -66,7 +67,7 @@ export function attachEmailReview(app,{get,run,uid,now,loadProof,withTransaction
   try{
    headers(res);
    const row=await load(String(req.query.token||''));
-   if(!row)return res.status(404).end();
+   if(!row||row.proof_key.startsWith('manual:'))return res.status(404).end();
    const data=await loadProof(row.proof_key);
    return res.type('image/webp').send(data);
   }catch(err){next(err)}
@@ -77,9 +78,10 @@ export function attachEmailReview(app,{get,run,uid,now,loadProof,withTransaction
    const token=String(req.body?.token||'');
    const decision=String(req.body?.decision||'');
    if(!tokenValid(token)||!['approved','rejected'].includes(decision))return res.status(400).type('html').send(page('<p>طلب غير صالح.</p>'));
+    if(decision==='approved'&&process.env.NODE_ENV==='production'&&process.env.SCHOOL_REFUND_POLICY_APPROVED!=='true')return res.status(503).type('html').send(page('<p>اعتماد اشتراكات مدفوعة جديدة موقوف إلى أن تُعتمد شروط الاشتراك والاسترداد رسميًا.</p>'));
     if(decision==='approved'&&req.body?.confirmed_on_phone!=='yes')return res.status(400).type('html').send(page('<p>لن يُقبل التحويل إلا بعد التأكيد صراحةً من هاتف المُدرِّسة أن المبلغ وصل من رقم المرسل.</p>'));
    const configuredOrigin=process.env.APP_ORIGIN;
-   if(req.headers.origin&&configuredOrigin&&req.headers.origin!==new URL(configuredOrigin).origin)return res.status(403).type('html').send(page('<p>مصدر الطلب غير موثوق.</p>'));
+   if(req.headers.origin&&req.headers.origin!=='https://mssofia.onrender.com'&&configuredOrigin&&req.headers.origin!==new URL(configuredOrigin).origin)return res.status(403).type('html').send(page('<p>مصدر الطلب غير موثوق.</p>'));
    const result=await withTransaction(async tx=>{
     const lock=isCloudDatabase?' FOR UPDATE OF l,p,b,c':'';
     const row=await tx.get(lookupSql+lock,sha(token));
@@ -89,8 +91,22 @@ export function attachEmailReview(app,{get,run,uid,now,loadProof,withTransaction
     if(!admin)return {status:403,message:'هذا البريد غير مرتبط بحساب إدارة نشط.'};
     const nowValue=now();
     if(decision==='approved'){
+     if(row.proof_key==='manual:notice'){
+      const reference=String(req.body?.transfer_reference||'').trim().toUpperCase();
+      if(!/^[A-Z0-9][A-Z0-9./_-]{4,63}$/.test(reference))return{status:400,message:'اكتب رقم العملية الحقيقي كما يظهر في كشف محفظتك قبل اعتماد الدفع.'};
+      const finalRef='MANUAL-'+reference;
+      const existing=await tx.get('SELECT id FROM payment_submissions WHERE transfer_reference=? AND id<>?',finalRef,row.payment_id);
+      const renewed=await tx.get('SELECT id FROM subscription_renewals WHERE transfer_reference=?',finalRef);
+      if(existing||renewed)return{status:409,message:'رقم عملية التحويل تم استخدامه مسبقًا؛ لا يمكن اعتماد الدفع مرتين.'};
+
+     }
      const capacity=await tx.get("SELECT COUNT(*) AS n FROM bookings WHERE course_id=(SELECT course_id FROM payment_submissions WHERE id=?) AND status='approved'",row.payment_id);
      if(Number(capacity?.n||0)>=Number(row.capacity))return{status:409,message:'الكورس مكتمل العدد؛ لم يتفعّل الحجز.'};
+     if(row.proof_key==='manual:notice'){
+      const ref='MANUAL-'+String(req.body.transfer_reference).trim().toUpperCase();
+      const updated=await tx.run('UPDATE payment_submissions SET transfer_reference=? WHERE id=? AND status=?',ref,row.payment_id,'pending');
+      if(!updated.changes)throw Error('Concurrent manual transfer review conflict');
+     }
      const pay=await tx.run("UPDATE payment_submissions SET status='approved',confirmed_on_phone=?,reviewed_by=?,reviewed_at=?,review_note=? WHERE id=? AND status='pending'",isCloudDatabase?true:1,admin.id,nowValue,'أقرت الإدارة بوصول التحويل من رابط البريد',row.payment_id);
      if(!pay.changes)throw Error('Concurrent payment approval failed');
      const booking=await tx.run("UPDATE bookings SET status='approved',reviewed_at=? WHERE id=? AND status='pending'",nowValue,row.booking_id);
@@ -102,7 +118,7 @@ export function attachEmailReview(app,{get,run,uid,now,loadProof,withTransaction
     }
     const used=await tx.run('UPDATE payment_review_links SET used_at=? WHERE id=? AND used_at IS NULL',nowValue,row.link_id);
     if(!used.changes)throw Error('One-time review token conflict');
-    return{status:200,message:decision==='approved'?'تم قبول التحويل وتفعيل حجز الطالب بنجاح.':'تم رفض الإيصال؛ يمكن للطالب رفع صورة أخرى بعد المراجعة.'};
+    return{status:200,message:decision==='approved'?'تم قبول التحويل وتفعيل حجز الطالب بنجاح.':'تم رفض البلاغ؛ يمكن لولي الأمر إرسال رقم جديد أو التواصل مع الإدارة.'};
    });
    return res.status(result.status).type('html').send(page('<p>'+htmlSafe(result.message)+'</p>','نتيجة مراجعة التحويل'));
   }catch(err){next(err)}
@@ -120,9 +136,9 @@ export function attachEmailReview(app,{get,run,uid,now,loadProof,withTransaction
   if(!admin)return false;
   const token=randomBytes(32).toString('hex'),id=uid();
   await run('INSERT INTO payment_review_links(id,payment_id,token_hash,recipient_email,expires_at,created_at) VALUES(?,?,?,?,?,?)',id,record.payment_id,sha(token),recipient,new Date(Date.now()+hours24).toISOString(),now());
-  const url=String(process.env.APP_ORIGIN||'').replace(/\/$/,'')+'/payment-review?token='+token;
+  const url=(process.env.NODE_ENV==='production'?'https://mssofia.onrender.com':String(process.env.APP_ORIGIN||'').replace(/\/$/,''))+'/payment-review?token='+token;
   try{
-   await sendAccountEmail({to:recipient,kind:'payment-review',subject:'Miss Sofia — مراجعة تحويل اشتراك جديد',text:`وصل طلب تحويل يحتاج موافقة أو رفض منك.\nاسم الطالب: ${record.student_name}\nالكورس: ${record.course_title}\nالمبلغ: ${record.amount_egp} جنيه\nرقم الموبايل المرسل: ${record.sender_phone}\nالرابط يفتح صورة التحويل وزرّي الموافقة والرفض. لن يتفعّل الحجز إلا بعد قرارك.`,url});
+   await sendAccountEmail({to:recipient,kind:'payment-review',subject:'Miss Sofia — مراجعة تحويل اشتراك جديد',text:`وصل طلب تحويل يحتاج موافقة أو رفض منك.\nاسم الطالب: ${record.student_name}\nالكورس: ${record.course_title}\nالمبلغ: ${record.amount_egp} جنيه\nرقم الموبايل المرسل: ${record.sender_phone}\nالرابط يفتح مراجعة التحويل وزرّي الموافقة والرفض. لن يتفعّل الحجز إلا بعد قرارك.`,url});
    return true;
   }catch(e){await run('DELETE FROM payment_review_links WHERE id=?',id).catch(()=>{});throw e}
  };

@@ -39,8 +39,13 @@ jobs:
         run: npm run build
       - name: Verify static SEO titles, canonicals and social previews
         run: npm run test:seo:build
-      - name: Install isolated headless browser
-        run: npx --yes playwright@1.64.0 install --with-deps chromium
+      - name: Install isolated headless browser (bounded retry)
+        run: |
+          timeout 240s npx --yes playwright@1.64.0 install --with-deps chromium || {
+            echo "::warning::First Chromium download attempt failed or stalled; retrying once."
+            sleep 5
+            timeout 240s npx --yes playwright@1.64.0 install --with-deps chromium
+          }
       - name: Verify first-visit guide, refresh and in-page navigation on mobile and desktop
         run: npm run test:guide:browser
       - name: Capture optional first-visit screenshots
