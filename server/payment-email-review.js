@@ -78,6 +78,7 @@ export function attachEmailReview(app,{get,run,uid,now,loadProof,withTransaction
    const token=String(req.body?.token||'');
    const decision=String(req.body?.decision||'');
    if(!tokenValid(token)||!['approved','rejected'].includes(decision))return res.status(400).type('html').send(page('<p>طلب غير صالح.</p>'));
+    if(decision==='approved'&&process.env.NODE_ENV==='production'&&process.env.SCHOOL_REFUND_POLICY_APPROVED!=='true')return res.status(503).type('html').send(page('<p>اعتماد اشتراكات مدفوعة جديدة موقوف إلى أن تُعتمد شروط الاشتراك والاسترداد رسميًا.</p>'));
     if(decision==='approved'&&req.body?.confirmed_on_phone!=='yes')return res.status(400).type('html').send(page('<p>لن يُقبل التحويل إلا بعد التأكيد صراحةً من هاتف المُدرِّسة أن المبلغ وصل من رقم المرسل.</p>'));
    const configuredOrigin=process.env.APP_ORIGIN;
    if(req.headers.origin&&req.headers.origin!=='https://mssofia.onrender.com'&&configuredOrigin&&req.headers.origin!==new URL(configuredOrigin).origin)return res.status(403).type('html').send(page('<p>مصدر الطلب غير موثوق.</p>'));
