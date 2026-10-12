@@ -60,7 +60,7 @@ try{
  let started=false;
  for(let i=0;i<100;i++){if(app.exitCode!==null)throw Error('backend did not start '+logs.slice(-700));try{if((await request('/health')).status===200){started=true;break}}catch{}await new Promise(done=>setTimeout(done,100))}
  assert.ok(started,'isolated Express test service starts');
- const parent=await login(student),stranger=await login(other),director=await login(admin);
+ const parent=await login(student),stranger=await login(other),director=await login(admin),instructor=await login(teacher);
  assert.equal((await request('/admin/manual-requests')).status,401,'unauthenticated cannot see parent phone list');
  assert.equal((await request('/admin/manual-requests','GET',null,parent)).status,403,'student cannot list contacts');
  assert.equal((await request('/bookings/'+booking+'/contact','POST',{phone,guardianConsent:true},stranger)).status,404,'other student cannot change guardian callback');
@@ -79,6 +79,9 @@ try{
  const pending=(await request('/my/overview','GET',undefined,parent)).data.bookings.find(b=>b.id===booking);
  assert.equal(pending.status,'pending','no auto activation after contact/email');
  assert.equal(pending.guardian_phone,phone);
+ const teacherView=await request('/my/overview','GET',null,instructor);
+ assert.equal(teacherView.status,200);
+ assert.equal(teacherView.data.bookings.find(b=>b.id===booking)?.guardian_phone,undefined,'instructor cannot fetch guardian callback number');
  const records=await request('/admin/manual-requests','GET',null,director);
  assert.equal(records.status,200);
  assert.equal(records.data.requests.find(r=>r.booking_id===booking).amount_egp,100);
