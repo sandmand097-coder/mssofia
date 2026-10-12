@@ -213,7 +213,7 @@ export function attachPaymentRoutes(app,{auth,role,get,all,run,uid,now}){
  });
  app.get('/api/admin/payments/:id/proof',auth,onlyAdmin,async(req,res,next)=>{
   try{const row=await get('SELECT proof_key FROM payment_submissions WHERE id=?',req.params.id);if(!row)return json(res,404,{error:'الإيصال غير موجود'});
-   if(row.proof_key.startsWith('manual:'))return json(res,404,{error:'تم اعتماد تحويل يدويًا دون صورة إيصال'});
+   if(row.proof_key.startsWith('manual:'))return json(res,404,{error:'هذا الطلب أُرسل بدون صورة إيصال'});
    const data=await loadProof(row.proof_key);
    res.set({'Content-Type':'image/webp','Cache-Control':'no-store, private','Content-Disposition':'inline; filename="vodafone-receipt.webp"','X-Content-Type-Options':'nosniff'}).send(data);
   }catch(e){next(e)}
@@ -228,6 +228,17 @@ export function attachPaymentRoutes(app,{auth,role,get,all,run,uid,now}){
     const decision=req.body?.decision;
     if(!['approved','rejected'].includes(decision))return{http:400,error:'حدد الموافقة أو الرفض'};
     if(decision==='approved'){
+     if(!refundPolicyReady())return{http:503,error:'لا يمكن تفعيل حجز مدفوع قبل اعتماد سياسة الاسترداد.'};
+     if(row.proof_key==='manual:notice'){
+      const reference=String(req.body?.transfer_reference||'').trim().toUpperCase();
+      if(!/^[A-Z0-9][A-Z0-9./_-]{4,63}$/.test(reference))return{http:400,error:'أدخل رقم عملية التحويل الحقيقي كما هو ظاهر في المحفظة.'};
+      const transfer='MANUAL-'+reference;
+      const duplicate=await tx.get('SELECT id FROM payment_submissions WHERE transfer_reference=? AND id<>?',transfer,row.id);
+      const renewal=await tx.get('SELECT id FROM subscription_renewals WHERE transfer_reference=?',transfer);
+      if(duplicate||renewal)return{http:409,error:'رقم التحويل مستخدم من قبل. لا يمكن تسجيل نفس المبلغ مرتين.'};
+      const changed=await tx.run('UPDATE payment_submissions SET transfer_reference=? WHERE id=? AND status=?',transfer,row.id,'pending');
+      if(!changed.changes)throw Error('Concurrent transfer reference conflict');
+     }
      if(req.body?.confirmedOnPhone!==true)return{http:400,error:'يجب التأكيد بأن المبلغ وصل فعليًا إلى تطبيق فودافون كاش على هاتف المُدرِّسة'};
      const used=await countCurrentMembers(tx.all,row.course_id);
      if(Number(used)>=Number(row.capacity))return{http:409,error:'المقاعد اكتملت؛ تواصل مع ولي الأمر قبل الموافقة'};
