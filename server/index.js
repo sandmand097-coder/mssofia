@@ -456,7 +456,7 @@ app.get('/api/my/overview', auth, async (req, res) => {
     courses = (await all(courseQuery + ` WHERE c.id IN (SELECT course_id FROM bookings WHERE student_id=? AND status='approved')`, u.id)).filter(c=>allowedIds.has(c.id));
   } else if (u.role === 'teacher') {
     courses = await all(courseQuery + ' WHERE c.teacher_id=?', u.id);
-    bookings = await all(`SELECT b.*,c.title AS course_title,u.name AS student_name,u.email AS student_email FROM bookings b JOIN courses c ON c.id=b.course_id JOIN users u ON u.id=b.student_id WHERE c.teacher_id=? ORDER BY b.created_at DESC`, u.id);
+    bookings = await all(`SELECT b.id,b.course_id,b.student_id,b.status,b.created_at,b.reviewed_at,c.title AS course_title,u.name AS student_name,u.email AS student_email FROM bookings b JOIN courses c ON c.id=b.course_id JOIN users u ON u.id=b.student_id WHERE c.teacher_id=? ORDER BY b.created_at DESC`, u.id);
   } else {
     courses = await all(courseQuery);
     bookings = await all(`SELECT b.*,c.title AS course_title,c.price AS course_price,(SELECT p.status FROM payment_submissions p WHERE p.booking_id=b.id) AS payment_status,(SELECT p.confirmed_on_phone FROM payment_submissions p WHERE p.booking_id=b.id) AS confirmed_on_phone,u.name AS student_name FROM bookings b JOIN courses c ON c.id=b.course_id JOIN users u ON u.id=b.student_id ORDER BY b.created_at DESC`);
