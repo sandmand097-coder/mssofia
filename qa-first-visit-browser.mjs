@@ -76,7 +76,7 @@ try{
   const third=page.locator('.sofia-guide-step-tab').nth(2);
   await third.click();
   assert.equal(await third.getAttribute('aria-pressed'),'true');
-  assert.match(await page.locator('#sofia-guide-step-detail').innerText(),/رقم المحفظة الرسمي/);
+  assert.match(await page.locator('#sofia-guide-step-detail').innerText(),/واتساب أو اترك رقم ولي الأمر/);
   assert.match(await page.locator('#sofia-guide-step-detail').innerText(),/لا تحوّل أي مبلغ/);
   assert.equal(await page.locator('#sofia-guide-step-detail .sofia-cta').getAttribute('href'),'/student');
   await page.locator('.sofia-guide-step-tab').first().click();
