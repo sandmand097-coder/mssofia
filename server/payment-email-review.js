@@ -12,7 +12,7 @@ const htmlSafe=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':
 const adminAddress=()=>String(process.env.SCHOOL_ADMIN_EMAIL||'').trim().toLowerCase();
 const hours24=24*60*60*1000;
 // Public email links from the old receipt-upload flow are retired in production.
-const legacyActive=()=>process.env.NODE_ENV!=='production'&&process.env.SCHOOL_LEGACY_EMAIL_REVIEW_ENABLED==='true';
+const legacyActive=()=>process.env.NODE_ENV!=='production';
 const headers=res=>res.set({
  'Cache-Control':'no-store, private',
  'Referrer-Policy':'no-referrer',
