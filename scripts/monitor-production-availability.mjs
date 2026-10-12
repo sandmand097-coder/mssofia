@@ -1,3 +1,5 @@
+import {resolve} from 'node:path';
+import {pathToFileURL} from 'node:url';
 // Hourly, read-only production watchdog. Free Render can sleep between visits:
 // allow a bounded wake-up grace period before reporting sustained unavailability.
 // NEVER restart production, change enrolments, or store authentication data here.
@@ -47,6 +49,6 @@ async function main(){
   process.exitCode=1;
  }else console.log('PASS: frontend proxy and Render recovered within free-plan grace period');
 }
-if(process.argv[1]&&import.meta.url===new URL('file://'+process.argv[1]).href){
+if(process.argv[1]&&import.meta.url===pathToFileURL(resolve(process.argv[1])).href){
  await main();
 }
