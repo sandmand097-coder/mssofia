@@ -17,7 +17,7 @@ assert.match(edge,/const RENDER_ORIGIN='https:\/\/mssofia\.onrender\.com'/);
 assert.match(edge,/headers\.delete\(key\)/,'edge strips user-supplied forwarded header entries');
 assert.match(edge,/out\.headers\.set\('cache-control','no-store, private'\)/);
 assert.match(backend,/configureReverseProxy\(app\);/);
-assert.ok(backend.indexOf('configureReverseProxy(app);')<backend.indexOf('const authLimiter=rateLimit('),'proxy trust configured before rate limiting');
+assert.ok(backend.indexOf('configureReverseProxy(app);')<backend.search(/const authLimiter\s*=\s*rateLimit\s*\(/),'proxy trust configured before rate limiting');
 assert.match(proxy,/production\?1:false/,'Render proxy trust limited to one trusted hop');
 assert.match(payment,/SCHOOL_REFUND_POLICY_APPROVED==='true'/,'new paid enrollments require owner sign-off');
 assert.match(renewal,/SCHOOL_REFUND_POLICY_APPROVED/,'new manual renewals require owner sign-off');
