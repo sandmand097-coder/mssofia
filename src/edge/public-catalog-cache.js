@@ -16,7 +16,7 @@ export function sanitizeCatalog(raw){
  if(!raw||!Array.isArray(raw.courses)||raw.courses.length>150)return null;
  const clean=[];
  for(const row of raw.courses){
-  if(!row||typeof row!=='object'||Array.isArray(row)||typeof row.title!=='string'
+  if(!row||typeof row!=='object'||Array.isArray(row)||row.status!=='published'||typeof row.title!=='string'
    ||!(typeof row.id==='string'||typeof row.id==='number'))return null;
   const course={};
   for(const field of fields){
