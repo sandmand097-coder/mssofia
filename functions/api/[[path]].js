@@ -1,3 +1,4 @@
+import {publicCatalogRequest,servePublicCatalog} from '../../src/edge/public-catalog-cache.js';
 // Cloudflare Pages edge API. Public preview never wakes Render.
 // When the school's backend and parental-safety checks are complete,
 // switch both PUBLIC_LAUNCH_MODE=full and FULL_BACKEND_READY=true in Pages
@@ -77,6 +78,17 @@ export async function onRequest(context){
 
  // The upstream address is constant (no user-supplied host or open proxy).
  const upstream=new URL(pathname+url.search,RENDER_ORIGIN);
+ // Public, published-only listing is safe to serve stale from Cloudflare.
+ // Never involve this cache in private, authenticated, or financial operations.
+ if(fullMode&&publicCatalogRequest(request)){
+  return servePublicCatalog({
+   request,upstreamUrl:upstream.toString(),
+   cache:globalThis.caches?.default,
+   waitUntil:typeof context.waitUntil==='function'?context.waitUntil.bind(context):undefined,
+   fetchImpl:fetch
+  });
+ }
+
  const headers=new Headers(request.headers);
  for(const key of ['host','content-length','connection','transfer-encoding',
   'x-forwarded-host','x-forwarded-proto','x-forwarded-for','x-real-ip','forwarded']){

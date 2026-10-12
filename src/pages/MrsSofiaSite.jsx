@@ -61,17 +61,39 @@ export function MrsHome({api}){
 }
 
 export function MrsCourses({api}){
- const [params,setParams]=useSearchParams(),[courses,setCourses]=useState([]),[loading,setLoading]=useState(true),[error,setError]=useState('');
+ const [params,setParams]=useSearchParams(),[courses,setCourses]=useState([]),[loading,setLoading]=useState(true),[error,setError]=useState(''),[stale,setStale]=useState(false);
  const subject=params.get('subject')||'الكل',q=params.get('q')||'';
- useEffect(()=>{let alive=true;setLoading(true);api('/courses').then(d=>{if(alive){setCourses(d.courses);setError('')}}).catch(e=>{if(alive)setError(e.message)}).finally(()=>{if(alive)setLoading(false)});return()=>{alive=false}},[api]);
+ useEffect(()=>{
+  let alive=true,timer,attempt=0;
+  const refresh=async()=>{
+   if(!alive)return;
+   if(typeof document!=='undefined'&&document.visibilityState==='hidden'){
+    timer=setTimeout(refresh,20000);return;
+   }
+   try{
+    const data=await api('/courses');
+    if(!alive)return;
+    if(!Array.isArray(data.courses))throw Error('صيغة بيانات الكورسات غير صالحة');
+    setCourses(data.courses);setError('');setStale(data.availability?.stale===true);setLoading(false);
+    if(data.availability?.stale===true)timer=setTimeout(refresh,15000);
+   }catch(e){
+    if(!alive)return;
+    setLoading(false);setError('يتم استعادة الاتصال لتحميل الكورسات تلقائيًا. يمكنك متابعة تصفح الموقع.');
+    timer=setTimeout(refresh,Math.min(30000,6000*(++attempt)));
+   }
+  };
+  void refresh();
+  return()=>{alive=false;clearTimeout(timer)};
+ },[api]);
  const visible=useMemo(()=>courses.filter(c=>scienceSubject(c.subject)&&(!subject||subject==='الكل'||c.subject===subject)&&(!q||[c.title,c.subject,c.level,c.teacher_name,c.description].some(s=>String(s||'').toLowerCase().includes(q.trim().toLowerCase())))),[courses,subject,q]);
  const update=(key,value)=>{const next=new URLSearchParams(params);if(!value||value==='الكل')next.delete(key);else next.set(key,value);setParams(next)};
  return <main className="sofia-site sofia-page-bg"><section className="sofia-page-heading"><div className="sofia-container"><span className="sofia-kicker"><i/> EXPLORE OUR COURSES</span><h1>كل تجربة علمية <em>بداية اكتشاف</em></h1><p>استكشف الدورات المنشورة فعلًا لطلاب المرحلة الابتدائية، واقرأ تفاصيل الحصص ومواعيدها قبل اتخاذ قرار الاشتراك.</p></div></section><LaunchOffer compact/><div className="sofia-container sofia-catalog">
   <div className="sofia-catalog-toolbar"><label className="sofia-catalog-search"><Search size={20}/><input aria-label="ابحث في الكورسات" placeholder="ابحث عن كورس أو مادة أو مرحلة..." value={q} onChange={e=>update('q',e.target.value)}/></label><span className="sofia-result-count"><Filter size={17}/> {visible.length.toLocaleString('ar-EG')} كورس</span></div>
   <div className="sofia-catalog-filters" aria-label="تصفية حسب المادة">{scienceSubjects.map(s=><button type="button" key={s} className={subject===s?'active':''} onClick={()=>update('subject',s)}>{s}</button>)}</div>
   {!loading&&courses.length===1&&<div className="sofia-auth-notice" role="note" style={{marginBlock:'18px',alignItems:'flex-start'}}><ShieldCheck size={23}/><div><strong>المتاح حاليًا: {courses[0].title} — {courses[0].level}</strong><p style={{margin:'6px 0'}}>تُعرض الدورات الأخرى عندما تُنشر رسميًا من إدارة المنصة؛ تصفح المجالات العلمية لا يعني أن كل مجال لديه دورة متاحة للحجز.</p>{!courses[0].next_date&&<small>لم يُعلن موعد حصة قادمة لهذه الدورة بعد. يمكنك الاستفسار عن الجدول قبل الاشتراك.</small>}</div></div>}
-  {error&&<div role="alert" className="sofia-alert">{error}</div>}
-  {loading?<div className="sofia-page-loading">بنجهّز الكورسات...</div>:visible.length?<div className="sofia-card-grid">{visible.map(c=><ScienceCourseCard course={c} key={c.id}/>)}</div>:<div className="sofia-no-results"><Search size={37}/><h3>مش لاقيين كورسات مطابقة</h3><p>جرّب تختار مادة تانية، أو امسح كلمة البحث.</p><button onClick={()=>setParams({})}>عرض كل المواد</button></div>}
+  {stale&&<div role="status" className="sofia-auth-notice" style={{marginBlock:'14px'}}>تُعرض آخر نسخة محفوظة من الكورسات أثناء استعادة اتصال الخادم. الأسعار والمقاعد والمواعيد تحتاج تأكيدًا قبل الحجز، وسيتم تحديثها تلقائيًا.</div>}
+  {error&&<div role="status" className="sofia-alert">{error}</div>}
+  {loading?<div className="sofia-page-loading">بنجهّز الكورسات...</div>:error&&courses.length===0?<div className="sofia-page-loading" role="status">الكورسات قيد التحميل، وسيتم إعادة الاتصال تلقائيًا.</div>:visible.length?<div className="sofia-card-grid">{visible.map(c=><ScienceCourseCard course={c} key={c.id}/>)}</div>:<div className="sofia-no-results"><Search size={37}/><h3>مش لاقيين كورسات مطابقة</h3><p>جرّب تختار مادة تانية، أو امسح كلمة البحث.</p><button onClick={()=>setParams({})}>عرض كل المواد</button></div>}
  </div>
  <section className="sofia-section" aria-label="طريقة الاشتراك ومميزات الدراسة"><div className="sofia-container">
   <Heading eyebrow="معلومات قبل الحجز" title={<>اختار وأنت <em>عارف التفاصيل</em></>} description="كل ما تحتاج معرفته قبل إرسال طلب اشتراك لأول مرة." center/>
@@ -85,20 +107,53 @@ export function MrsCourses({api}){
 
 export function MrsCourseDetails({api,user,show}){
  const {id}=useParams(),[data,setData]=useState(null),[loading,setLoading]=useState(true),[error,setError]=useState(''),[busy,setBusy]=useState(false),[bookingStatus,setBookingStatus]=useState(''),[monthlyExpired,setMonthlyExpired]=useState(false);
- useEffect(()=>{let alive=true;setLoading(true);setData(null);api('/courses/'+id).then(d=>{if(alive){setData(d);setError('')}}).catch(e=>{if(alive)setError(e.message)}).finally(()=>{if(alive)setLoading(false)});return()=>{alive=false}},[id,api]);
+ useEffect(()=>{
+  let alive=true,timer,attempt=0;
+  setLoading(true);setData(null);setError('');
+  const refresh=async()=>{
+   if(!alive)return;
+   if(typeof document!=='undefined'&&document.visibilityState==='hidden'){
+    timer=setTimeout(refresh,20000);return;
+   }
+   try{
+    const detail=await api('/courses/'+id);
+    if(!alive)return;
+    if(!detail?.course||!Array.isArray(detail.lessons))throw Error('Invalid course detail');
+    setData(detail);setError('');setLoading(false);
+   }catch(e){
+    if(!alive)return;
+    if(e?.status===404){setError('الدورة غير موجودة');setLoading(false);return}
+    // Public-only summary fallback: never synthesize lesson schedules,
+    // entitlements, available seats, or prices that appear confirmed.
+    try{
+     const catalog=await api('/courses');
+     if(!alive)return;
+     const summary=Array.isArray(catalog?.courses)?catalog.courses.find(course=>String(course.id)===String(id)):null;
+     if(summary)setData({course:summary,lessons:[],partial:true});
+    }catch{}
+    if(!alive)return;
+    setError('يتم استعادة تفاصيل الدورة تلقائيًا من الخادم.');
+    setLoading(false);
+    timer=setTimeout(refresh,Math.min(30000,6000*(++attempt)));
+   }
+  };
+  void refresh();
+  return()=>{alive=false;clearTimeout(timer)};
+ },[id,api]);
  useEffect(()=>{let alive=true;if(user?.role==='student')api('/my/overview').then(d=>{if(alive){const booking=d.bookings.find(b=>b.course_id===id);setBookingStatus(booking?.status||'');setMonthlyExpired(booking?.live_access_status==='expired')}}).catch(()=>{});return()=>{alive=false}},[id,user,api]);
  const book=async()=>{if(!user)return;setBusy(true);try{const d=await api('/courses/'+id+'/book',{method:'POST'});setBookingStatus('pending');show(d.message)}catch(e){show(e.message)}finally{setBusy(false)}};
  if(loading)return <div className="sofia-page-loading">بنجهّز تفاصيل الكورس...</div>;
- if(error||!data)return <main className="sofia-site sofia-container sofia-no-results"><h2>تعذر عرض الدورة</h2><p>{error||'الدورة غير موجودة'}</p><Link to="/courses">العودة للكورسات</Link></main>;
- const c=data.course,isStudent=user?.role==='student',canBook=isStudent&&!bookingStatus;
+ if(!data)return <main className="sofia-site sofia-container sofia-no-results"><h2>{error==='الدورة غير موجودة'?'الدورة غير موجودة':'جارٍ تجهيز تفاصيل الدورة'}</h2><p>{error||'يتم استعادة الاتصال تلقائيًا.'}</p><Link to="/courses">العودة للكورسات</Link></main>;
+ const c=data.course,isStudent=user?.role==='student',canBook=isStudent&&!bookingStatus&&!data.partial;
  return <main className="sofia-site sofia-page-bg"><div className="sofia-container sofia-detail-wrap"><nav className="sofia-breadcrumb"><Link to="/">الرئيسية</Link><ChevronLeft size={15}/><Link to="/courses">الكورسات</Link><ChevronLeft size={15}/><span>{c.subject}</span></nav>
   <div className="sofia-detail-layout"><div className="sofia-detail-content"><div className="sofia-detail-art"><div className="sofia-detail-art-grid"/><span><FlaskConical size={108} strokeWidth={1}/></span><div className="sofia-detail-art-caption"><Sparkles size={18}/> عالم العلوم مع Miss Sofia</div></div>
     <div className="sofia-detail-section"><span className="sofia-kicker"><i/> عن الكورس</span><h2>إيه اللي هتتعلمه؟</h2><p>{publicCourseDescription(c)}</p><p>محتوى الحصص ومواعيدها المعتمدة يظهران في الجدول أدناه عند نشرهما من الإدارة.</p></div>
-    <div className="sofia-detail-section"><span className="sofia-kicker"><i/> جدول الحصص</span><h2>رحلتك خطوة بخطوة</h2>{data.lessons.length?<div className="sofia-detail-lessons">{data.lessons.map((lesson,i)=><div key={lesson.id} className="sofia-detail-lesson"><span>{String(i+1).padStart(2,'0')}</span><div><strong>{lesson.title}</strong><small><CalendarDays size={14}/> {formatDateTime(lesson.starts_at)}</small></div><em>{lesson.duration_minutes} دقيقة</em></div>)}</div>:<p>مواعيد الحصص هتظهر هنا عند إضافتها.</p>}</div>
+    <div className="sofia-detail-section"><span className="sofia-kicker"><i/> جدول الحصص</span><h2>رحلتك خطوة بخطوة</h2>{data.partial?<p role="status">بيانات جدول الحصص قيد التحديث، ولا يمكن اعتماد المواعيد حتى عودة الاتصال.</p>:data.lessons.length?<div className="sofia-detail-lessons">{data.lessons.map((lesson,i)=><div key={lesson.id} className="sofia-detail-lesson"><span>{String(i+1).padStart(2,'0')}</span><div><strong>{lesson.title}</strong><small><CalendarDays size={14}/> {formatDateTime(lesson.starts_at)}</small></div><em>{lesson.duration_minutes} دقيقة</em></div>)}</div>:<p>مواعيد الحصص هتظهر هنا عند إضافتها.</p>}</div>
   </div>
-  <aside className="sofia-detail-sidebar"><span className="sofia-detail-label"><Sparkles size={16}/> كورس علوم تفاعلي</span><h1>{c.title}</h1><div className="sofia-detail-chips"><span>{c.subject}</span><span>{c.level}</span></div><div className="sofia-detail-instructor"><span><GraduationCap size={23}/></span><div><small>مع المدرّس</small><strong>{publicTeacherName(c.teacher_name)}</strong></div></div><div className="sofia-detail-facts"><div><span><Clock3 size={18}/> مدة الحصة</span><strong>{c.duration_minutes} دقيقة</strong></div><div><span><Users size={18}/> المقاعد المتاحة</span><strong>{Math.max(0,c.capacity-c.enrolled)} من {c.capacity}</strong></div><div><span><BookOpen size={18}/> عدد الحصص</span><strong>{data.lessons.length} حصص</strong></div></div>
+  <aside className="sofia-detail-sidebar"><span className="sofia-detail-label"><Sparkles size={16}/> كورس علوم تفاعلي</span><h1>{c.title}</h1><div className="sofia-detail-chips"><span>{c.subject}</span><span>{c.level}</span></div><div className="sofia-detail-instructor"><span><GraduationCap size={23}/></span><div><small>مع المدرّس</small><strong>{publicTeacherName(c.teacher_name)}</strong></div></div><div className="sofia-detail-facts"><div><span><Clock3 size={18}/> مدة الحصة</span><strong>{c.duration_minutes} دقيقة</strong></div><div><span><Users size={18}/> المقاعد المتاحة</span><strong>{data.partial?'جارٍ التحقق':Math.max(0,c.capacity-c.enrolled)+' من '+c.capacity}</strong></div><div><span><BookOpen size={18}/> عدد الحصص</span><strong>{data.partial?'جارٍ التحقق':data.lessons.length+' حصص'}</strong></div></div>
+   {data.partial&&<p role="status" className="sofia-auth-notice">تُعرض معلومات الدورة العامة من نسخة مؤقتة. لا تعتمد السعر أو المقاعد أو المواعيد حتى عودة اتصال الخادم.</p>}
    <div className="sofia-detail-price">{introductoryOfferApplies(c)?<><small>عرض اشتراك شرح العلوم — الشهر الأول</small><strong>100 جنيه <del style={{fontSize:'.52em',opacity:.62}}>170 جنيه</del></strong><small>من الشهر الثاني 170 جنيه شهريًا — 30 يوم بث مباشر داخل الموقع بعد تأكيد الدفع</small></>:<><small>سعر الكورس</small><strong>{currency(c.price)}</strong></>}</div>
-   {!user?<Link to="/login" className="sofia-cta sofia-detail-book">سجّل دخولك للحجز <ArrowLeft size={17}/></Link>:<button type="button" className="sofia-cta sofia-detail-book" disabled={!canBook||busy} onClick={book}>{busy?'جارٍ إرسال الطلب...':bookingStatus==='approved'?(monthlyExpired?'الاشتراك الشهري منتهٍ — تواصل مع الإدارة':'الاشتراك نشط ومشاهدة البث متاحة'):bookingStatus==='pending'?'طلبك قيد المراجعة':bookingStatus==='rejected'?'تم رفض طلب الحجز':!isStudent?'الحجز متاح للطلاب فقط':'اطلب الحجز الآن'} <ArrowLeft size={17}/></button>}
+   {data.partial?<button type="button" className="sofia-cta sofia-detail-book" disabled>الحجز متاح عند عودة الاتصال</button>:!user?<Link to="/login" className="sofia-cta sofia-detail-book">سجّل دخولك للحجز <ArrowLeft size={17}/></Link>:<button type="button" className="sofia-cta sofia-detail-book" disabled={!canBook||busy} onClick={book}>{busy?'جارٍ إرسال الطلب...':bookingStatus==='approved'?(monthlyExpired?'الاشتراك الشهري منتهٍ — تواصل مع الإدارة':'الاشتراك نشط ومشاهدة البث متاحة'):bookingStatus==='pending'?'طلبك قيد المراجعة':bookingStatus==='rejected'?'تم رفض طلب الحجز':!isStudent?'الحجز متاح للطلاب فقط':'اطلب الحجز الآن'} <ArrowLeft size={17}/></button>}
    {bookingStatus==='approved'&&!monthlyExpired&&<Link className="sofia-dashboard-link" to="/student">تابع الحصص المباشرة من داخل موقع المُدرِّسة <ArrowLeft size={16}/></Link>}
    <p className="sofia-detail-fine"><ShieldCheck size={17}/> سيتم مراجعة الطلب قبل السماح بدخول الحصص.</p>
    {c.price>0&&<p className="sofia-detail-fine">الدفع غير متاح حاليًا؛ لا ترسل تحويلًا قبل ظهور رقم المحفظة الرسمي داخل حساب الطالب.</p>}

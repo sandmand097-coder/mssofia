@@ -1,0 +1,40 @@
+name: Cold-start account recovery regression
+on:
+  push:
+    branches: [fix/safer-cold-start-auth-recovery-20261012]
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  safe-bootstrap:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - name: Verify safe bootstrap behavior
+        run: node tests/bootstrap-recovery.mjs
+      - name: Verify Cloudflare public-only resilience and rate limiting
+        run: |
+          node tests/public-catalog-cache.mjs
+          node tests/pages-edge.mjs
+          node tests/launch-banner-recovery.mjs
+          node tests/availability-monitor.mjs
+      - name: Existing unit and integration regression
+        run: npm run check && npm test
+        env:
+          NODE_ENV: test
+          PUBLIC_LAUNCH_MODE: preview
+          REGISTRATION_ENABLED: 'false'
+      - name: Build production site
+        run: npm run build
+      - name: Install browser test environment
+        run: npx --yes playwright@1.64.0 install --with-deps chromium
+      - name: Verify offline public course fallback and automatic recovery
+        run: node qa-free-tier-course-recovery-browser.mjs
+

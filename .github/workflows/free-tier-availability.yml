@@ -1,0 +1,50 @@
+name: Miss Sofia free-tier availability watchdog
+on:
+  schedule:
+    - cron: '17 * * * *'
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+    paths:
+      - scripts/monitor-production-availability.mjs
+      - tests/availability-monitor.mjs
+      - .github/workflows/free-tier-availability.yml
+permissions:
+  contents: read
+jobs:
+  monitor-tests:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: node tests/availability-monitor.mjs
+  monitor-production:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Check live origin and Pages edge with cold-start grace
+        run: node scripts/monitor-production-availability.mjs
+      - name: Create one GitHub incident after persistent failures (no automatic redeploy)
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          title='[availability-monitor] Miss Sofia public API not recovering'
+          existing=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --limit 100 --json number,title --jq '.[] | select(.title == "[availability-monitor] Miss Sofia public API not recovering") | .number' | head -n 1)
+          if [ -z "$existing" ]; then
+            gh issue create --repo "$GITHUB_REPOSITORY" --title "$title" --body "The scheduled read-only monitor found sustained unavailability after three rounds and cold-start grace. Run: https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID . Inspect Render logs, API /health, proxy and database safely. Do not restart or replay money/classroom operations automatically."
+          else
+            echo "An availability incident is already open as issue #$existing."
+          fi
