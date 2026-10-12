@@ -53,6 +53,7 @@ export function attachSubscriptionRenewalRoutes(app,{
 
  app.post('/api/bookings/:id/renewal',auth,student,uploadLimiter,async(req,res,next)=>{
   try{
+   if(process.env.NODE_ENV==='production')return json(res,410,{error:'التجديد عبر إيصال داخل الموقع غير متاح. تواصل مع الإدارة لتأكيد التحويل يدويًا.'});
    if(!renewalsEnabled())return json(res,503,{error:'التجديد غير مُتاح حتى تجهز المُدرِّسة قاعدة البيانات'});
    if(!(await storageReady()))return json(res,503,{error:'التجديد متوقف إلى أن يجتاز تخزين الإيصالات فحص الخصوصية. لا ترسل أي تحويل'});
    receiptUpload.single('receipt')(req,res,error=>{
