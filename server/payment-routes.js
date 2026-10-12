@@ -112,6 +112,38 @@ export function attachPaymentRoutes(app,{auth,role,get,all,run,uid,now}){
  });
  // Director may approve a *real, already received* wallet transfer even if the
  // student forgot to submit an image. No fake receipts and no automatic approval.
+ // No receipt upload or gateway: a guardian may leave a contact phone number.
+ // This is an UNVERIFIED notice only, never a settled payment or approved seat.
+ app.post('/api/bookings/:id/payment-notice',auth,onlyStudent,async(req,res,next)=>{
+  try{
+   if(!refundPolicyReady())return json(res,503,{error:'استقبال إشعارات التحويل معلّق حتى اعتماد سياسة الاشتراك والاسترداد من الإدارة.'});
+   const senderPhone=String(req.body?.sender_phone||'').trim();
+   if(!isEgyptianPhone(senderPhone))return json(res,400,{error:'اكتب رقم هاتف مصري صحيح للتواصل، 11 رقمًا.'});
+   const result=await withTransaction(async tx=>{
+    const lock=isCloudDatabase?' FOR UPDATE OF b,c':'';
+    const b=await tx.get('SELECT b.id,b.student_id,b.course_id,b.status,c.price,c.subject FROM bookings b JOIN courses c ON c.id=b.course_id WHERE b.id=?'+lock,req.params.id);
+    if(!b)return{status:404,error:'الحجز غير موجود'};
+    if(b.student_id!==req.user.id)return{status:403,error:'لا يمكنك إرسال طلب لهذا الحجز'};
+    if(b.status!=='pending'||requiredAmount(b)<=0)return{status:409,error:'هذا الحجز لا ينتظر مراجعة اشتراك مدفوع'};
+    const old=await tx.get('SELECT id,status,proof_key FROM payment_submissions WHERE booking_id=?',b.id);
+    if(old&&old.status!=='rejected')return{status:409,error:'هناك بلاغ تحويل سابق قيد المراجعة أو مقبول؛ لا ترسل مرة أخرى'};
+    const id=old?.id||uid(),timestamp=now();
+    if(old){
+     await tx.run("UPDATE payment_submissions SET sender_phone=?,sender_last4=?,status='pending',submitted_at=?,reviewed_at=NULL,reviewed_by=NULL,review_note=NULL,confirmed_on_phone=?,transfer_reference=?,proof_key=? WHERE id=?",
+      senderPhone,senderPhone.slice(-4),timestamp,isCloudDatabase?false:0,'NOTICE-'+uid(),'manual:notice',id);
+     await tx.run('UPDATE payment_review_links SET used_at=? WHERE payment_id=? AND used_at IS NULL',timestamp,id);
+    }else{
+     await tx.run('INSERT INTO payment_submissions(id,booking_id,student_id,course_id,amount_egp,transfer_reference,sender_phone,sender_last4,proof_key,status,submitted_at,confirmed_on_phone) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)',
+      id,b.id,b.student_id,b.course_id,requiredAmount(b),'NOTICE-'+uid(),senderPhone,senderPhone.slice(-4),'manual:notice','pending',timestamp,isCloudDatabase?false:0);
+    }
+    return{status:201,bookingId:b.id};
+   });
+   if(result.error)return json(res,result.status,{error:result.error});
+   // Mail provider absence must NOT approve or lose the queued notice.
+   await notifyPaymentReviewer({bookingId:result.bookingId}).catch(()=>{});
+   return res.status(201).set('Cache-Control','no-store, private').json({ok:true,status:'pending',message:'وصل رقمك للإدارة. ستراجع تحويلك بنفسها وتقرر القبول أو الرفض. لم يتم تفعيل الاشتراك بعد.'});
+  }catch(err){if(/unique|duplicate key|constraint failed/i.test(String(err.message||'')))return json(res,409,{error:'هذا الحجز لديه بلاغ تحويل قائم'});next(err)}
+ });
  app.get('/api/admin/payments/without-proof',auth,onlyAdmin,async(req,res,next)=>{
   try{
    const rows=await all(`SELECT b.id AS booking_id,b.student_id,u.name AS student_name,u.email AS student_email,
