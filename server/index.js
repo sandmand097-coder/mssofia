@@ -15,6 +15,7 @@ import {schoolReadiness} from './release-readiness.js';
 import {createDiagnosticReader} from './deployment-diagnostics.js';
 import {attachAdminOnlyGuard} from './admin-only.js';
 import {attachPaymentRoutes} from './payment-routes.js';
+import {attachManualEnrollment} from './manual-enrollment.js';
 import {createLiveAdmission} from './live-admission.js';
 import {configureReverseProxy} from './reverse-proxy.js';
 import {createEarlyLiveInspector} from './live-presence.js';
@@ -119,6 +120,7 @@ const role = (...roles) => (req, res, next) => roles.includes(req.user.role) ? n
 });
 attachAdminOnlyGuard(app,{auth,role,enabled:adminOnly});
 attachPaymentRoutes(app,{auth,role,get,all,run,uid,now});
+attachManualEnrollment(app,{auth,role,get,all,run,uid,now,withTransaction,isCloudDatabase});
 app.get('/api/admin/setup-status',auth,role('admin'),(req,res)=>res.json(schoolReadiness()));
 const readSchoolDiagnostics=createDiagnosticReader({
  env:process.env,roomService,
@@ -488,7 +490,7 @@ app.post('/api/courses/:id/book', auth, role('student'), async (req, res) => {
   });
   await run('INSERT INTO bookings(id,course_id,student_id,status,created_at) VALUES(?,?,?,?,?)', uid(), c.id, req.user.id, 'pending', now());
   res.status(201).json({
-    message:Number(c.price)>0?'تم تسجيل طلبك. لا ترسل أي تحويل قبل ظهور وسيلة الدفع المعتمدة داخل حساب الطالب؛ يظل دخول الحصة معلقًا حتى تؤكد الإدارة الاشتراك.':'تم إرسال طلب الالتحاق بالدورة المجانية. انتظر موافقة الإدارة على الحجز.'
+    message:Number(c.price)>0?'تم تسجيل طلبك. للتواصل بعد تحويلك خارج الموقع استخدم واتساب أو اترك رقم ولي الأمر في حسابك. تفعيل الحجز يتم فقط بعد قرار الإدارة.':'تم إرسال طلب الالتحاق بالدورة المجانية. انتظر موافقة الإدارة على الحجز.'
   });
 });
 app.post('/api/courses', auth, role('teacher', 'admin'), async (req, res) => {
