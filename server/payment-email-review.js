@@ -11,6 +11,8 @@ const tokenValid=s=>typeof s==='string'&&/^[a-f0-9]{64}$/.test(s);
 const htmlSafe=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const adminAddress=()=>String(process.env.SCHOOL_ADMIN_EMAIL||'').trim().toLowerCase();
 const hours24=24*60*60*1000;
+// Public email links from the old receipt-upload flow are retired in production.
+const legacyActive=()=>process.env.NODE_ENV!=='production'&&process.env.SCHOOL_LEGACY_EMAIL_REVIEW_ENABLED==='true';
 const headers=res=>res.set({
  'Cache-Control':'no-store, private',
  'Referrer-Policy':'no-referrer',
@@ -39,6 +41,7 @@ export function attachEmailReview(app,{get,run,uid,now,loadProof,withTransaction
   return row;
  };
  const open=async(req,res,next)=>{
+  if(!legacyActive())return res.status(410).set('Cache-Control','no-store').send('Legacy receipt review has been retired.');
   try{
    headers(res);
    const token=String(req.query.token||'');
@@ -63,6 +66,7 @@ export function attachEmailReview(app,{get,run,uid,now,loadProof,withTransaction
  };
  app.get('/payment-review',reviewLimiter,open);
  app.get('/payment-review/proof',reviewLimiter,async(req,res,next)=>{
+  if(!legacyActive())return res.status(410).end();
   try{
    headers(res);
    const row=await load(String(req.query.token||''));
@@ -72,6 +76,7 @@ export function attachEmailReview(app,{get,run,uid,now,loadProof,withTransaction
   }catch(err){next(err)}
  });
  app.post('/payment-review/decision',reviewLimiter,express.urlencoded({extended:false,limit:'4kb'}),async(req,res,next)=>{
+  if(!legacyActive())return res.status(410).end();
   try{
    headers(res);
    const token=String(req.body?.token||'');
@@ -108,6 +113,7 @@ export function attachEmailReview(app,{get,run,uid,now,loadProof,withTransaction
   }catch(err){next(err)}
  });
  return async function notify({bookingId}){
+  if(!legacyActive())return false;
   const recipient=adminAddress();
   if(!recipient||mailMode()==='disabled')return false;
   const query=`SELECT p.id AS payment_id,p.amount_egp,p.sender_phone,u.name AS student_name,
