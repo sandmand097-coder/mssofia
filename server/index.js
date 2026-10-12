@@ -16,6 +16,7 @@ import {createDiagnosticReader} from './deployment-diagnostics.js';
 import {attachAdminOnlyGuard} from './admin-only.js';
 import {attachPaymentRoutes} from './payment-routes.js';
 import {createLiveAdmission} from './live-admission.js';
+import {configureReverseProxy} from './reverse-proxy.js';
 import {createEarlyLiveInspector} from './live-presence.js';
 import {attachClassroomQuestions,classroomQuestionsEnabled} from './classroom-questions.js';
 import {evaluateMonthlyAccess,accessView,countCurrentMembers,renewalEndSelect} from './monthly-access.js';
@@ -33,7 +34,8 @@ if (process.env.NODE_ENV === 'production') {
   if (!process.env.APP_ORIGIN?.startsWith('https://')) throw Error('Production requires secure APP_ORIGIN.');
   if (adminOnly && (!googleAdminConfig().enabled || process.env.REGISTRATION_ENABLED==='true')) throw Error('Admin-only production requires configured Google login and disabled public registration.');
 }
-// Render places one trusted reverse-proxy hop in front of Express.\n// Never use boolean true: that would trust client-supplied X-Forwarded-For.\napp.set('trust proxy', process.env.NODE_ENV === 'production' ? 1 : false);\napp.disable('x-powered-by');
+// Bounded reverse-proxy trust must execute before Express rate limiters.
+configureReverseProxy(app);
 app.use(helmet({
   contentSecurityPolicy: false
 }));
