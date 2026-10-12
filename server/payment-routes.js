@@ -70,6 +70,7 @@ export function attachPaymentRoutes(app,{auth,role,get,all,run,uid,now}){
   }catch(err){next(err)}
  });
  app.post('/api/bookings/:id/payment',auth,onlyStudent,async(req,res,next)=>{
+  if(process.env.NODE_ENV==='production')return json(res,410,{error:'استُبدل رفع إيصالات الدفع بنظام الإبلاغ برقم التواصل. لا ترسل صورًا أو بيانات مالية.'});
   try{
    if(!(await storageReady()))return json(res,503,{error:'التحويلات غير متاحة لأن حفظ الإيصالات الخاصة لم ينجح فحص الأمان بعد. لا ترسل أي تحويل.'});
    receiptUpload.single('receipt')(req,res,err=>{
@@ -116,7 +117,7 @@ export function attachPaymentRoutes(app,{auth,role,get,all,run,uid,now}){
  // This is an UNVERIFIED notice only, never a settled payment or approved seat.
  app.post('/api/bookings/:id/payment-notice',auth,onlyStudent,async(req,res,next)=>{
   try{
-   if(!refundPolicyReady())return json(res,503,{error:'استقبال إشعارات التحويل معلّق حتى اعتماد سياسة الاشتراك والاسترداد من الإدارة.'});
+   // Reporting a phone number does not authorize charging or unlocking an enrollment.
    const senderPhone=String(req.body?.sender_phone||'').trim();
    if(!isEgyptianPhone(senderPhone))return json(res,400,{error:'اكتب رقم هاتف مصري صحيح للتواصل، 11 رقمًا.'});
    const result=await withTransaction(async tx=>{
