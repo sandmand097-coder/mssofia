@@ -54,7 +54,7 @@ export function attachSubscriptionRenewalRoutes(app,{
  app.post('/api/bookings/:id/renewal',auth,student,uploadLimiter,async(req,res,next)=>{
   try{
    // Parent/guardian contact is the only website flow; no receipt upload.
-   if(process.env.NODE_ENV==='production'||process.env.SCHOOL_RECEIPT_UPLOAD_ENABLED!=='true')
+   if(process.env.NODE_ENV==='production')
     return json(res,410,{error:'إيصالات التجديد لم تعد تُرفع في الموقع. اترك رقم ولي الأمر أو تواصل عبر واتساب.'});
    if(!renewalsEnabled())return json(res,503,{error:'التجديد غير مُتاح حتى تجهز المُدرِّسة قاعدة البيانات'});
    if(!(await storageReady()))return json(res,503,{error:'التجديد متوقف إلى أن يجتاز تخزين الإيصالات فحص الخصوصية. لا ترسل أي تحويل'});
