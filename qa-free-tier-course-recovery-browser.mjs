@@ -24,7 +24,7 @@ try{
  const context=await browser.newContext({viewport:{width:390,height:844},locale:'ar-EG'});
  const page=await context.newPage();
  let detailsCalls=0,catalogCalls=0,postCalls=0;
- const course={id:'science-1',title:'كورس العلوم التفاعلي',subject:'علوم',level:'الصف الأول',description:'تجارب علوم مبسطة',price:100,capacity:50,enrolled:12,teacher_name:'Miss Sofia',duration_minutes:45};
+ const course={id:'science-1',status:'published',title:'كورس العلوم التفاعلي',subject:'علوم',level:'الصف الأول',description:'تجارب علوم مبسطة',price:100,capacity:50,enrolled:12,teacher_name:'Miss Sofia',duration_minutes:45};
  const ok=(route,data,status=200)=>route.fulfill({status,contentType:'application/json',body:JSON.stringify(data)});
  await page.route('**/api/**',route=>{
   const url=new URL(route.request().url()),path=url.pathname;
