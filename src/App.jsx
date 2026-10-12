@@ -1,6 +1,6 @@
 import React,{useEffect,useState,useCallback,useRef,lazy,Suspense,createContext,useContext} from 'react';
 import {joinWithBackoff} from './components/live-resilience.js';
-import {launchModeFromHealth} from './launch-mode.js';
+import {checkBootstrap,recoveryRetryDelay} from './bootstrap-recovery.js';
 import {isPublicBootstrapRoute} from './public-bootstrap.js';
 import {Routes,Route,Link,Navigate,useLocation,useNavigate,useParams} from 'react-router-dom';
 import {LockKeyhole,ChevronLeft,ShieldCheck,Video,Play,ArrowLeft} from 'lucide-react';
@@ -234,15 +234,10 @@ export default function App(){
  useEffect(()=>{
   mounted.current=true;
   let active=true;
-  // Active guards prevent an earlier StrictMode mount from overriding the
-  // latest bootstrap result after its own effect has been cleaned up.
-  Promise.allSettled([
-   api('/auth/me',{signal:AbortSignal.timeout(12000)}),
-   api('/health',{signal:AbortSignal.timeout(12000)})
-  ]).then(([session,health])=>{
+  void checkBootstrap(api).then(result=>{
    if(!active)return;
-   setUser(session.status==='fulfilled'?session.value.user:null);
-   setLaunchMode(health.status==='fulfilled'?launchModeFromHealth(health.value):'offline');
+   setUser(result.user);
+   setLaunchMode(result.launchMode);
   });
   return()=>{active=false;mounted.current=false};
  },[]);
@@ -251,30 +246,37 @@ export default function App(){
   retryInFlight.current=true;
   setReconnecting(true);
   try{
-   const [session,health]=await Promise.allSettled([
-    api('/auth/me',{signal:AbortSignal.timeout(12000)}),
-    api('/health',{signal:AbortSignal.timeout(12000)})
-   ]);
-   const mode=health.status==='fulfilled'?launchModeFromHealth(health.value):'offline';
-   if(mounted.current&&mode!=='offline'){
-    setUser(session.status==='fulfilled'?session.value.user:null);
-    setLaunchMode(mode);
+   const result=await checkBootstrap(api);
+   if(mounted.current&&result.launchMode!=='offline'){
+    setUser(result.user);
+    setLaunchMode(result.launchMode);
    }
   }finally{
    retryInFlight.current=false;
    if(mounted.current)setReconnecting(false);
   }
  },[]);
+ const retryAttempt=useRef(0);
  useEffect(()=>{
-  if(launchMode!=='offline')return;
-  // Recheck a sleeping Render backend only while the tab is visible.
-  // Small randomized jitter avoids synchronized bursts from many parents.
-  const interval=setInterval(()=>{
-   if(document.visibilityState==='visible'&&navigator.onLine)void retryBootstrap();
-  },18000+Math.floor(Math.random()*9000));
+  if(launchMode!=='offline'){retryAttempt.current=0;return}
+  let cancelled=false,timer;
+  const schedule=()=>{
+   if(cancelled)return;
+   timer=setTimeout(async()=>{
+    if(cancelled)return;
+    if(document.visibilityState==='visible'&&navigator.onLine){
+     await retryBootstrap();
+     retryAttempt.current=Math.min(retryAttempt.current+1,4);
+    }
+    schedule();
+   },recoveryRetryDelay(retryAttempt.current));
+  };
   const onOnline=()=>{if(document.visibilityState==='visible')void retryBootstrap()};
+  const onVisible=()=>{if(document.visibilityState==='visible'&&navigator.onLine)void retryBootstrap()};
+  schedule();
   window.addEventListener('online',onOnline);
-  return()=>{clearInterval(interval);window.removeEventListener('online',onOnline)};
+  document.addEventListener('visibilitychange',onVisible);
+  return()=>{cancelled=true;clearTimeout(timer);window.removeEventListener('online',onOnline);document.removeEventListener('visibilitychange',onVisible)};
  },[launchMode,retryBootstrap]);
  useEffect(()=>{if(!toast)return;const timeout=setTimeout(()=>setToast(''),4600);return()=>clearTimeout(timeout)},[toast]);
  const show=useCallback(message=>setToast(message),[]);
