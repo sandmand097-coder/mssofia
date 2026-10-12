@@ -9,6 +9,7 @@ import {WhatsAppContact} from './components/WhatsAppContact.jsx';
 import {showWhatsAppContact} from './components/whatsapp-contact.js';
 import {publicSeoMeta,SEO_ORIGIN} from './public-seo.js';
 import RouteScrollManager from './components/RouteScrollManager.jsx';
+import {validAdminReviewPath} from './components/manual-review-redirect.js';
 
 const MrsHome=lazy(()=>import('./pages/MrsSofiaSite.jsx').then(m=>({default:m.MrsHome})));
 const MrsCourses=lazy(()=>import('./pages/MrsSofiaSite.jsx').then(m=>({default:m.MrsCourses})));
@@ -53,8 +54,8 @@ async function api(path,options={}){
  return data;
 }
 function RoutePortal(){
- const {user,setUser,show}=useApp(),{pathname}=useLocation();
- if(!user)return <Navigate to="/login" replace/>;
+ const {user,setUser,show}=useApp(),{pathname,search}=useLocation();
+ if(!user){const next=pathname+search;return <Navigate to={validAdminReviewPath(next)?'/login?next='+encodeURIComponent(next):'/login'} replace/>;}
  const correct=dashboardPath(user);
  if(pathname!==correct)return <Navigate to={correct} replace/>;
  const props={user,setUser,show};

@@ -36,8 +36,8 @@ assert.match(student,/to="\/guide"/,'student can access help inside dashboard');
 
 const required=[
  'تسجيل الطالب باستخدام حساب ولي الأمر Google',
- 'طلب الحجز','فودافون كاش','رقم المحفظة',
- 'PNG أو JPEG أو WebP','8 ميجابايت','لا تكرر التحويل',
+ 'طلب الحجز','التواصل والاشتراك','واتساب','رقم ولي الأمر',
+ 'لا يوجد دفع إلكتروني','لا تكرر التحويل',
  'قيد المراجعة','قبل الموعد بـ15 دقيقة','مشاهدة البث',
  'قاعة انتظار الحصة','اضغط هنا لتشغيل صوت الدرس',
  'ارفع إيدك','تشغيل ميكروفوني','30 يومًا','تجديد الاشتراك'
@@ -71,4 +71,4 @@ assert.match(liveCss,/prefers-reduced-motion/,'reduced-motion styles');
 assert.match(liveCss,/sofia-livewalk-stage:focus-visible/,'keyboard visible focus');
 assert.ok(!/ليلة الامتحان|نزول الأطفال بالليل|كلهم عارفين بعض/.test(liveWalk),'do not disclose private motivation');
 
-console.log('PASS newcomer guide covers real registration, payment and LiveKit controls, safe payments, navigation and scroll routing');
+console.log('PASS newcomer guide covers manual contact, director approval and live classroom controls');

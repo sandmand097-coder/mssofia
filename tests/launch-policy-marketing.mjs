@@ -9,6 +9,7 @@ const cards=read('src/components/MrsSofiaBrand.jsx');
 const offer=read('src/components/LaunchOffer.jsx');
 const payment=read('server/payment-routes.js');
 const renewal=read('server/subscription-renewals.js');
+const contact=read('server/manual-enrollment.js');
 const readiness=read('server/release-readiness.js');
 const env=read('.env.example');
 const sitemap=read('public/sitemap.xml');
@@ -28,6 +29,10 @@ assert.ok(!policy.includes('سيتم الإعلان عن سياسة الاستر
 assert.match(policy,/WHATSAPP_CONTACT_URL/,'guardian can reach official support destination');
 assert.match(payment,/SCHOOL_REFUND_POLICY_APPROVED==='true'/,'new paid subscriptions need explicit production approval');
 assert.match(payment,/refundPolicyReady\(\)/,'financial activation must be fail-closed');
+assert.match(contact,/confirmedOnPhone/,'manual approval requires school director confirmation');
+assert.match(contact,/role\('admin'\)/,'manual decision is admin-only');
+assert.match(payment,/process\.env\.NODE_ENV==='production'/,'receipt uploads are retired on production');
+assert.match(payment,/return json\(res,410/,'production receipt uploads fail closed');
 assert.match(renewal,/SCHOOL_REFUND_POLICY_APPROVED/,'manual renewals must not bypass refund policy sign-off');
 assert.match(readiness,/refundPolicyApproved/,'admin setup status reports approval gate');
 assert.match(env,/^SCHOOL_REFUND_POLICY_APPROVED=false$/m,'refund policy is off by default');

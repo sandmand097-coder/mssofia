@@ -1,0 +1,37 @@
+/* Manual-first enrollment: native responsive UI, no payment gateway/receipt uploader. */
+.sofia-contact-panel{display:grid;gap:20px}
+.sofia-contact-head{display:flex;align-items:flex-start;gap:13px;color:#136b59}
+.sofia-contact-head>svg{flex-shrink:0;margin-top:4px}
+.sofia-contact-head h2{font-size:clamp(19px,2.4vw,25px);line-height:1.45;margin:0 0 7px;color:#184f42}
+.sofia-contact-head p{margin:0;color:#56786e;font-size:13px;line-height:1.95}
+.sofia-contact-notice{display:flex;gap:10px;padding:16px;background:#eef9f3;border:1px solid #c7e4d3;border-radius:14px;color:#196d55;font-size:12px;line-height:1.9}
+.sofia-contact-notice svg{flex-shrink:0;margin-top:3px}
+.sofia-contact-notice p{margin:0}
+.sofia-contact-list{display:grid;gap:16px}
+.sofia-contact-card{background:#fbfdfb;border:1px solid #dceee4;border-radius:19px;padding:20px;display:grid;gap:13px;scroll-margin-top:110px}
+.sofia-contact-card.sofia-contact-selected{border-color:#138677;box-shadow:0 0 0 3px #daf4e6}
+.sofia-contact-title{display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:10px}
+.sofia-contact-title h3{font-size:18px;color:#23574b;margin:0 0 5px}
+.sofia-contact-title small,.sofia-contact-card>small{color:#6f8c7f;font-size:11px;overflow-wrap:anywhere}
+.sofia-contact-chip{background:#ddefe4;color:#21624e;border-radius:999px;padding:6px 10px;font-size:11px;font-weight:800}
+.sofia-contact-chip.waiting{background:#fff5dd;color:#916f2c}
+.sofia-contact-chip.rejected{background:#ffe8e5;color:#a1473e}
+.sofia-contact-card>p{display:flex;gap:7px;align-items:center;color:#416b5e;font-size:12px;line-height:1.9;margin:0}
+.sofia-contact-wa{display:inline-flex;align-items:center;justify-content:center;gap:9px;max-width:360px;background:#087e6c;color:white;padding:14px 18px;border-radius:12px;font-weight:850;font-size:13px;text-decoration:none}
+.sofia-contact-wa:hover{background:#056b60;color:white}
+.sofia-contact-form{display:grid;gap:12px;border:1px solid #e1ece6;background:white;border-radius:14px;padding:18px}
+.sofia-contact-form>p{margin:0;display:flex;gap:7px;align-items:center;font-size:12px;color:#396f5c;font-weight:800}
+.sofia-contact-form>label:not(.sofia-contact-consent){display:grid;gap:7px;font-size:12px;font-weight:750;color:#355f50}
+.sofia-contact-form input:not([type=checkbox]){width:100%;min-width:0;border:1px solid #cbded2;border-radius:10px;padding:12px;font-size:13px;line-height:1.4;background:white;color:#1f473f;font-family:inherit;box-sizing:border-box}
+.sofia-contact-form input:focus-visible,.sofia-contact-wa:focus-visible,.sofia-contact-form button:focus-visible{outline:3px solid #21a68b;outline-offset:2px}
+.sofia-contact-consent{display:flex;align-items:flex-start;gap:10px;font-weight:700;font-size:12px;line-height:1.85;color:#527b6e}
+.sofia-contact-consent input{width:19px;height:19px;flex-shrink:0;accent-color:#087f6c;margin-top:3px}
+.sofia-contact-form button{width:fit-content;max-width:100%;font-family:inherit}
+.sofia-contact-form button:disabled{opacity:.5;cursor:not-allowed}
+.sofia-contact-success{display:flex!important;align-items:flex-start!important;gap:8px!important;padding:12px 14px;border-radius:11px;background:#ecf8ee;color:#176b46!important;font-size:12px;line-height:1.8}
+.sofia-contact-reject{padding:12px 14px;border-radius:11px;background:#fff0ee;color:#9e453b!important;font-size:12px;line-height:1.8}
+.sofia-contact-foot{font-size:11px!important;color:#748f84!important}
+.sofia-contact-empty{display:grid;justify-items:start;gap:10px}
+.sofia-contact-panel .portal-primary-btn{min-height:42px}
+@media(max-width:670px){.sofia-contact-panel{gap:15px}.sofia-contact-card{padding:13px}.sofia-contact-form{padding:13px}.sofia-contact-wa{max-width:none;width:100%}.sofia-contact-form button{width:100%}.sofia-contact-title{display:grid}}
+@media(prefers-reduced-motion:reduce){.sofia-contact-panel *{transition:none!important;animation:none!important}}

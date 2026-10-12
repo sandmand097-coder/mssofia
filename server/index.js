@@ -15,6 +15,7 @@ import {schoolReadiness} from './release-readiness.js';
 import {createDiagnosticReader} from './deployment-diagnostics.js';
 import {attachAdminOnlyGuard} from './admin-only.js';
 import {attachPaymentRoutes} from './payment-routes.js';
+import {attachManualEnrollment} from './manual-enrollment.js';
 import {createLiveAdmission} from './live-admission.js';
 import {configureReverseProxy} from './reverse-proxy.js';
 import {createEarlyLiveInspector} from './live-presence.js';
@@ -119,6 +120,7 @@ const role = (...roles) => (req, res, next) => roles.includes(req.user.role) ? n
 });
 attachAdminOnlyGuard(app,{auth,role,enabled:adminOnly});
 attachPaymentRoutes(app,{auth,role,get,all,run,uid,now});
+attachManualEnrollment(app,{auth,role,get,all,run,uid,now,withTransaction,isCloudDatabase});
 app.get('/api/admin/setup-status',auth,role('admin'),(req,res)=>res.json(schoolReadiness()));
 const readSchoolDiagnostics=createDiagnosticReader({
  env:process.env,roomService,
@@ -454,7 +456,7 @@ app.get('/api/my/overview', auth, async (req, res) => {
     courses = (await all(courseQuery + ` WHERE c.id IN (SELECT course_id FROM bookings WHERE student_id=? AND status='approved')`, u.id)).filter(c=>allowedIds.has(c.id));
   } else if (u.role === 'teacher') {
     courses = await all(courseQuery + ' WHERE c.teacher_id=?', u.id);
-    bookings = await all(`SELECT b.*,c.title AS course_title,u.name AS student_name,u.email AS student_email FROM bookings b JOIN courses c ON c.id=b.course_id JOIN users u ON u.id=b.student_id WHERE c.teacher_id=? ORDER BY b.created_at DESC`, u.id);
+    bookings = await all(`SELECT b.id,b.course_id,b.student_id,b.status,b.created_at,b.reviewed_at,c.title AS course_title,u.name AS student_name,u.email AS student_email FROM bookings b JOIN courses c ON c.id=b.course_id JOIN users u ON u.id=b.student_id WHERE c.teacher_id=? ORDER BY b.created_at DESC`, u.id);
   } else {
     courses = await all(courseQuery);
     bookings = await all(`SELECT b.*,c.title AS course_title,c.price AS course_price,(SELECT p.status FROM payment_submissions p WHERE p.booking_id=b.id) AS payment_status,(SELECT p.confirmed_on_phone FROM payment_submissions p WHERE p.booking_id=b.id) AS confirmed_on_phone,u.name AS student_name FROM bookings b JOIN courses c ON c.id=b.course_id JOIN users u ON u.id=b.student_id ORDER BY b.created_at DESC`);
@@ -488,7 +490,7 @@ app.post('/api/courses/:id/book', auth, role('student'), async (req, res) => {
   });
   await run('INSERT INTO bookings(id,course_id,student_id,status,created_at) VALUES(?,?,?,?,?)', uid(), c.id, req.user.id, 'pending', now());
   res.status(201).json({
-    message:Number(c.price)>0?'تم تسجيل طلبك. لا ترسل أي تحويل قبل ظهور وسيلة الدفع المعتمدة داخل حساب الطالب؛ يظل دخول الحصة معلقًا حتى تؤكد الإدارة الاشتراك.':'تم إرسال طلب الالتحاق بالدورة المجانية. انتظر موافقة الإدارة على الحجز.'
+    message:Number(c.price)>0?'تم تسجيل طلبك. للتواصل بعد تحويلك خارج الموقع استخدم واتساب أو اترك رقم ولي الأمر في حسابك. تفعيل الحجز يتم فقط بعد قرار الإدارة.':'تم إرسال طلب الالتحاق بالدورة المجانية. انتظر موافقة الإدارة على الحجز.'
   });
 });
 app.post('/api/courses', auth, role('teacher', 'admin'), async (req, res) => {

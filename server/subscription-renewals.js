@@ -53,6 +53,9 @@ export function attachSubscriptionRenewalRoutes(app,{
 
  app.post('/api/bookings/:id/renewal',auth,student,uploadLimiter,async(req,res,next)=>{
   try{
+   // Parent/guardian contact is the only website flow; no receipt upload.
+   if(process.env.NODE_ENV==='production')
+    return json(res,410,{error:'إيصالات التجديد لم تعد تُرفع في الموقع. اترك رقم ولي الأمر أو تواصل عبر واتساب.'});
    if(!renewalsEnabled())return json(res,503,{error:'التجديد غير مُتاح حتى تجهز المُدرِّسة قاعدة البيانات'});
    if(!(await storageReady()))return json(res,503,{error:'التجديد متوقف إلى أن يجتاز تخزين الإيصالات فحص الخصوصية. لا ترسل أي تحويل'});
    receiptUpload.single('receipt')(req,res,error=>{
@@ -148,7 +151,9 @@ export function attachSubscriptionRenewalRoutes(app,{
    if(process.env.NODE_ENV==='production'&&process.env.SCHOOL_REFUND_POLICY_APPROVED!=='true')return json(res,503,{error:'التجديدات المالية الجديدة معلّقة حتى اعتماد سياسة الاسترداد.'});
    if(!renewalsEnabled())return json(res,503,{error:'تجديد الاشتراكات غير مفعّل'});
    const senderPhone=String(req.body?.sender_phone||'').trim();
-   const reference=String(req.body?.transfer_reference||'').trim().toUpperCase();
+   const viaGuardianContact=req.body?.source==='guardian_contact';
+    // This is an internal audit reference, NOT an invented external wallet txn.
+    const reference=viaGuardianContact?'CONTACT-'+uid():String(req.body?.transfer_reference||'').trim().toUpperCase();
    const amount=Number(req.body?.amount_egp);
    if(req.body?.confirmedOnPhone!==true)return json(res,400,{error:'يجب التأكد يدويًا من وصول التحويل على محفظة المُدرِّسة'});
    if(!isPhone(senderPhone))return json(res,400,{error:'أدخلي رقم المرسل الحقيقي كما ظهر في كشف المحفظة'});
@@ -189,9 +194,11 @@ export function attachSubscriptionRenewalRoutes(app,{
      VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
      uid(),booking.id,booking.student_id,booking.course_id,due,transfer,senderPhone,'manual:'+uid(),
      'approved',reviewedAt,reviewedAt,req.user.id,
-     'تجديد يدوي من المديرة بعد التحقق من تحويل حقيقي دون صورة إيصال',
+     viaGuardianContact?'تجديد معتمد يدويًا من الإدارة بعد التحقق من المبلغ، بمرجع سجل داخلي وليس رقم عملية خارجية':
+      'تجديد يدوي من المديرة بعد التحقق من تحويل حقيقي دون صورة إيصال',
      isCloudDatabase?true:1,new Date(begins).toISOString(),new Date(ends).toISOString());
-    return{status:201,ok:true,period_start:new Date(begins).toISOString(),period_end:new Date(ends).toISOString()};
+    if(viaGuardianContact)await tx.run("UPDATE bookings SET contact_status='approved',contact_review_note=NULL WHERE id=? AND contact_kind='renewal'",booking.id);
+     return{status:201,ok:true,period_start:new Date(begins).toISOString(),period_end:new Date(ends).toISOString()};
    });
    res.set('Cache-Control','no-store, private').status(result.status).json(result.error?{error:result.error}:result);
   }catch(error){

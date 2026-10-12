@@ -30,6 +30,8 @@ export function schoolReadiness(env=process.env){
   refundPolicyApproved,
   schoolContactConfigured:ownerContactConfigured,
   outboundMailConfigured:senderConfigured,
+  manualContactEnabled:true,
+  manualReviewMailConfigured:senderConfigured&&/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(env.SCHOOL_ADMIN_EMAIL||''),
   paymentWalletConfigured:walletNumberConfigured,
   privateReceiptStorageConfigured:receiptStorageConfigured,
   paymentUploadConfigured:walletNumberConfigured&&receiptStorageConfigured&&refundPolicyApproved,
