@@ -4,7 +4,7 @@
 const FRESH_SECONDS=180;
 const STALE_SECONDS=6*60*60;
 const REFRESH_GUARD_SECONDS=45;
-const fields=['id','title','description','subject','level','price','capacity','enrolled','teacher_name','teacher_specialty','next_date','duration_minutes'];
+const fields=['id','status','title','description','subject','level','price','capacity','enrolled','teacher_name','teacher_specialty','next_date','duration_minutes'];
 const allowedTypes=new Set(['string','number','boolean']);
 
 export function publicCatalogRequest(request){
