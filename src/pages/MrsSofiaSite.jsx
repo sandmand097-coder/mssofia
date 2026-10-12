@@ -29,7 +29,7 @@ export function MrsHome({api}){
   <LaunchOffer/>
   <section className="sofia-guide-home-strip" aria-labelledby="sofia-guide-home-title"><div className="sofia-container sofia-guide-home-inner">
    <div className="sofia-guide-home-icon"><GraduationCap size={28}/></div>
-   <div className="sofia-guide-home-copy"><span>دليل ولي الأمر والطالب</span><h2 id="sofia-guide-home-title">أول مرة تدخل المنصة؟ هنشرح لك كل خطوة.</h2><p>التسجيل، اختيار الدورة، الدفع الرسمي عند تفعيله، ودخول الحصة المباشرة — شرح واضح بأمثلة مرئية من خطوات الموقع.</p><Link to="/guide#live-class" className="sofia-guide-home-deep-link">شرح دخول الدرس والبث المباشر <ArrowLeft size={15}/></Link></div>
+   <div className="sofia-guide-home-copy"><span>دليل ولي الأمر والطالب</span><h2 id="sofia-guide-home-title">أول مرة تدخل المنصة؟ هنشرح لك كل خطوة.</h2><p>التسجيل، طلب الاشتراك عبر واتساب أو رقم ولي الأمر، ودخول الحصة المباشرة — شرح واضح بأمثلة مرئية من خطوات الموقع.</p><Link to="/guide#live-class" className="sofia-guide-home-deep-link">شرح دخول الدرس والبث المباشر <ArrowLeft size={15}/></Link></div>
    <Link to="/guide" className="sofia-guide-home-link">شوف دليل الاستخدام <ArrowLeft size={18}/></Link>
   </div></section>
   <section className="sofia-trust-strip"><div className="sofia-container sofia-trust-grid"><div><span><Lightbulb size={23}/></span><b>افهم الفكرة الأول</b><small>الأساس قبل الحفظ</small></div><div><span><Microscope size={23}/></span><b>تعلّم بالاكتشاف</b><small>تجارب وأمثلة واقعية</small></div><div><span><CalendarDays size={23}/></span><b>نظّم وقتك</b><small>جدول حصص واضح</small></div><div><span><ShieldCheck size={23}/></span><b>حسابك ومساحتك</b><small>دوراتك وطلباتك في مكان واحد</small></div></div></section>
@@ -53,7 +53,7 @@ export function MrsHome({api}){
      ['أقدر أشوف مواعيد حصصي فين؟','من لوحة الطالب، افتح جدول الحصص. المواعيد بتظهر بعد الموافقة على حجزك في الدورة.'],
      ['هل فيه حصص أونلاين مباشرة؟','المنصة فيها فصل مباشر تفاعلي بالصوت والفيديو ومشاركة الشاشة، ويحتاج تفعيل خدمة البث قبل الاستخدام الفعلي.'],
      ['عرض الشهر الأول بكام؟','عرض شرح العلوم للطالب الجديد: 100 جنيه في الشهر الأول بدل 170 جنيه، وبعده 170 جنيه شهريًا. تأكيد الاشتراك بعد مراجعة الإدارة للتحويل.'],
-     ['إزاي أدفع الاشتراك؟','تسجيل الطالب يتم بحساب Google الخاص بولي الأمر. لا تحوّل أي مبلغ إلا بعد ظهور المحفظة الرسمية داخل حساب الطالب. تراجع الإدارة التحويل بنفسها قبل اعتماد الحجز.'],
+     ['إزاي أتأكد من الاشتراك بعد التحويل؟','ادفع خارج الموقع بالطريقة التي تتفق عليها مع المُدرِّسة، ثم راسل واتساب أو اترك رقم ولي الأمر من حساب الطالب. المعلمة تقبل أو ترفض بعد التأكد من وصول المبلغ.'],
      ['إزاي أتواصل مع الإدارة؟','هتلاقي رقم التواصل وواتساب الرسمي أسفل الموقع علشان تستفسر عن الكورسات أو الاشتراك.']
    ].map(([q,a],i)=><details className="sofia-faq-item" key={q} open={i===0}><summary><span>{q}</span><span className="sofia-faq-plus">+</span></summary><p>{a}</p></details>)}</div></div></section>
   <section className="sofia-container"><div className="sofia-bottom-cta"><div className="sofia-bottom-molecule"><Atom size={108} strokeWidth={1.2}/></div><div><span>خلّي الفضول يقودك ✦</span><h2>جاهز تشوف العلوم بشكل مختلف؟</h2><p>ابدأ خطوة جديدة في رحلة الفهم والاكتشاف مع مس صوفيا للعلوم.</p></div><Link to="/register" className="sofia-cta sofia-cta-white">أنشئ حسابك <ArrowLeft size={19}/></Link></div></section>
@@ -101,7 +101,7 @@ export function MrsCourseDetails({api,user,show}){
    {!user?<Link to="/login" className="sofia-cta sofia-detail-book">سجّل دخولك للحجز <ArrowLeft size={17}/></Link>:<button type="button" className="sofia-cta sofia-detail-book" disabled={!canBook||busy} onClick={book}>{busy?'جارٍ إرسال الطلب...':bookingStatus==='approved'?(monthlyExpired?'الاشتراك الشهري منتهٍ — تواصل مع الإدارة':'الاشتراك نشط ومشاهدة البث متاحة'):bookingStatus==='pending'?'طلبك قيد المراجعة':bookingStatus==='rejected'?'تم رفض طلب الحجز':!isStudent?'الحجز متاح للطلاب فقط':'اطلب الحجز الآن'} <ArrowLeft size={17}/></button>}
    {bookingStatus==='approved'&&!monthlyExpired&&<Link className="sofia-dashboard-link" to="/student">تابع الحصص المباشرة من داخل موقع المُدرِّسة <ArrowLeft size={16}/></Link>}
    <p className="sofia-detail-fine"><ShieldCheck size={17}/> سيتم مراجعة الطلب قبل السماح بدخول الحصص.</p>
-   {c.price>0&&<p className="sofia-detail-fine">الدفع غير متاح حاليًا؛ لا ترسل تحويلًا قبل ظهور رقم المحفظة الرسمي داخل حساب الطالب.</p>}
+   {c.price>0&&<p className="sofia-detail-fine">لا يوجد دفع أو رفع إيصالات داخل الموقع. بعد الحجز، راسل المُدرِّسة عبر واتساب أو اترك رقم ولي الأمر للمراجعة اليدوية.</p>}
   </aside></div></div></main>;
 }
 
