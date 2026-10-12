@@ -16,7 +16,7 @@ const steps=[
 const liveVerification=[
  {key:'databaseConnected',label:'اتصال قاعدة بيانات الطلاب والمديرة',description:'استعلام فعلي بقاعدة PostgreSQL وبصلاحية تطبيق المُدرِّسة'},
  {key:'livekitApiVerified',label:'الاتصال السحابي بغرف البث LiveKit',description:'طلب فعلي إلى LiveKit Cloud، بدون إنشاء غرفة أو فتح كاميرا'},
- {key:'receiptBucketPrivateVerified',label:'المخزن الخاص لإيصالات فودافون كاش',description:'فحص مخزن Supabase الصحيح والتأكد أنه غير متاح للعامة'}
+ {key:'receiptBucketPrivateVerified',label:'فحص أرشيف الإيصالات القديمة (خدمة غير مستخدمة في الاشتراكات الجديدة)',description:'هذا الفحص اختياري لمسار الإيصالات التاريخية؛ الطلبات الجديدة تعتمد واتساب أو رقم ولي الأمر ولا ترفع مستندات'}
 ];
 const readiness=[
  {key:'adminGoogleEnabled',label:'Google دخول المديرة'},
@@ -25,8 +25,10 @@ const readiness=[
  {key:'guardianPrivacyApproved',label:'اعتماد سياسة الخصوصية وموافقة ولي الأمر'},
  {key:'schoolContactConfigured',label:'بريد التواصل الرسمي للمُدرِّسة'},
  {key:'outboundMailConfigured',label:'إعداد مزود إرسال بريد التأكيد (إن استُخدمت كلمات المرور)'},
+ {key:'manualContactEnabled',label:'طلبات تواصل ولي الأمر واستقبالها بدون نظام دفع'},
+ {key:'manualReviewMailConfigured',label:'إعداد بريد إشعار طلبات المراجعة اليدوية (لا يثبت التسليم)'},
  {key:'paymentWalletConfigured',label:'إعداد رقم محفظة فودافون كاش'},
- {key:'privateReceiptStorageConfigured',label:'إعداد مخزن إيصالات الدفع الخاص'},
+ {key:'privateReceiptStorageConfigured',label:'إعداد أرشيف الإيصالات القديمة — اختياري'},
  {key:'livekitCredentialsConfigured',label:'إعداد LiveKit للبث المباشر'},
  {key:'monthlyRenewalsEnabled',label:'تفعيل تجديد الاشتراكات الشهرية بعد ترحيل قاعدة البيانات'},
  {key:'classroomQuestionsEnabled',label:'تفعيل الأسئلة المكتوبة الخاصة داخل الحصة'}
