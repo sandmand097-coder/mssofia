@@ -19,6 +19,12 @@ jobs:
       - run: npm ci --no-audit --no-fund
       - name: Verify safe bootstrap behavior
         run: node tests/bootstrap-recovery.mjs
+      - name: Verify Cloudflare public-only resilience and rate limiting
+        run: |
+          node tests/public-catalog-cache.mjs
+          node tests/pages-edge.mjs
+          node tests/launch-banner-recovery.mjs
+          node tests/availability-monitor.mjs
       - name: Existing unit and integration regression
         run: npm run check && npm test
         env:
