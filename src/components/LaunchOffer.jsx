@@ -19,7 +19,7 @@ export function LaunchOffer({compact=false}){
     <div className="sofia-offer-price-values"><strong>100 <small>جنيه</small></strong><del aria-label="السعر المعتاد 170 جنيه">170 جنيه</del></div>
     <p>من الشهر الثاني: <b>170 جنيه شهريًا</b></p>
     <Link to="/courses" className="sofia-offer-cta">استكشف شرح العلوم <ArrowLeft size={18}/></Link>
-    <small className="sofia-offer-disclaimer">الدفع والتأكيد خارج الموقع بالتنسيق مع الإدارة فقط؛ لا توجد بوابة دفع إلكترونية. شروط الاشتراك متاحة أسفل الموقع.</small>
+    <small className="sofia-offer-disclaimer">لا تحوّل أي مبلغ قبل الاتفاق مع المُدرِّسة عبر قناة التواصل الرسمية؛ لا توجد بوابة دفع إلكترونية. شروط الاشتراك متاحة أسفل الموقع.</small>
    </div>
   </div>
  </section>;
