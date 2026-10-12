@@ -6,9 +6,5 @@ ALTER TABLE public.bookings ADD COLUMN IF NOT EXISTS contact_requested_at timest
 ALTER TABLE public.bookings ADD COLUMN IF NOT EXISTS contact_kind text;
 ALTER TABLE public.bookings ADD COLUMN IF NOT EXISTS contact_status text;
 ALTER TABLE public.bookings ADD COLUMN IF NOT EXISTS contact_review_note text;
-ALTER TABLE public.bookings ADD CONSTRAINT bookings_contact_kind_valid
-  CHECK (contact_kind IS NULL OR contact_kind IN ('initial','renewal')) NOT VALID;
-ALTER TABLE public.bookings ADD CONSTRAINT bookings_contact_status_valid
-  CHECK (contact_status IS NULL OR contact_status IN ('pending','approved','rejected')) NOT VALID;
--- Both new constraints permit legacy NULL data. Validate when a maintenance
--- window and project backup/restore plan have been confirmed.
+-- The application validates contact_kind/contact_status and only the school's
+-- authenticated backend may update these fields. Keep migration repeatable.
