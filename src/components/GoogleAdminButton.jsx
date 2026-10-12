@@ -1,7 +1,8 @@
 import React,{useEffect,useRef,useState} from 'react';
-import {useNavigate} from 'react-router-dom';
+import {useNavigate,useLocation} from 'react-router-dom';
 import {ShieldCheck} from 'lucide-react';
 import {dashboardPath} from './MrsSofiaBrand.jsx';
+import {safeAdminRedirect} from './manual-review-redirect.js';
 
 let googleScriptPromise=null;
 function loadGoogleIdentity(){
@@ -21,7 +22,7 @@ function loadGoogleIdentity(){
 export default function GoogleAdminButton({
  api,setUser,purpose='admin',registration=false,studentName='',guardianConsent=false
 }){
- const navigate=useNavigate(),container=useRef(null);
+ const navigate=useNavigate(),location=useLocation(),container=useRef(null);
  const latest=useRef({studentName,guardianConsent});
  latest.current={studentName,guardianConsent};
  const [config,setConfig]=useState(null),[busy,setBusy]=useState(false),[error,setError]=useState('');
@@ -51,7 +52,7 @@ export default function GoogleAdminButton({
        input.guardian_consent=latest.current.guardianConsent===true;
       }
       const response=await api('/auth/google/login',{method:'POST',body:JSON.stringify(input)});
-      if(mounted){setUser(response.user);navigate(dashboardPath(response.user),{replace:true})}
+      if(mounted){setUser(response.user);navigate(safeAdminRedirect(location.search,response.user)||dashboardPath(response.user),{replace:true})}
      }catch(err){if(mounted)setError(err.message||'تعذر تسجيل الدخول عبر Google')}
      finally{if(mounted)setBusy(false)}
     }
@@ -62,7 +63,7 @@ export default function GoogleAdminButton({
    });
   }).catch(err=>{if(mounted)setError(err.message||'تعذر الاتصال بـ Google')});
   return()=>{mounted=false};
- },[config?.clientId,api,setUser,navigate,ready,registration,studentSignupAvailable]);
+ },[config?.clientId,api,setUser,navigate,location.search,ready,registration,studentSignupAvailable]);
  if(!config)return null;
  if(registration&&!studentSignupAvailable)return null;
  const label=registration?'تسجيل الطالب باستخدام حساب ولي الأمر Google'
