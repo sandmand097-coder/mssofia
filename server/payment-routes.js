@@ -72,7 +72,7 @@ export function attachPaymentRoutes(app,{auth,role,get,all,run,uid,now}){
  app.post('/api/bookings/:id/payment',auth,onlyStudent,async(req,res,next)=>{
   // Retired: guardians never submit payment proofs through Miss Sofia.
   // Legacy review/records remain visible only to the authenticated director.
-  if(process.env.NODE_ENV==='production'||process.env.SCHOOL_RECEIPT_UPLOAD_ENABLED!=='true')
+  if(process.env.NODE_ENV==='production')
    return json(res,410,{error:'رفع الإيصالات داخل الموقع غير متاح. تواصل مع المُدرِّسة عبر واتساب أو اترك رقم ولي الأمر.'});
   try{
    if(!(await storageReady()))return json(res,503,{error:'التحويلات غير متاحة لأن حفظ الإيصالات الخاصة لم ينجح فحص الأمان بعد. لا ترسل أي تحويل.'});
