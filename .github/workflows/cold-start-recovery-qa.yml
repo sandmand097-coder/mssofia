@@ -1,0 +1,29 @@
+name: Cold-start account recovery regression
+on:
+  push:
+    branches: [fix/safer-cold-start-auth-recovery-20261012]
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  safe-bootstrap:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - name: Verify safe bootstrap behavior
+        run: node tests/bootstrap-recovery.mjs
+      - name: Existing unit and integration regression
+        run: npm run check && npm test
+        env:
+          NODE_ENV: test
+          PUBLIC_LAUNCH_MODE: preview
+          REGISTRATION_ENABLED: 'false'
+      - name: Build production site
+        run: npm run build
