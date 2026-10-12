@@ -98,11 +98,15 @@ export function attachEmailReview(app,{get,run,uid,now,loadProof,withTransaction
       const existing=await tx.get('SELECT id FROM payment_submissions WHERE transfer_reference=? AND id<>?',finalRef,row.payment_id);
       const renewed=await tx.get('SELECT id FROM subscription_renewals WHERE transfer_reference=?',finalRef);
       if(existing||renewed)return{status:409,message:'رقم عملية التحويل تم استخدامه مسبقًا؛ لا يمكن اعتماد الدفع مرتين.'};
-      const updated=await tx.run('UPDATE payment_submissions SET transfer_reference=? WHERE id=? AND status=?',finalRef,row.payment_id,'pending');
-      if(!updated.changes)throw Error('Concurrent manual transfer review conflict');
+
      }
      const capacity=await tx.get("SELECT COUNT(*) AS n FROM bookings WHERE course_id=(SELECT course_id FROM payment_submissions WHERE id=?) AND status='approved'",row.payment_id);
      if(Number(capacity?.n||0)>=Number(row.capacity))return{status:409,message:'الكورس مكتمل العدد؛ لم يتفعّل الحجز.'};
+     if(row.proof_key==='manual:notice'){
+      const ref='MANUAL-'+String(req.body.transfer_reference).trim().toUpperCase();
+      const updated=await tx.run('UPDATE payment_submissions SET transfer_reference=? WHERE id=? AND status=?',ref,row.payment_id,'pending');
+      if(!updated.changes)throw Error('Concurrent manual transfer review conflict');
+     }
      const pay=await tx.run("UPDATE payment_submissions SET status='approved',confirmed_on_phone=?,reviewed_by=?,reviewed_at=?,review_note=? WHERE id=? AND status='pending'",isCloudDatabase?true:1,admin.id,nowValue,'أقرت الإدارة بوصول التحويل من رابط البريد',row.payment_id);
      if(!pay.changes)throw Error('Concurrent payment approval failed');
      const booking=await tx.run("UPDATE bookings SET status='approved',reviewed_at=? WHERE id=? AND status='pending'",nowValue,row.booking_id);
@@ -114,7 +118,7 @@ export function attachEmailReview(app,{get,run,uid,now,loadProof,withTransaction
     }
     const used=await tx.run('UPDATE payment_review_links SET used_at=? WHERE id=? AND used_at IS NULL',nowValue,row.link_id);
     if(!used.changes)throw Error('One-time review token conflict');
-    return{status:200,message:decision==='approved'?'تم قبول التحويل وتفعيل حجز الطالب بنجاح.':'تم رفض الإيصال؛ يمكن للطالب رفع صورة أخرى بعد المراجعة.'};
+    return{status:200,message:decision==='approved'?'تم قبول التحويل وتفعيل حجز الطالب بنجاح.':'تم رفض البلاغ؛ يمكن لولي الأمر إرسال رقم جديد أو التواصل مع الإدارة.'};
    });
    return res.status(result.status).type('html').send(page('<p>'+htmlSafe(result.message)+'</p>','نتيجة مراجعة التحويل'));
   }catch(err){next(err)}
