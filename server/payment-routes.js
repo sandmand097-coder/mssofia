@@ -35,6 +35,7 @@ const enabled=()=>Boolean(refundPolicyReady()&&/^01[0125]\d{8}$/.test(process.en
 const storageReady=createPaymentStorageGate({configured:enabled,development:devStorage,verify:()=>verifyPrivateStorage(process.env)});
 const isEgyptianPhone=s=>/^01[0125]\d{8}$/.test(s||'');
 const storageBase=()=>process.env.SUPABASE_URL.replace(/\/$/,'');
+const isManualNotice=key=>key==='manual:notice'||(typeof key==='string'&&key.startsWith('manual:notice:'));
 async function saveProof(key,bytes){
  if(devStorage()){const dest=path.join(process.env.TEST_PAYMENT_UPLOAD_DIR,key+'.webp');await mkdir(path.dirname(dest),{recursive:true});await writeFile(dest,bytes,{flag:'wx',mode:0o600});return}
  const url=storageBase()+'/storage/v1/object/'+BUCKET+'/'+key+'.webp';
@@ -50,6 +51,8 @@ async function loadProof(key){
  return Buffer.from(await response.arrayBuffer());
 }
 async function removeProof(key){
+ // Virtual phone-only proof markers are not objects in Supabase Storage.
+ if(typeof key==='string'&&key.startsWith('manual:'))return;
  if(devStorage())return unlink(path.join(process.env.TEST_PAYMENT_UPLOAD_DIR,key+'.webp')).catch(()=>{});
  if(!prodStorage())return;
  await fetch(storageBase()+'/storage/v1/object/'+BUCKET+'/'+key+'.webp',{method:'DELETE',headers:storageAuthHeaders()}).catch(()=>{});
@@ -131,11 +134,11 @@ export function attachPaymentRoutes(app,{auth,role,get,all,run,uid,now}){
     const id=old?.id||uid(),timestamp=now();
     if(old){
      await tx.run("UPDATE payment_submissions SET sender_phone=?,sender_last4=?,status='pending',submitted_at=?,reviewed_at=NULL,reviewed_by=NULL,review_note=NULL,confirmed_on_phone=?,transfer_reference=?,proof_key=? WHERE id=?",
-      senderPhone,senderPhone.slice(-4),timestamp,isCloudDatabase?false:0,'NOTICE-'+uid(),'manual:notice',id);
+      senderPhone,senderPhone.slice(-4),timestamp,isCloudDatabase?false:0,'NOTICE-'+uid(),'manual:notice:'+id,id);
      await tx.run('UPDATE payment_review_links SET used_at=? WHERE payment_id=? AND used_at IS NULL',timestamp,id);
     }else{
      await tx.run('INSERT INTO payment_submissions(id,booking_id,student_id,course_id,amount_egp,transfer_reference,sender_phone,sender_last4,proof_key,status,submitted_at,confirmed_on_phone) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)',
-      id,b.id,b.student_id,b.course_id,requiredAmount(b),'NOTICE-'+uid(),senderPhone,senderPhone.slice(-4),'manual:notice','pending',timestamp,isCloudDatabase?false:0);
+      id,b.id,b.student_id,b.course_id,requiredAmount(b),'NOTICE-'+uid(),senderPhone,senderPhone.slice(-4),'manual:notice:'+id,'pending',timestamp,isCloudDatabase?false:0);
     }
     return{status:201,bookingId:b.id};
    });
@@ -230,7 +233,7 @@ export function attachPaymentRoutes(app,{auth,role,get,all,run,uid,now}){
     if(!['approved','rejected'].includes(decision))return{http:400,error:'حدد الموافقة أو الرفض'};
     if(decision==='approved'){
      if(!refundPolicyReady())return{http:503,error:'لا يمكن تفعيل حجز مدفوع قبل اعتماد سياسة الاسترداد.'};
-     if(row.proof_key==='manual:notice'){
+     if(isManualNotice(row.proof_key)){
       const reference=String(req.body?.transfer_reference||'').trim().toUpperCase();
       if(!/^[A-Z0-9][A-Z0-9./_-]{4,63}$/.test(reference))return{http:400,error:'أدخل رقم عملية التحويل الحقيقي كما هو ظاهر في المحفظة.'};
       const transfer='MANUAL-'+reference;
@@ -242,7 +245,7 @@ export function attachPaymentRoutes(app,{auth,role,get,all,run,uid,now}){
      if(req.body?.confirmedOnPhone!==true)return{http:400,error:'يجب التأكيد بأن المبلغ وصل فعليًا إلى تطبيق فودافون كاش على هاتف المُدرِّسة'};
      const used=await countCurrentMembers(tx.all,row.course_id);
      if(Number(used)>=Number(row.capacity))return{http:409,error:'المقاعد اكتملت؛ تواصل مع ولي الأمر قبل الموافقة'};
-     if(row.proof_key==='manual:notice'){
+     if(isManualNotice(row.proof_key)){
       const ref='MANUAL-'+String(req.body.transfer_reference).trim().toUpperCase();
       const changed=await tx.run('UPDATE payment_submissions SET transfer_reference=? WHERE id=? AND status=?',ref,row.id,'pending');
       if(!changed.changes)throw Error('Concurrent transfer reference conflict');

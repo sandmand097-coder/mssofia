@@ -9,7 +9,7 @@ const env={
  GOOGLE_ADMIN_LOGIN_ENABLED:'true',
  GOOGLE_OAUTH_CLIENT_ID:'12345.apps.googleusercontent.com',
  REGISTRATION_ENABLED:'false',SCHOOL_PRIVACY_APPROVED:'false',
- SUPABASE_URL:'https://jtluslevdmcpxxkngomj.supabase.co',
+ SUPABASE_URL:'https://wnkewiulyobbjftckfqb.supabase.co',
  SUPABASE_SERVICE_ROLE_KEY:'mock-secret-do-not-print',
  LIVEKIT_URL:'wss://school.livekit.cloud',
  LIVEKIT_API_KEY:'mock-key',LIVEKIT_API_SECRET:'mock-value',
@@ -18,7 +18,7 @@ const env={
 let bucketRequests=0,dbCalls=0,roomCalls=0;
 const request=async(url,{method,headers,signal}={})=>{
  bucketRequests++;
- assert.equal(url,'https://jtluslevdmcpxxkngomj.supabase.co/storage/v1/bucket/mrsofia-payment-proofs');
+ assert.equal(url,'https://wnkewiulyobbjftckfqb.supabase.co/storage/v1/bucket/mrsofia-payment-proofs');
  assert.equal(method,'GET');
  assert.ok(headers.apikey&&headers.Authorization);
  assert.ok(signal);
@@ -45,7 +45,7 @@ assert.equal(roomCalls,1);
 assert.ok(!JSON.stringify(healthy).includes('mock-secret-do-not-print'));
 assert.ok(!JSON.stringify(healthy).includes('01012345678'));
 assert.ok(!JSON.stringify(healthy).includes('director@example.com'));
-const wrongProject=await verifyPrivateStorage({...env,SUPABASE_URL:'https://wnkewiulyobbjftckfqb.supabase.co'},()=>{throw Error('Wrong project should be denied before fetching')});
+const wrongProject=await verifyPrivateStorage({...env,SUPABASE_URL:'https://jtluslevdmcpxxkngomj.supabase.co'},()=>{throw Error('Wrong project should be denied before fetching')});
 assert.equal(wrongProject,false);
 const modern=await verifyPrivateStorage({...env,SUPABASE_SECRET_KEY:'sb_secret_local-test-not-real',SUPABASE_SERVICE_ROLE_KEY:''},async(url,{headers})=>{
  assert.equal(headers.apikey,'sb_secret_local-test-not-real');

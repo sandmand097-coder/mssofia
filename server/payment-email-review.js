@@ -1,4 +1,4 @@
-// Passwordless one-time payment review email for the designated school administrator.
+// Legacy one-time reviews are local-only; production requires signed-in administration.
 // A link opens a read-only review first. Only an explicit POST can approve or reject.
 // Scanned email links (GET requests) can never activate a paid booking.
 import express from 'express';
@@ -8,6 +8,7 @@ import {mailMode,sendAccountEmail} from './email.js';
 
 const sha=s=>createHash('sha256').update(s).digest('hex');
 const tokenValid=s=>typeof s==='string'&&/^[a-f0-9]{64}$/.test(s);
+const isManualNotice=key=>key==='manual:notice'||(typeof key==='string'&&key.startsWith('manual:notice:'));
 const htmlSafe=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const adminAddress=()=>String(process.env.SCHOOL_ADMIN_EMAIL||'').trim().toLowerCase();
 const hours24=24*60*60*1000;
@@ -21,6 +22,13 @@ const headers=res=>res.set({
 const page=(body,title='مراجعة تحويل الطالب')=>`<!doctype html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${htmlSafe(title)} — Miss Sofia</title><style>body{font-family:Tahoma,Arial,sans-serif;background:#eff7f4;margin:0;padding:22px;color:#163f3a}main{max-width:640px;margin:30px auto;background:white;padding:30px;border:1px solid #d5ebe4;border-radius:20px;box-shadow:0 18px 50px #114b381a}h1{font-size:25px}p{line-height:2}.fact{background:#f0faf5;padding:15px;border-radius:12px;margin-bottom:16px}img{display:block;max-width:100%;max-height:450px;object-fit:contain;margin:12px auto;border:1px solid #ddd;border-radius:10px}button{font:700 16px Tahoma;cursor:pointer;padding:14px;border:0;border-radius:9px;width:100%;margin-top:10px}.accept{background:#0b806b;color:white}.reject{background:#ffeded;color:#ac2535}input[type=text]{width:95%;font:15px Tahoma;padding:11px;border:1px solid #ddd;border-radius:8px}.confirm{display:flex;align-items:flex-start;gap:11px;padding:14px;background:#ebf8ed;border:1px solid #acd7bb;border-radius:10px;font-weight:700;line-height:1.8}.confirm input{width:21px;height:21px;flex-shrink:0}small{color:#647771;display:block;line-height:2}strong{font-size:19px}section{margin-top:22px}</style></head><body><main><h1>Miss Sofia — مُدرِّسة العلوم</h1>${body}</main></body></html>`;
 
 export function attachEmailReview(app,{get,run,uid,now,loadProof,withTransaction,isCloudDatabase}){
+ // Old links cannot expose receipts or change real financial records in production.
+ app.use('/payment-review',(req,res,next)=>{
+  if(process.env.NODE_ENV!=='production')return next();
+  return res.status(410).set('Cache-Control','no-store, private').json({
+   error:'انتهت صلاحية مراجعة المدفوعات عبر الروابط؛ ادخل إلى لوحة الإدارة المعتمدة.'
+  });
+ });
  const reviewLimiter=rateLimit({windowMs:15*60*1000,limit:80,standardHeaders:'draft-8',legacyHeaders:false,message:'تم تجاوز عدد المحاولات، حاول مرة أخرى لاحقًا'});
  const lookupSql=`SELECT l.id AS link_id,l.payment_id,l.recipient_email,l.expires_at,l.used_at,
  p.status AS payment_status,p.amount_egp,p.sender_phone,p.proof_key,p.booking_id,
@@ -49,12 +57,12 @@ export function attachEmailReview(app,{get,run,uid,now,loadProof,withTransaction
     <p>الكورس: ${htmlSafe(record.course_title)}</p>
     <p>المبلغ: <strong>${Number(record.amount_egp)} جنيه</strong></p>
     <p>رقم الهاتف الذي أرسل التحويل: <strong dir="ltr">${htmlSafe(record.sender_phone||'إيصال قديم')}</strong></p></div>
-    ${record.proof_key==='manual:notice'?'<p>بلاغ برقم الهاتف فقط، بدون صورة إيصال.</p>':'<p>صورة الإيصال:</p><img alt="صورة التحويل" src="/payment-review/proof?token='+token+'">'}
+    ${isManualNotice(record.proof_key)?'<p>بلاغ برقم الهاتف فقط، بدون صورة إيصال.</p>':'<p>صورة الإيصال:</p><img alt="صورة التحويل" src="/payment-review/proof?token='+token+'">'}
     <small>راجع وصول المبلغ داخل تطبيق فودافون كاش قبل الضغط على الموافقة. إرسال صورة وحدها لا يعني وصول الأموال.</small>
     <form method="POST" action="/payment-review/decision">
      <input type="hidden" name="token" value="${token}">
      <label class="confirm"><input type="checkbox" name="confirmed_on_phone" value="yes"> تحققت بنفسي من وصول المبلغ المطلوب ومن رقم المُرسل على هاتف فودافون كاش الرسمي للمُدرِّسة.</label>
-     ${record.proof_key==='manual:notice'?'<label for="transfer_reference">رقم عملية التحويل الحقيقي من المحفظة (إلزامي عند القبول)</label><input id="transfer_reference" name="transfer_reference" type="text" minlength="5" maxlength="64" autocomplete="off" placeholder="رقم العملية">':''}
+     ${isManualNotice(record.proof_key)?'<label for="transfer_reference">رقم عملية التحويل الحقيقي من المحفظة (إلزامي عند القبول)</label><input id="transfer_reference" name="transfer_reference" type="text" minlength="5" maxlength="64" autocomplete="off" placeholder="رقم العملية">':''}
      <button name="decision" value="approved" class="accept" type="submit">قبول الدفع بعد التحقق من وصول المبلغ</button>
      <section><label for="reason">سبب الرفض (اختياري)</label><input id="reason" name="reason" type="text" maxlength="250" placeholder="المبلغ لم يصل أو الإيصال غير واضح"></section>
      <button name="decision" value="rejected" class="reject" type="submit">رفض الإيصال</button>
@@ -91,7 +99,7 @@ export function attachEmailReview(app,{get,run,uid,now,loadProof,withTransaction
     if(!admin)return {status:403,message:'هذا البريد غير مرتبط بحساب إدارة نشط.'};
     const nowValue=now();
     if(decision==='approved'){
-     if(row.proof_key==='manual:notice'){
+     if(isManualNotice(row.proof_key)){
       const reference=String(req.body?.transfer_reference||'').trim().toUpperCase();
       if(!/^[A-Z0-9][A-Z0-9./_-]{4,63}$/.test(reference))return{status:400,message:'اكتب رقم العملية الحقيقي كما يظهر في كشف محفظتك قبل اعتماد الدفع.'};
       const finalRef='MANUAL-'+reference;
@@ -102,7 +110,7 @@ export function attachEmailReview(app,{get,run,uid,now,loadProof,withTransaction
      }
      const capacity=await tx.get("SELECT COUNT(*) AS n FROM bookings WHERE course_id=(SELECT course_id FROM payment_submissions WHERE id=?) AND status='approved'",row.payment_id);
      if(Number(capacity?.n||0)>=Number(row.capacity))return{status:409,message:'الكورس مكتمل العدد؛ لم يتفعّل الحجز.'};
-     if(row.proof_key==='manual:notice'){
+     if(isManualNotice(row.proof_key)){
       const ref='MANUAL-'+String(req.body.transfer_reference).trim().toUpperCase();
       const updated=await tx.run('UPDATE payment_submissions SET transfer_reference=? WHERE id=? AND status=?',ref,row.payment_id,'pending');
       if(!updated.changes)throw Error('Concurrent manual transfer review conflict');
@@ -134,7 +142,16 @@ export function attachEmailReview(app,{get,run,uid,now,loadProof,withTransaction
   if(!record)return false;
   const admin=await get("SELECT id FROM users WHERE role='admin' AND status='active' AND email=?",recipient);
   if(!admin)return false;
-  const token=randomBytes(32).toString('hex'),id=uid();
+  if(process.env.NODE_ENV==='production'){
+    // Notification only: no financial bearer token and no private student data in the email.
+    await sendAccountEmail({
+     to:recipient,kind:'payment-review',subject:'Miss Sofia — بلاغ تحويل يحتاج مراجعة',
+     text:'وصل بلاغ دفع جديد. راجع كشف المحفظة ثم افتح لوحة الإدارة بحساب Google المعتمد قبل اتخاذ أي قرار. البلاغ ليس إثباتًا لوصول المال.',
+     url:'https://mssofia.pages.dev/admin'
+    });
+    return true;
+   }
+   const token=randomBytes(32).toString('hex'),id=uid();
   await run('INSERT INTO payment_review_links(id,payment_id,token_hash,recipient_email,expires_at,created_at) VALUES(?,?,?,?,?,?)',id,record.payment_id,sha(token),recipient,new Date(Date.now()+hours24).toISOString(),now());
   const url=(process.env.NODE_ENV==='production'?'https://mssofia.onrender.com':String(process.env.APP_ORIGIN||'').replace(/\/$/,''))+'/payment-review?token='+token;
   try{

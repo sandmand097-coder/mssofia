@@ -10,7 +10,7 @@ import { AccessToken, WebhookReceiver } from 'livekit-server-sdk';
 import { getRoomService, participantPermission, videoGrant, MAX_ACTIVE_SPEAKERS } from './classroom.js';
 import { randomBytes, createHash } from 'node:crypto';
 import { sendAccountEmail, canRegister, mailMode } from './email.js';
-import {attachGoogleAdminAuth,googleAdminConfig,googleStudentConfig} from './google-admin-auth.js';
+import {attachGoogleAdminAuth,googleAdminConfig,googleStudentConfig,isPasswordLoginAllowed} from './google-admin-auth.js';
 import {schoolReadiness} from './release-readiness.js';
 import {createDiagnosticReader} from './deployment-diagnostics.js';
 import {attachAdminOnlyGuard} from './admin-only.js';
@@ -19,7 +19,7 @@ import {createLiveAdmission} from './live-admission.js';
 import {configureReverseProxy} from './reverse-proxy.js';
 import {createEarlyLiveInspector} from './live-presence.js';
 import {attachClassroomQuestions,classroomQuestionsEnabled} from './classroom-questions.js';
-import {evaluateMonthlyAccess,accessView,countCurrentMembers,renewalEndSelect} from './monthly-access.js';
+import {evaluateMonthlyAccess,accessView,countCurrentMembers,countActiveMembersByCourse,renewalEndSelect} from './monthly-access.js';
 import { get, all, run, uid, now, publicUser, checkConnection, withTransaction, isCloudDatabase } from './db-adapter.js';
 const app = express(),
   PORT = Number(process.env.PORT || 4010);
@@ -36,9 +36,18 @@ if (process.env.NODE_ENV === 'production') {
 }
 // Bounded reverse-proxy trust must execute before Express rate limiters.
 configureReverseProxy(app);
-app.use(helmet({
-  contentSecurityPolicy: false
-}));
+// Protect direct Render visitors as well as the Cloudflare Pages static origin.
+const productionCsp={
+ defaultSrc:["'self'"],scriptSrc:["'self'","https://accounts.google.com","https://apis.google.com"],
+ styleSrc:["'self'","'unsafe-inline'","https://fonts.googleapis.com","https://accounts.google.com"],
+ fontSrc:["'self'","data:","https://fonts.gstatic.com"],
+ imgSrc:["'self'","data:","blob:","https:"],
+ connectSrc:["'self'","https:","wss:"],mediaSrc:["'self'","blob:","https:"],
+ frameSrc:["https://accounts.google.com","https://*.google.com"],
+ workerSrc:["'self'","blob:"],objectSrc:["'none'"],frameAncestors:["'none'"],
+ baseUri:["'self'"],formAction:["'self'"],upgradeInsecureRequests:[]
+};
+app.use(helmet({contentSecurityPolicy:process.env.NODE_ENV==='production'?{useDefaults:false,directives:productionCsp}:false}));
 const roomService = getRoomService();
 const earlyLiveInspector=createEarlyLiveInspector({roomService,lookupUser:id=>get('SELECT role,status FROM users WHERE id=?',id)});
 const admission=createLiveAdmission({studentLimit:Number(process.env.LIVE_JOIN_STUDENT_INFLIGHT||14),totalLimit:Number(process.env.LIVE_JOIN_TOTAL_INFLIGHT||20)});
@@ -170,6 +179,18 @@ app.get('/api/health', (req, res) => res.json({
   videoConfigured: !!(process.env.LIVEKIT_URL && process.env.LIVEKIT_API_KEY && process.env.LIVEKIT_API_SECRET),
   videoMode: localVideo ? 'local-development' : process.env.LIVEKIT_URL ? 'remote' : 'disabled'
 }));
+// Health is liveness only; readiness checks the actual database connection.
+app.get('/api/ready',asyncRoute(async(req,res)=>{
+ let ok=false;
+ try{ok=await checkConnection()}catch{/* Do not expose database errors or secrets. */}
+ res.set('Cache-Control','no-store, private').status(ok?200:503).json({ok});
+}));
+// Read-only release identity used by the cross-provider publish gate.
+app.get('/api/release',(req,res)=>{
+ const value=String(process.env.RENDER_GIT_COMMIT||'');
+ const commit=/^[a-f0-9]{40}$/i.test(value)?value:null;
+ res.set('Cache-Control','no-store, private').status(commit?200:503).json({commit});
+});
 const tokenHash = token => createHash('sha256').update(token).digest('hex');
 const issueAccountToken = async (userId, purpose, minutes) => {
   const token = randomBytes(32).toString('hex');
@@ -332,6 +353,7 @@ app.post('/api/auth/login', asyncRoute(async (req, res) => {
   if (!user || typeof req.body?.password !== 'string' || !(await bcrypt.compare(req.body.password, user.password_hash))) return send(res, 401, {
     error: 'بيانات الدخول غير صحيحة'
   });
+  if(!isPasswordLoginAllowed(user))return send(res,403,{error:'دخول الإدارة متاح من حساب Google المعتمد فقط'});
   if (user.status !== 'active') return send(res, 403, {
     error: user.status === 'pending' && user.role === 'student' ? 'راجع بريدك لتأكيد حسابك قبل تسجيل الدخول' : user.status === 'pending' ? 'حسابك ينتظر موافقة الإدارة' : 'الحساب غير مفعل'
   });
@@ -393,10 +415,11 @@ app.get('/api/courses', async (req, res) => {
     p.push(subject);
   }
   const listing=await all(sql + ' ORDER BY c.created_at DESC', ...p);
-  res.json({courses:await Promise.all(listing.map(async c=>({...c,enrolled:await countCurrentMembers(all,c.id)})))});
+  const counts=await countActiveMembersByCourse(all,listing.map(c=>c.id));
+  res.json({courses:listing.map(c=>({...c,enrolled:counts.get(c.id)||0}))});
 });
 app.get('/api/courses/:id', async (req, res) => {
-  const c = await get(courseQuery + ' WHERE c.id=?', req.params.id);
+  const c = await get(courseQuery + " WHERE c.id=? AND c.status='published' AND u.status='active'", req.params.id);
   if (!c) return send(res, 404, {
     error: 'الدورة غير موجودة'
   });
@@ -459,7 +482,8 @@ app.get('/api/my/overview', auth, async (req, res) => {
     courses = await all(courseQuery);
     bookings = await all(`SELECT b.*,c.title AS course_title,c.price AS course_price,(SELECT p.status FROM payment_submissions p WHERE p.booking_id=b.id) AS payment_status,(SELECT p.confirmed_on_phone FROM payment_submissions p WHERE p.booking_id=b.id) AS confirmed_on_phone,u.name AS student_name FROM bookings b JOIN courses c ON c.id=b.course_id JOIN users u ON u.id=b.student_id ORDER BY b.created_at DESC`);
   }
-  courses=await Promise.all(courses.map(async c=>({...c,enrolled:await countCurrentMembers(all,c.id)})));
+  const memberCounts=await countActiveMembersByCourse(all,courses.map(c=>c.id));
+  courses=courses.map(c=>({...c,enrolled:memberCounts.get(c.id)||0}));
   const lessons = await all(`SELECT l.id,l.title,l.course_id,l.starts_at,l.duration_minutes,l.status,l.meet_url,c.title AS course_title FROM lessons l JOIN courses c ON c.id=l.course_id WHERE ${u.role === 'student' ? "c.id IN (SELECT course_id FROM bookings WHERE student_id=? AND status='approved')" : u.role === 'teacher' ? 'c.teacher_id=?' : '1=1'} ORDER BY l.starts_at ASC LIMIT 120`, ...(u.role === 'admin' ? [] : [u.id]));
   const visibleLessons=u.role==='student'?(await studentAccessRows(u.id)).reduce((ids,row)=>{if(evaluateMonthlyAccess(row).active)ids.add(row.course_id);return ids},new Set()):null;
   const accessibleLessons=visibleLessons?lessons.filter(l=>visibleLessons.has(l.course_id)):lessons;
@@ -985,7 +1009,7 @@ app.post('/api/lessons/:id/token',auth,classroomJoinLimiter,admission.middleware
     // older course points to a different teacher_id. Only the server assigns
     // these roles; students cannot elevate themselves through client input.
     metadata: JSON.stringify({mrsSofiaRole: admin ? 'director' : teacher ? 'instructor' : 'viewer'}),
-    ttl: '30m'
+    ttl: '2m'
   });
   token.addGrant({
     roomJoin: true,

@@ -78,6 +78,7 @@ try{
  const directorToken=payload(directorResponse.data.token);
  check(directorToken.video.canPublish===true&&directorToken.video.roomAdmin===true,'admin token contains host camera and moderator privileges');
  check(JSON.parse(directorToken.metadata).mrsSofiaRole==='director','LiveKit tells student player that admin is the broadcaster');
+ check(Number(directorToken.exp)-Math.floor(Date.now()/1000)<=130&&Number(directorToken.exp)>Math.floor(Date.now()/1000),'short-lived LiveKit admission JWTs minimize stale-token reuse after room end');
  const teacherToken=payload((await request('/lessons/'+lesson+'/token','POST',{},a.teacher)).data.token);
  check(JSON.parse(teacherToken.metadata).mrsSofiaRole==='instructor','teacher metadata supports older courses');
  check((await request('/lessons/'+lesson+'/token','POST',{},a.outsider)).status===403,'unapproved child cannot enter live room');
