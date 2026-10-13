@@ -185,6 +185,12 @@ app.get('/api/ready',asyncRoute(async(req,res)=>{
  try{ok=await checkConnection()}catch{/* Do not expose database errors or secrets. */}
  res.set('Cache-Control','no-store, private').status(ok?200:503).json({ok});
 }));
+// Read-only release identity used by the cross-provider publish gate.
+app.get('/api/release',(req,res)=>{
+ const value=String(process.env.RENDER_GIT_COMMIT||'');
+ const commit=/^[a-f0-9]{40}$/i.test(value)?value:null;
+ res.set('Cache-Control','no-store, private').status(commit?200:503).json({commit});
+});
 const tokenHash = token => createHash('sha256').update(token).digest('hex');
 const issueAccountToken = async (userId, purpose, minutes) => {
   const token = randomBytes(32).toString('hex');
@@ -1003,7 +1009,7 @@ app.post('/api/lessons/:id/token',auth,classroomJoinLimiter,admission.middleware
     // older course points to a different teacher_id. Only the server assigns
     // these roles; students cannot elevate themselves through client input.
     metadata: JSON.stringify({mrsSofiaRole: admin ? 'director' : teacher ? 'instructor' : 'viewer'}),
-    ttl: '30m'
+    ttl: '2m'
   });
   token.addGrant({
     roomJoin: true,

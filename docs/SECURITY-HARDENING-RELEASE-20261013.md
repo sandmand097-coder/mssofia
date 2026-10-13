@@ -29,3 +29,9 @@ The target production database project `wnkewiulyobbjftckfqb` is not currently a
 ## Rollback
 
 No production mutation is performed by this PR. Preserve the prior live Render deploy for deliberate rollback, and block Cloudflare activation if the origin remains on an incompatible SHA. Never downgrade database policy or expose an anonymous financial endpoint to make a failing test pass.
+
+## Atomic cross-provider deployment gate
+
+The Cloudflare GitHub workflow now requires an actually successful quality check on **the same main commit**, checks that main has not moved, then performs anonymous read-only `/api/release` and `/api/ready` probes against Render. Unless Render's `RENDER_GIT_COMMIT` equals the source SHA and its database replies ready, the website **will not deploy**. A missing Cloudflare token is treated as a failure rather than reported as green.
+
+Render deploys are still a separate manual owner decision. After Render is verified, re-run the Cloudflare workflow on main; rerunning the quality workflow is also supported. Never merge a partly tested backend and trust the next frontend automation to repair it.
