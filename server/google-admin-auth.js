@@ -11,6 +11,9 @@ const validParentProfile=profile=>Boolean(profile&&trustedIssuers.has(profile.is
  &&typeof profile.sub==='string'&&profile.sub.length>0
  &&/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized(profile.email)));
 
+// Disable legacy password fallback for director accounts in production.
+export const isPasswordLoginAllowed=(user,env=process.env)=>env.NODE_ENV!=='production'||user?.role!=='admin';
+
 export function googleAdminConfig(env=process.env){
  const clientId=String(env.GOOGLE_OAUTH_CLIENT_ID||'').trim();
  const email=normalized(env.GOOGLE_ADMIN_EMAIL);

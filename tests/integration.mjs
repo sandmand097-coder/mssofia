@@ -28,6 +28,12 @@ const outsider = addUser('student','Another Student','outsider@test.local');
 const teacherTwo = addUser('teacher','Teacher Two','teacher2@test.local');
 const course = uid();
 run('INSERT INTO courses(id,title,description,subject,level,price,duration_minutes,capacity,teacher_id,status,created_at) VALUES(?,?,?,?,?,?,?,?,?,?,?)',course,'اختبار الرياضيات','دورة للاختبارات الآلية','رياضيات','الإعدادي',0,60,1,teacher,'published',now());
+// A draft course and its private timetable must not be leaked via the public endpoint.
+const unpublishedCourse=uid(),unpublishedLesson=uid();
+run('INSERT INTO courses(id,title,description,subject,level,price,duration_minutes,capacity,teacher_id,status,created_at) VALUES(?,?,?,?,?,?,?,?,?,?,?)',
+ unpublishedCourse,'Confidential preparation','Not yet advertised','علوم','خاص',0,60,10,teacher,'draft',now());
+run('INSERT INTO lessons(id,course_id,title,starts_at,duration_minutes,status,room_key,created_at) VALUES(?,?,?,?,?,?,?,?)',
+ unpublishedLesson,unpublishedCourse,'Unlisted class',new Date(Date.now()+120000).toISOString(),60,'scheduled',uid(),now());
 const lesson = uid();
 run('INSERT INTO lessons(id,course_id,title,starts_at,duration_minutes,status,room_key,created_at) VALUES(?,?,?,?,?,?,?,?)',lesson,course,'حصة اختبار',new Date(Date.now()+60*1000).toISOString(),60,'scheduled',uid(),now());
 const futureLesson = uid();
@@ -73,6 +79,10 @@ try {
  check((await request('/my/overview')).status===401,'unauthenticated dashboard denied');
  check((await request('/a-route-that-does-not-exist')).status===404,'unknown API route returns JSON 404');
  check((await request('/courses')).data.courses.length===1,'published course visible');
+  check((await request('/courses/'+unpublishedCourse)).status===404,'anonymous users cannot enumerate draft course details or timetable');
+  check((await request('/courses/'+unpublishedCourse,'GET',null,cookies.student)).status===404,'students cannot enumerate draft course details');
+  check((await request('/courses/'+course)).status===200,'published course details remain public');
+  check((await request('/ready')).status===200,'database readiness verified independently from liveness');
  check((await request('/lessons/'+lesson,'GET',null,cookies.outsider)).status===403,'outsider cannot view lesson');
  check((await request('/lessons/'+lesson+'/token','POST',{},cookies.outsider)).status===403,'outsider cannot request video token');
  check((await request('/courses','POST',{title:'X',description:'Y',subject:'Z',level:'P'},cookies.student)).status===403,'student cannot create course');

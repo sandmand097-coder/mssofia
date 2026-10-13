@@ -2,7 +2,8 @@
 // NEVER include environment values, SQL errors, tokens, emails or URLs in the API.
 import {schoolReadiness} from './release-readiness.js';
 
-const VERIFIED_PROJECT='jtluslevdmcpxxkngomj';
+// Owner-controlled cutover target; never accept the old project's receipt bucket.
+const VERIFIED_PROJECT='wnkewiulyobbjftckfqb';
 const PRIVATE_BUCKET='mrsofia-payment-proofs';
 
 function withTimeout(promise,ms=9000){

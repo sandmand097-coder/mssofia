@@ -22,7 +22,7 @@ assert.match(proxy,/production\?1:false/,'Render proxy trust limited to one trus
 assert.match(payment,/SCHOOL_REFUND_POLICY_APPROVED==='true'/,'new paid enrollments require owner sign-off');
 assert.match(renewal,/SCHOOL_REFUND_POLICY_APPROVED/,'new manual renewals require owner sign-off');
 assert.match(payment,/verifyPrivateStorage/,'receipt API requires independent bucket verification');
-assert.match(diagnostics,/const VERIFIED_PROJECT='jtluslevdmcpxxkngomj'/,'correct deployment project pinned');
+assert.match(diagnostics,/const VERIFIED_PROJECT='wnkewiulyobbjftckfqb'/,'owner-controlled cutover project pinned');
 assert.match(checkout,/run: node scripts\/run-production-risk-probe\.mjs/,'post-deployment GET-only readiness remains required');
 assert.match(runbook,/Current deployment map/,'runtime boundaries are documented');
 console.log('PASS operational architecture boundaries, exact project, payment sign-off and bounded proxy assertions');

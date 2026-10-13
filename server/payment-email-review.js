@@ -1,4 +1,4 @@
-// Passwordless one-time payment review email for the designated school administrator.
+// Legacy one-time reviews are local-only; production requires signed-in administration.
 // A link opens a read-only review first. Only an explicit POST can approve or reject.
 // Scanned email links (GET requests) can never activate a paid booking.
 import express from 'express';
@@ -22,6 +22,13 @@ const headers=res=>res.set({
 const page=(body,title='مراجعة تحويل الطالب')=>`<!doctype html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${htmlSafe(title)} — Miss Sofia</title><style>body{font-family:Tahoma,Arial,sans-serif;background:#eff7f4;margin:0;padding:22px;color:#163f3a}main{max-width:640px;margin:30px auto;background:white;padding:30px;border:1px solid #d5ebe4;border-radius:20px;box-shadow:0 18px 50px #114b381a}h1{font-size:25px}p{line-height:2}.fact{background:#f0faf5;padding:15px;border-radius:12px;margin-bottom:16px}img{display:block;max-width:100%;max-height:450px;object-fit:contain;margin:12px auto;border:1px solid #ddd;border-radius:10px}button{font:700 16px Tahoma;cursor:pointer;padding:14px;border:0;border-radius:9px;width:100%;margin-top:10px}.accept{background:#0b806b;color:white}.reject{background:#ffeded;color:#ac2535}input[type=text]{width:95%;font:15px Tahoma;padding:11px;border:1px solid #ddd;border-radius:8px}.confirm{display:flex;align-items:flex-start;gap:11px;padding:14px;background:#ebf8ed;border:1px solid #acd7bb;border-radius:10px;font-weight:700;line-height:1.8}.confirm input{width:21px;height:21px;flex-shrink:0}small{color:#647771;display:block;line-height:2}strong{font-size:19px}section{margin-top:22px}</style></head><body><main><h1>Miss Sofia — مُدرِّسة العلوم</h1>${body}</main></body></html>`;
 
 export function attachEmailReview(app,{get,run,uid,now,loadProof,withTransaction,isCloudDatabase}){
+ // Old links cannot expose receipts or change real financial records in production.
+ app.use('/payment-review',(req,res,next)=>{
+  if(process.env.NODE_ENV!=='production')return next();
+  return res.status(410).set('Cache-Control','no-store, private').json({
+   error:'انتهت صلاحية مراجعة المدفوعات عبر الروابط؛ ادخل إلى لوحة الإدارة المعتمدة.'
+  });
+ });
  const reviewLimiter=rateLimit({windowMs:15*60*1000,limit:80,standardHeaders:'draft-8',legacyHeaders:false,message:'تم تجاوز عدد المحاولات، حاول مرة أخرى لاحقًا'});
  const lookupSql=`SELECT l.id AS link_id,l.payment_id,l.recipient_email,l.expires_at,l.used_at,
  p.status AS payment_status,p.amount_egp,p.sender_phone,p.proof_key,p.booking_id,
@@ -135,7 +142,16 @@ export function attachEmailReview(app,{get,run,uid,now,loadProof,withTransaction
   if(!record)return false;
   const admin=await get("SELECT id FROM users WHERE role='admin' AND status='active' AND email=?",recipient);
   if(!admin)return false;
-  const token=randomBytes(32).toString('hex'),id=uid();
+  if(process.env.NODE_ENV==='production'){
+    // Notification only: no financial bearer token and no private student data in the email.
+    await sendAccountEmail({
+     to:recipient,kind:'payment-review',subject:'Miss Sofia — بلاغ تحويل يحتاج مراجعة',
+     text:'وصل بلاغ دفع جديد. راجع كشف المحفظة ثم افتح لوحة الإدارة بحساب Google المعتمد قبل اتخاذ أي قرار. البلاغ ليس إثباتًا لوصول المال.',
+     url:'https://mssofia.pages.dev/admin'
+    });
+    return true;
+   }
+   const token=randomBytes(32).toString('hex'),id=uid();
   await run('INSERT INTO payment_review_links(id,payment_id,token_hash,recipient_email,expires_at,created_at) VALUES(?,?,?,?,?,?)',id,record.payment_id,sha(token),recipient,new Date(Date.now()+hours24).toISOString(),now());
   const url=(process.env.NODE_ENV==='production'?'https://mssofia.onrender.com':String(process.env.APP_ORIGIN||'').replace(/\/$/,''))+'/payment-review?token='+token;
   try{

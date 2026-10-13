@@ -55,3 +55,28 @@ export async function countCurrentMembers(all,courseId,current=Date.now()){
  );
  return members.reduce((n,row)=>n+(evaluateMonthlyAccess(row,current).active?1:0),0);
 }
+
+// Batch public catalogue/member counts using the same entitlement rules.
+// SQLite and Postgres are both covered by parameterized ? placeholders.
+export async function countActiveMembersByCourse(all,courseIds,current=Date.now()){
+ const ids=[...new Set((courseIds||[]).filter(id=>typeof id==='string'||typeof id==='number'))];
+ const counts=new Map(ids.map(id=>[id,0]));
+ for(let offset=0;offset<ids.length;offset+=250){
+  const chunk=ids.slice(offset,offset+250);
+  const placeholders=chunk.map(()=>'?').join(',');
+  const rows=await all(
+   `SELECT b.course_id,b.status AS booking_status,c.price AS course_price,
+      p.status AS payment_status,p.reviewed_at AS payment_reviewed_at,
+      p.confirmed_on_phone,${renewalEndSelect('b')}
+     FROM bookings b JOIN courses c ON c.id=b.course_id
+     LEFT JOIN payment_submissions p ON p.booking_id=b.id
+     WHERE b.status='approved' AND b.course_id IN (${placeholders})`,
+   ...chunk
+  );
+  for(const row of rows){
+   if(evaluateMonthlyAccess(row,current).active)
+    counts.set(row.course_id,(counts.get(row.course_id)||0)+1);
+  }
+ }
+ return counts;
+}
