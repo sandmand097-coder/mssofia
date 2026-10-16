@@ -164,9 +164,31 @@ const studentAccessState=async studentId=>{
  return {rows,allAccess:evaluateAllAccess(rows)};
 };
 const studentCanStream=async(courseId,studentId)=>{
+ const course=await get('SELECT status FROM courses WHERE id=?',courseId);
+ if(!course||course.status!=='published')return false;
  const {rows,allAccess}=await studentAccessState(studentId);
  if(allAccess.active)return true;
  return evaluateMonthlyAccess(rows.find(row=>row.course_id===courseId)).active;
+};
+const studentsCanStream=async(courseId,studentIds)=>{
+ const ids=[...new Set((studentIds||[]).filter(id=>typeof id==='string'&&id))];
+ if(!ids.length)return new Set();
+ const course=await get('SELECT status FROM courses WHERE id=?',courseId);
+ if(!course||course.status!=='published')return new Set();
+ const placeholders=ids.map(()=>'?').join(',');
+ const rows=await all(`SELECT b.student_id,b.course_id,b.status AS booking_status,c.price AS course_price,
+  p.status AS payment_status,p.reviewed_at AS payment_reviewed_at,p.confirmed_on_phone AS confirmed_on_phone,
+  ${renewalEndSelect('b')}
+  FROM bookings b JOIN courses c ON c.id=b.course_id
+  LEFT JOIN payment_submissions p ON p.booking_id=b.id
+  WHERE b.student_id IN (${placeholders})`,...ids);
+ const grouped=new Map(ids.map(id=>[id,[]]));
+ for(const row of rows)grouped.get(row.student_id)?.push(row);
+ const allowed=new Set();
+ for(const [studentId,records] of grouped){
+  if(evaluateAllAccess(records).active||evaluateMonthlyAccess(records.find(row=>row.course_id===courseId)).active)allowed.add(studentId);
+ }
+ return allowed;
 };
 app.get('/api/health', (req, res) => res.json({
   ok: true,
@@ -758,9 +780,9 @@ app.patch('/api/admin/users/:id', auth, role('admin'), async (req, res) => {
   });
 });
 // The LiveKit SFU handles video and audio. This API controls room access and consent-based participation.
-const roomLesson = async id => await get('SELECT l.*,c.teacher_id,c.capacity,c.title AS course_title FROM lessons l JOIN courses c ON c.id=l.course_id WHERE l.id=?', id);
+const roomLesson = async id => await get('SELECT l.*,c.teacher_id,c.capacity,c.status AS course_status,c.title AS course_title FROM lessons l JOIN courses c ON c.id=l.course_id WHERE l.id=?', id);
 const isLessonHost = (l, u) => u.role === 'admin' || u.role === 'teacher' && l.teacher_id === u.id;
-const canStudentAttend = async (l,u)=>u.role==='student'&&(await studentCanStream(l.course_id,u.id));
+const canStudentAttend = async (l,u)=>u.role==='student'&&l.course_status==='published'&&(await studentCanStream(l.course_id,u.id));
 const isBanned = async (l, userId) => !!(await get('SELECT student_id FROM lesson_bans WHERE lesson_id=? AND student_id=?', l.id, userId));
 const roomPermitted = async (l, user) => isLessonHost(l, user) || (await canStudentAttend(l, user)) && !(await isBanned(l, user.id));
 const selectedStudent = async(l,id)=>{
@@ -783,8 +805,9 @@ app.get('/api/lessons/:id/classroom', auth, async (req, res) => {
     FROM lesson_hands h JOIN users u ON u.id=h.student_id
     WHERE h.lesson_id=? AND u.status='active'
     ORDER BY h.raised_at LIMIT 100`,l.id):[];
-  const allowedHands=host?await Promise.all(raisedHands.map(async row=>(await studentCanStream(l.course_id,row.student_id))?row:null)):[];
-  const hands=allowedHands.filter(Boolean).map(row=>({student_id:row.student_id,name:row.name,raised_at:row.raised_at}));
+  const allowedHandIds=host?await studentsCanStream(l.course_id,raisedHands.map(row=>row.student_id)):new Set();
+  const hands=raisedHands.filter(row=>allowedHandIds.has(row.student_id))
+    .map(row=>({student_id:row.student_id,name:row.name,raised_at:row.raised_at}));
   const speakers = host ? await all('SELECT s.student_id,s.mode,s.approved_at,u.name FROM lesson_speakers s JOIN users u ON u.id=s.student_id WHERE s.lesson_id=? ORDER BY s.approved_at', l.id) : [];
   res.json({
     isHost: host,
