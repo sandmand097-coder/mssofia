@@ -9,6 +9,13 @@ export const scienceSubject=name=>/(علوم|فيزياء|أحياء|كيميا�
 export const currency=n=>Number(n)===0?'مجاناً':Number(n).toLocaleString('ar-EG')+' ج.م';
 export {introductoryOfferApplies};
 export const publicTeacherName=name=>/school administration/i.test(String(name||''))?'مس صوفيا':String(name||'مس صوفيا');
+export function publicCourseTitle(course){
+ let title=String(typeof course==='string'?course:course?.title||'').trim();
+ if(/^علوم اليوم\s+سن[هة]\s*6\s+ابتدا[ءئ]?ي$/i.test(title))return 'علوم اليوم — الصف السادس الابتدائي';
+ title=title.replace(/\bسنه\b/g,'سنة').replace(/\bابتداءي\b/g,'ابتدائي').replace(/\bالانسان\b/g,'الإنسان');
+ return title||'كورس العلوم';
+}
+
 export function publicCourseDescription(course){
  const description=String(course?.description||'').trim();
  const title=String(course?.title||'').trim();
@@ -91,6 +98,6 @@ export function ScienceCourseCard({course}){
  const subject=course.subject||'علوم';const setting=palettes[subject]||{icon:Microscope,tone:'mint',eyebrow:'DISCOVER'};const Icon=setting.icon;
  return <Link className="sofia-course-card" to={'/courses/'+course.id}>
   <div className={'sofia-course-cover tone-'+setting.tone}><span className="sofia-course-grid-art"/><span className="sofia-course-english">{setting.eyebrow}</span><Icon size={86} strokeWidth={1.2}/><span className="sofia-course-live"><span/> حصص تفاعلية</span></div>
-  <div className="sofia-course-content"><div className="sofia-course-tags"><span>{subject}</span><span>{course.level}</span></div><h3>{course.title}</h3><p>{publicCourseDescription(course)}</p><div className="sofia-course-meta"><span><GraduationCap size={15}/> {publicTeacherName(course.teacher_name)}</span><span><Clock3 size={15}/> {course.duration_minutes} دقيقة</span></div><div className="sofia-course-price">{introductoryOfferApplies(course)?<strong>أول شهر {FIRST_MONTH_EGP} ج.م <del style={{fontSize:'.72em',opacity:.65}}>{REGULAR_MONTH_EGP} ج.م</del></strong>:<strong>{currency(course.price)}</strong>}<span>تفاصيل الدورة <ArrowLeft size={17}/></span></div></div>
+  <div className="sofia-course-content"><div className="sofia-course-tags"><span>{subject}</span><span>{course.level}</span></div><h3>{publicCourseTitle(course)}</h3><p>{publicCourseDescription(course)}</p><div className="sofia-course-meta"><span><GraduationCap size={15}/> {publicTeacherName(course.teacher_name)}</span><span><Clock3 size={15}/> {course.duration_minutes} دقيقة</span></div><div className="sofia-course-price">{introductoryOfferApplies(course)?<strong>أول شهر {FIRST_MONTH_EGP} ج.م <del style={{fontSize:'.72em',opacity:.65}}>{REGULAR_MONTH_EGP} ج.م</del></strong>:<strong>{currency(course.price)}</strong>}<span>تفاصيل الدورة <ArrowLeft size={17}/></span></div></div>
  </Link>;
 }
