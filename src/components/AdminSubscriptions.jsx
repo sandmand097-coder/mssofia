@@ -22,7 +22,7 @@ export default function AdminSubscriptions(){
  });
  return <section className="portal-panel" aria-label="الاشتراكات الشهرية">
   <h2><CalendarClock size={21}/> متابعة الاشتراكات الشهرية</h2>
-  <p>الاشتراكات السارية والانتهاء والتجديد مبنيان على الدفعات المعتمدة في الخادم، وليس على حالة الحجز وحدها. لا تتحول صورة الإيصال تلقائيًا إلى اشتراك.</p>
+  <p>أي اشتراك مدفوع معتمد يفتح للطالب كل الكورسات المنشورة لمدة 30 يوم. الكورس الظاهر هنا هو نقطة بدء الاشتراك فقط، والتجديد يمدد الوصول الشامل.</p>
   <div className="portal-metrics">
    <div className="portal-panel"><strong>اشتراكات سارية</strong><h3>{data?.counts?.active??'—'}</h3></div>
    <div className="portal-panel"><strong>تنتهي خلال 5 أيام</strong><h3>{data?.counts?.expiringSoon??'—'}</h3></div>
@@ -42,7 +42,7 @@ export default function AdminSubscriptions(){
     <th>الطالب</th><th>الكورس</th><th>الحالة</th><th>صلاحية الحضور</th>
    </tr></thead><tbody>{rows.map(m=><tr key={m.id}>
     <td><strong>{m.student_name}</strong><small>{m.student_email}</small></td>
-    <td>{m.course_title}</td>
+    <td>{Number(m.course_price)>0?<>اشتراك شامل<small>بدأ من: {m.course_title}</small></>:m.course_title}</td>
     <td>{stateLabel[m.live_access_status]||'بانتظار المراجعة'}
      {m.live_access_active&&m.live_access_days_remaining!==null&&m.live_access_days_remaining<=5&&<small>قرب الانتهاء</small>}</td>
     <td>{m.live_access_expires_at?dateTimeLabel(m.live_access_expires_at):m.live_access_status==='free'?'دورة مجانية':'—'}</td>
