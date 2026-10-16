@@ -19,7 +19,7 @@ import {createLiveAdmission} from './live-admission.js';
 import {configureReverseProxy} from './reverse-proxy.js';
 import {createEarlyLiveInspector} from './live-presence.js';
 import {attachClassroomQuestions,classroomQuestionsEnabled} from './classroom-questions.js';
-import {evaluateMonthlyAccess,accessView,countCurrentMembers,renewalEndSelect} from './monthly-access.js';
+import {evaluateMonthlyAccess,accessView,evaluateAllAccess,allAccessView,countCurrentMembers,renewalEndSelect} from './monthly-access.js';
 import { get, all, run, uid, now, publicUser, checkConnection, withTransaction, isCloudDatabase } from './db-adapter.js';
 const app = express(),
   PORT = Number(process.env.PORT || 4010);
@@ -159,9 +159,14 @@ const parseLesson = input => {
 };
 const courseQuery = `SELECT c.*,u.name AS teacher_name,u.specialty AS teacher_specialty,(SELECT COUNT(*) FROM bookings b WHERE b.course_id=c.id AND b.status='approved') AS enrolled,(SELECT MIN(starts_at) FROM lessons l WHERE l.course_id=c.id AND datetime(l.starts_at)>=datetime('now')) AS next_date FROM courses c JOIN users u ON u.id=c.teacher_id`;
 const studentAccessRows=studentId=>all(`SELECT b.course_id,b.status AS booking_status,c.price AS course_price,p.status AS payment_status,p.reviewed_at AS payment_reviewed_at,p.confirmed_on_phone AS confirmed_on_phone,${renewalEndSelect('b')} FROM bookings b JOIN courses c ON c.id=b.course_id LEFT JOIN payment_submissions p ON p.booking_id=b.id WHERE b.student_id=?`,studentId);
+const studentAccessState=async studentId=>{
+ const rows=await studentAccessRows(studentId);
+ return {rows,allAccess:evaluateAllAccess(rows)};
+};
 const studentCanStream=async(courseId,studentId)=>{
- const row=await get(`SELECT b.status AS booking_status,c.price AS course_price,p.status AS payment_status,p.reviewed_at AS payment_reviewed_at,p.confirmed_on_phone AS confirmed_on_phone,${renewalEndSelect('b')} FROM bookings b JOIN courses c ON c.id=b.course_id LEFT JOIN payment_submissions p ON p.booking_id=b.id WHERE b.course_id=? AND b.student_id=?`,courseId,studentId);
- return evaluateMonthlyAccess(row).active;
+ const {rows,allAccess}=await studentAccessState(studentId);
+ if(allAccess.active)return true;
+ return evaluateMonthlyAccess(rows.find(row=>row.course_id===courseId)).active;
 };
 app.get('/api/health', (req, res) => res.json({
   ok: true,
@@ -426,55 +431,70 @@ app.get('/api/admin/subscriptions',auth,role('admin'),asyncRoute(async(req,res)=
  res.set('Cache-Control','no-store, private').json({memberships,counts});
 }));
 app.get('/api/student/dashboard', auth, role('student'), async (req, res) => {
-  const id = req.user.id,
-    asOf = now();
-  const learningRows = await all(`SELECT c.id,c.title,c.subject,c.level,c.teacher_id,u.name AS teacher_name,
+  const id=req.user.id,asOf=now();
+  const state=await studentAccessState(id);
+  const common=`SELECT c.id,c.title,c.subject,c.level,c.teacher_id,u.name AS teacher_name,
  (SELECT COUNT(*) FROM lessons l WHERE l.course_id=c.id) AS total_lessons,
  (SELECT COUNT(*) FROM lessons l WHERE l.course_id=c.id AND l.starts_at<?) AS started_lessons,
  (SELECT COUNT(*) FROM attendance a JOIN lessons l ON l.id=a.lesson_id WHERE l.course_id=c.id AND a.user_id=?) AS attended_lessons,
  (SELECT MIN(l.starts_at) FROM lessons l WHERE l.course_id=c.id AND l.starts_at>=?) AS next_lesson_at
- FROM bookings b JOIN courses c ON c.id=b.course_id JOIN users u ON u.id=c.teacher_id
- WHERE b.student_id=? AND b.status='approved' ORDER BY b.created_at DESC`, asOf, id, asOf, id);
-  const allowedIds=new Set((await studentAccessRows(id)).filter(row=>evaluateMonthlyAccess(row).active).map(row=>row.course_id));
-  const learning=learningRows.filter(row=>allowedIds.has(row.id));
-  const attendance = (await all('SELECT lesson_id FROM attendance WHERE user_id=?', id)).map(row => row.lesson_id);
-  res.json({
-    learning,
-    attendedLessonIds: attendance
-  });
+ FROM courses c JOIN users u ON u.id=c.teacher_id`;
+  let learningRows;
+  if(state.allAccess.active){
+    learningRows=await all(common+` WHERE c.status='published' ORDER BY c.created_at DESC`,asOf,id,asOf);
+  }else{
+    learningRows=await all(common+` JOIN bookings b ON b.course_id=c.id WHERE b.student_id=? AND b.status='approved' AND c.status='published' ORDER BY b.created_at DESC`,asOf,id,asOf,id);
+    const allowedIds=new Set(state.rows.filter(row=>evaluateMonthlyAccess(row).active).map(row=>row.course_id));
+    learningRows=learningRows.filter(row=>allowedIds.has(row.id));
+  }
+  const attendance=(await all('SELECT lesson_id FROM attendance WHERE user_id=?',id)).map(row=>row.lesson_id);
+  res.json({learning:learningRows,attendedLessonIds:attendance,all_access:allAccessView(state.rows)});
 });
 app.get('/api/my/overview', auth, async (req, res) => {
-  const u = req.user;
-  let courses,
-    bookings = [];
-  if (u.role === 'student') {
-    bookings = await all(`SELECT b.*,(SELECT p.status FROM payment_submissions p WHERE p.booking_id=b.id) AS payment_status,(SELECT p.amount_egp FROM payment_submissions p WHERE p.booking_id=b.id) AS payment_amount,(SELECT p.review_note FROM payment_submissions p WHERE p.booking_id=b.id) AS payment_note,(SELECT p.reviewed_at FROM payment_submissions p WHERE p.booking_id=b.id) AS payment_reviewed_at,(SELECT p.confirmed_on_phone FROM payment_submissions p WHERE p.booking_id=b.id) AS confirmed_on_phone,${renewalEndSelect('b')},c.price,c.title AS course_title,c.subject,c.teacher_id,u.name AS teacher_name FROM bookings b JOIN courses c ON c.id=b.course_id JOIN users u ON u.id=c.teacher_id WHERE b.student_id=? ORDER BY b.created_at DESC`, u.id);
-    const allowedIds=new Set(bookings.filter(b=>evaluateMonthlyAccess(b).active).map(b=>b.course_id));
+  const u=req.user;
+  let courses,bookings=[],studentRows=null,studentAllAccess={active:false,status:'none',expires_at:null,days_remaining:0,source_course_id:null};
+  if(u.role==='student'){
+    bookings=await all(`SELECT b.*,(SELECT p.status FROM payment_submissions p WHERE p.booking_id=b.id) AS payment_status,(SELECT p.amount_egp FROM payment_submissions p WHERE p.booking_id=b.id) AS payment_amount,(SELECT p.review_note FROM payment_submissions p WHERE p.booking_id=b.id) AS payment_note,(SELECT p.reviewed_at FROM payment_submissions p WHERE p.booking_id=b.id) AS payment_reviewed_at,(SELECT p.confirmed_on_phone FROM payment_submissions p WHERE p.booking_id=b.id) AS confirmed_on_phone,${renewalEndSelect('b')},c.price,c.price AS course_price,c.title AS course_title,c.subject,c.teacher_id,t.name AS teacher_name FROM bookings b JOIN courses c ON c.id=b.course_id JOIN users t ON t.id=c.teacher_id WHERE b.student_id=? ORDER BY b.created_at DESC`,u.id);
+    studentRows=bookings;
+    studentAllAccess=allAccessView(studentRows);
+    const directAllowed=new Set(studentRows.filter(row=>evaluateMonthlyAccess(row).active).map(row=>row.course_id));
     bookings=bookings.map(b=>({...b,...accessView(b)}));
-    courses = (await all(courseQuery + ` WHERE c.id IN (SELECT course_id FROM bookings WHERE student_id=? AND status='approved')`, u.id)).filter(c=>allowedIds.has(c.id));
-  } else if (u.role === 'teacher') {
-    courses = await all(courseQuery + ' WHERE c.teacher_id=?', u.id);
-    bookings = await all(`SELECT b.*,c.title AS course_title,u.name AS student_name,u.email AS student_email FROM bookings b JOIN courses c ON c.id=b.course_id JOIN users u ON u.id=b.student_id WHERE c.teacher_id=? ORDER BY b.created_at DESC`, u.id);
-  } else {
-    courses = await all(courseQuery);
-    bookings = await all(`SELECT b.*,c.title AS course_title,c.price AS course_price,(SELECT p.status FROM payment_submissions p WHERE p.booking_id=b.id) AS payment_status,(SELECT p.confirmed_on_phone FROM payment_submissions p WHERE p.booking_id=b.id) AS confirmed_on_phone,u.name AS student_name FROM bookings b JOIN courses c ON c.id=b.course_id JOIN users u ON u.id=b.student_id ORDER BY b.created_at DESC`);
+    if(studentAllAccess.active){
+      courses=await all(courseQuery+` WHERE c.status='published'`);
+    }else{
+      courses=(await all(courseQuery+` WHERE c.status='published' AND c.id IN (SELECT course_id FROM bookings WHERE student_id=? AND status='approved')`,u.id)).filter(c=>directAllowed.has(c.id));
+    }
+  }else if(u.role==='teacher'){
+    courses=await all(courseQuery+' WHERE c.teacher_id=?',u.id);
+    bookings=await all(`SELECT b.*,c.title AS course_title,u.name AS student_name,u.email AS student_email FROM bookings b JOIN courses c ON c.id=b.course_id JOIN users u ON u.id=b.student_id WHERE c.teacher_id=? ORDER BY b.created_at DESC`,u.id);
+  }else{
+    courses=await all(courseQuery);
+    bookings=await all(`SELECT b.*,c.title AS course_title,c.price AS course_price,(SELECT p.status FROM payment_submissions p WHERE p.booking_id=b.id) AS payment_status,(SELECT p.confirmed_on_phone FROM payment_submissions p WHERE p.booking_id=b.id) AS confirmed_on_phone,u.name AS student_name FROM bookings b JOIN courses c ON c.id=b.course_id JOIN users u ON u.id=b.student_id ORDER BY b.created_at DESC`);
   }
   courses=await Promise.all(courses.map(async c=>({...c,enrolled:await countCurrentMembers(all,c.id)})));
-  const lessons = await all(`SELECT l.id,l.title,l.course_id,l.starts_at,l.duration_minutes,l.status,l.meet_url,c.title AS course_title FROM lessons l JOIN courses c ON c.id=l.course_id WHERE ${u.role === 'student' ? "c.id IN (SELECT course_id FROM bookings WHERE student_id=? AND status='approved')" : u.role === 'teacher' ? 'c.teacher_id=?' : '1=1'} ORDER BY l.starts_at ASC LIMIT 120`, ...(u.role === 'admin' ? [] : [u.id]));
-  const visibleLessons=u.role==='student'?(await studentAccessRows(u.id)).reduce((ids,row)=>{if(evaluateMonthlyAccess(row).active)ids.add(row.course_id);return ids},new Set()):null;
-  const accessibleLessons=visibleLessons?lessons.filter(l=>visibleLessons.has(l.course_id)):lessons;
+  let lessons;
+  if(u.role==='student'){
+    if(studentAllAccess.active){
+      lessons=await all(`SELECT l.id,l.title,l.course_id,l.starts_at,l.duration_minutes,l.status,l.meet_url,c.title AS course_title FROM lessons l JOIN courses c ON c.id=l.course_id WHERE c.status='published' ORDER BY l.starts_at ASC LIMIT 240`);
+    }else{
+      const visible=new Set((studentRows||[]).filter(row=>evaluateMonthlyAccess(row).active).map(row=>row.course_id));
+      const candidates=await all(`SELECT l.id,l.title,l.course_id,l.starts_at,l.duration_minutes,l.status,l.meet_url,c.title AS course_title FROM lessons l JOIN courses c ON c.id=l.course_id WHERE c.id IN (SELECT course_id FROM bookings WHERE student_id=? AND status='approved') ORDER BY l.starts_at ASC LIMIT 120`,u.id);
+      lessons=candidates.filter(l=>visible.has(l.course_id));
+    }
+  }else{
+    lessons=await all(`SELECT l.id,l.title,l.course_id,l.starts_at,l.duration_minutes,l.status,l.meet_url,c.title AS course_title FROM lessons l JOIN courses c ON c.id=l.course_id WHERE ${u.role==='teacher'?'c.teacher_id=?':'1=1'} ORDER BY l.starts_at ASC LIMIT 120`,...(u.role==='teacher'?[u.id]:[]));
+  }
   res.json({
     courses,
     bookings,
-    lessons:accessibleLessons,
-    stats: {
-      courses: courses.length,
-      bookings: bookings.length,
-      upcoming: accessibleLessons.filter(x => x.status !== 'ended' && Date.parse(x.starts_at) > Date.now()).length
-    }
+    lessons,
+    all_access:studentAllAccess,
+    stats:{courses:courses.length,bookings:bookings.length,upcoming:lessons.filter(x=>x.status!=='ended'&&Date.parse(x.starts_at)>Date.now()).length}
   });
 });
 app.post('/api/courses/:id/book', auth, role('student'), async (req, res) => {
+  const access=await studentAccessState(req.user.id);
+  if(access.allAccess.active)return send(res,409,{error:'اشتراكك الشامل نشط بالفعل وكل الكورسات المنشورة متاحة لك'});
   const c = await get('SELECT * FROM courses WHERE id=? AND status=?', req.params.id, 'published');
   if (!c) return send(res, 404, {
     error: 'الدورة غير متاحة'
@@ -759,18 +779,12 @@ app.get('/api/lessons/:id/classroom', auth, async (req, res) => {
   const host = isLessonHost(l, req.user);
   const raised = host ? false : !!(await get('SELECT student_id FROM lesson_hands WHERE lesson_id=? AND student_id=?', l.id, req.user.id));
   const mode = host ? 'host' : (await get('SELECT mode FROM lesson_speakers WHERE lesson_id=? AND student_id=?', l.id, req.user.id))?.mode || '';
-  // Single entitlement query, not 100 one-by-one SQL reads per polling cycle.
-  const raisedHands=host?await all(`SELECT h.student_id,h.raised_at,u.name,b.status AS booking_status,
-    c.price AS course_price,p.status AS payment_status,p.reviewed_at AS payment_reviewed_at,
-    p.confirmed_on_phone,${renewalEndSelect('b')}
+  const raisedHands=host?await all(`SELECT h.student_id,h.raised_at,u.name
     FROM lesson_hands h JOIN users u ON u.id=h.student_id
-    JOIN bookings b ON b.student_id=u.id AND b.course_id=? AND b.status='approved'
-    JOIN courses c ON c.id=b.course_id
-    LEFT JOIN payment_submissions p ON p.booking_id=b.id
     WHERE h.lesson_id=? AND u.status='active'
-    ORDER BY h.raised_at LIMIT 100`,l.course_id,l.id):[];
-  const hands=raisedHands.filter(row=>evaluateMonthlyAccess(row).active)
-    .map(row=>({student_id:row.student_id,name:row.name,raised_at:row.raised_at}));
+    ORDER BY h.raised_at LIMIT 100`,l.id):[];
+  const allowedHands=host?await Promise.all(raisedHands.map(async row=>(await studentCanStream(l.course_id,row.student_id))?row:null)):[];
+  const hands=allowedHands.filter(Boolean).map(row=>({student_id:row.student_id,name:row.name,raised_at:row.raised_at}));
   const speakers = host ? await all('SELECT s.student_id,s.mode,s.approved_at,u.name FROM lesson_speakers s JOIN users u ON u.id=s.student_id WHERE s.lesson_id=? ORDER BY s.approved_at', l.id) : [];
   res.json({
     isHost: host,
