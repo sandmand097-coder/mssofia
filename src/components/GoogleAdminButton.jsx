@@ -72,9 +72,9 @@ export default function GoogleAdminButton({
   {!ready?<p className="sofia-auth-hint">أدخل اسم الطالب أولًا وحدد موافقة ولي الأمر أعلاه، ثم استخدم حساب Google الخاص بولي الأمر.</p>
    :<div ref={container} aria-busy={busy} className="sofia-google-signin-mount"/>}
   <small><ShieldCheck size={14}/>
-   {registration?'يُنشأ ملف الطالب تحت بريد ولي الأمر المؤكد. الاشتراك في الكورس لا يتفعّل دون موافقة الإدارة على الحجز والدفع.'
+   {registration?'يُنشأ ملف الطالب تحت بريد ولي الأمر المؤكد. يبدأ الاشتراك الشامل لكل الكورسات المنشورة فقط بعد مراجعة الإدارة لأول دفعة.'
     :purpose==='admin'?'حساب المُدرِّسة المعتمد فقط، ولا يُنشئ أي حساب إدارة جديد.'
-    :'Google يثبت ملكية بريد ولي الأمر. يُسمح بدخول الحصص بعد موافقة الإدارة.'}
+    :'Google يثبت ملكية بريد ولي الأمر. يظهر محتوى الاشتراك بعد اعتماد الإدارة، ولا تُفتح الكاميرا أو الميكروفون تلقائيًا.'}
   </small>
   {error&&<div role="alert" className="sofia-alert">{error}</div>}
  </section>;
