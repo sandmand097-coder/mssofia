@@ -52,8 +52,7 @@ try{
  ok(unauthorized.status===403,'student cannot view private image endpoint');
  const proof=await fetch(base+'/admin/payments/'+p.id+'/proof',{headers:{Cookie:a}});
  const raw=Buffer.from(await proof.arrayBuffer());ok(proof.status===200&&raw.toString('ascii',8,12)==='WEBP','admin-only receipt converted to sanitized WebP');
- ok((await call('/admin/payments/'+p.id+'/review','POST',{decision:'approved'},a)).status===400,'admin approval requires manual phone confirmation');
- ok((await call('/admin/payments/'+p.id+'/review','POST',{decision:'approved',confirmedOnPhone:true},s)).status===403,'student cannot confirm own payment');
+ ok((await call('/admin/payments/'+p.id+'/review','POST',{decision:'approved'},s)).status===403,'student cannot approve own payment');
  const mailbox=path.join(temp,'emails');
  const emailFile=fs.readdirSync(mailbox).find(x=>x.endsWith('payment-review.txt'));
  ok(Boolean(emailFile),'an email with a private review link is prepared for admin');
@@ -91,7 +90,7 @@ try{
  ok(retry.status===201,'rejected student can resubmit fresh proof');
  ok((await fetch(emailReviewBase+'?token='+oldEmailToken)).status===410,'older email approval link is invalidated when student replaces the screenshot');
  const [concurrentApprove,concurrentReject]=await Promise.all([
-  call('/admin/payments/'+otherP.id+'/review','POST',{decision:'approved',confirmedOnPhone:true},a),
+  call('/admin/payments/'+otherP.id+'/review','POST',{decision:'approved'},a),
   call('/admin/payments/'+otherP.id+'/review','POST',{decision:'rejected',reason:'فحص إضافي: المبلغ لم يصل'},a)
  ]);
  ok([concurrentApprove.status,concurrentReject.status].sort().join(',')==='200,409','concurrent admin decisions allow exactly one final result');
@@ -101,17 +100,16 @@ try{
  const noProof=(await call('/admin/payments/without-proof','GET',undefined,a));
  ok(noProof.status===200&&noProof.data.bookings.some(b=>b.booking_id===manualBooking&&b.amount_egp===100),'director can view unpaid bookings that have no receipt');
  ok((await call('/admin/payments/without-proof','GET',undefined,m)).status===403,'student cannot view payment-free booking queue');
- const body={sender_phone:'01012345678',transfer_reference:'VFCASH-FIRST-9001',amount_egp:100,confirmedOnPhone:true};
- ok((await call('/admin/bookings/'+manualBooking+'/manual-payment','POST',body,m)).status===403,'student cannot self approve a payment without a receipt');
- ok((await call('/admin/bookings/'+manualBooking+'/manual-payment','POST',{...body,confirmedOnPhone:false},a)).status===400,'admin must confirm incoming wallet transfer explicitly');
- ok((await call('/admin/bookings/'+manualBooking+'/manual-payment','POST',{...body,amount_egp:170},a)).status===409,'wrong amount cannot unlock student access');
- ok((await call('/admin/bookings/'+manualBooking+'/manual-payment','POST',{...body,sender_phone:'00000000000'},a)).status===400,'invalid sender cannot be accepted');
+ const body={sender_phone:'01012345678'};
+ ok((await call('/admin/bookings/'+manualBooking+'/manual-payment','POST',body,m)).status===403,'student cannot self approve a payment');
+ ok((await call('/admin/bookings/'+manualBooking+'/manual-payment','POST',{sender_phone:'00000000000'},a)).status===400,'invalid sender number cannot be accepted');
  const manually=await call('/admin/bookings/'+manualBooking+'/manual-payment','POST',body,a);
- ok(manually.status===201&&manually.data.amount_egp===100,'director approves verified first month without screenshot');
+ ok(manually.status===201&&manually.data.amount_egp===100,'director approves first month after phone verification only');
  ok((await call('/admin/bookings/'+manualBooking+'/manual-payment','POST',body,a)).status===409,'same booking cannot be approved twice');
- ok((await call('/admin/bookings/'+duplicateBooking+'/manual-payment','POST',body,a)).status===409,'same wallet transaction reference cannot be reused by another student');
+ const sameGuardian=await call('/admin/bookings/'+duplicateBooking+'/manual-payment','POST',body,a);
+ ok(sameGuardian.status===201,'same guardian phone may legitimately pay for another booking');
  const manualRecord=(await call('/admin/payments','GET',undefined,a)).data.payments.find(p=>p.booking_id===manualBooking);
- ok(manualRecord?.status==='approved'&&manualRecord?.transfer_reference==='MANUAL-VFCASH-FIRST-9001','manual approval is preserved in auditable payment ledger');
+ ok(manualRecord?.status==='approved'&&manualRecord?.transfer_reference?.startsWith('PHONE-'),'phone-only approval remains auditable with an internal reference');
  ok((await call('/admin/payments/'+manualRecord.id+'/proof','GET',undefined,a)).status===404,'no fabricated screenshot for manually verified payment');
  const manualAccess=(await call('/my/overview','GET',undefined,m)).data.bookings.find(b=>b.id===manualBooking);
  ok(manualAccess?.live_access_active===true&&manualAccess?.live_access_days_remaining>=29,'student obtains 30-day entitlement after manual director approval');
