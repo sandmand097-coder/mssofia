@@ -28,7 +28,8 @@ const newCourse=(price)=>{
  lesson,id,'حصة علوم',new Date(Date.now()+8*60000).toISOString(),60,'scheduled',uid(),now());
  return{id,lesson};
 };
-const paidCourse=newCourse(170),secondPaidCourse=newCourse(170),freeCourse=newCourse(0);
+const paidCourse=newCourse(170),secondPaidCourse=newCourse(170),freeCourse=newCourse(0),hiddenPaidCourse=newCourse(170);
+run("UPDATE courses SET status='draft' WHERE id=?",hiddenPaidCourse.id);
 const makeBooking=(student,course,daysAgo)=>{
  const b=uid();run('INSERT INTO bookings(id,course_id,student_id,status,created_at,reviewed_at) VALUES(?,?,?,?,?,?)',
  b,course.id,student.id,'approved',now(),now());
@@ -73,6 +74,8 @@ try{
  expect((await api('/lessons/'+paidCourse.lesson+'/token',{method:'POST',cookie:cookies.active})).status,200,'paid active member receives signed LiveKit token');
  expect((await api('/lessons/'+secondPaidCourse.lesson,{cookie:cookies.active})).status,200,'one paid activation unlocks another published course');
  expect((await api('/lessons/'+secondPaidCourse.lesson+'/token',{method:'POST',cookie:cookies.active})).status,200,'all-access member receives token for another course without another booking');
+ expect((await api('/lessons/'+hiddenPaidCourse.lesson,{cookie:cookies.active})).status,403,'all-access does not expose an unpublished course lesson');
+ expect((await api('/lessons/'+hiddenPaidCourse.lesson+'/token',{method:'POST',cookie:cookies.active})).status,403,'all-access never issues a token for an unpublished course');
  expect((await api('/lessons/'+paidCourse.lesson,{cookie:cookies.expired})).status,403,'expired paid member cannot even read private live lesson');
  expect((await api('/lessons/'+paidCourse.lesson+'/token',{method:'POST',cookie:cookies.expired})).status,403,'expired paid member gets no LiveKit token');
  expect((await api('/lessons/'+secondPaidCourse.lesson+'/token',{method:'POST',cookie:cookies.expired})).status,403,'expired subscription does not retain all-course access');
