@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {evaluateMonthlyAccess,accessView,PAID_ACCESS_DAYS} from '../server/monthly-access.js';
+import {evaluateMonthlyAccess,evaluateAllAccess,allAccessView,accessView,PAID_ACCESS_DAYS} from '../server/monthly-access.js';
 const clock=Date.parse('2026-10-10T13:00:00.000Z'),day=86400000;
 const active={course_price:170,booking_status:'approved',payment_status:'approved',payment_reviewed_at:new Date(clock-10*day).toISOString(),confirmed_on_phone:true};
 assert.equal(PAID_ACCESS_DAYS,30);
@@ -21,4 +21,10 @@ assert.equal(evaluateMonthlyAccess({...active,confirmed_on_phone:1},clock).activ
 assert.equal(evaluateMonthlyAccess(null,clock).active,false,'missing enrollment denied');
 assert.equal(accessView(active,clock).live_access_active,true);
 assert.ok(accessView(active,clock).live_access_expires_at?.startsWith('2026-10-30'));
-console.log('PASS 18 monthly live-entitlement approval, expiry, payment and free-course cases');
+const all=evaluateAllAccess([{...active,course_id:'course-a'},{...active,course_id:'course-b',payment_reviewed_at:new Date(clock-5*day).toISOString()}],clock);
+assert.equal(all.active,true);
+assert.equal(all.kind,'all_access');
+assert.equal(all.sourceCourseId,'course-b','latest valid paid entitlement drives global expiry');
+assert.equal(evaluateAllAccess([{...active,course_price:0,course_id:'free'}],clock).active,false,'free approval stays course-specific');
+assert.equal(allAccessView([{...active,course_id:'course-a'}],clock).active,true);
+console.log('PASS 23 monthly live-entitlement, all-access, expiry, payment and free-course cases');
