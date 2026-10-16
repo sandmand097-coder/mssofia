@@ -1,8 +1,7 @@
 import React,{useState} from 'react';
 import {Smartphone,ShieldCheck,CheckCircle2,RefreshCw,MessageCircle} from 'lucide-react';
 import {WHATSAPP_CONTACT_URL} from './whatsapp-contact.js';
-import {introductoryOfferApplies} from './MrsSofiaBrand.jsx';
-import {FIRST_MONTH_EGP,REGULAR_MONTH_EGP} from './LaunchOffer.jsx';
+import {FIRST_MONTH_EGP,REGULAR_MONTH_EGP,introductoryOfferApplies} from '../../shared/subscription-plan.js';
 
 const money=n=>Number(n).toLocaleString('ar-EG')+' جنيه';
 const validPhone=s=>/^01[0125]\d{8}$/.test(s);
