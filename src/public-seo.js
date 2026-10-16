@@ -19,6 +19,10 @@ export const PUBLIC_SEO=Object.freeze({
   title:'دليل الاستخدام والتسجيل والدفع والحصص المباشرة | مس صوفيا للعلوم',
   description:'دليل ولي الأمر والطالب لاستخدام منصة مس صوفيا للعلوم: إنشاء حساب Google، طلب الحجز، فودافون كاش عند التفعيل، اعتماد الإدارة، جدول الحصص ودخول الفصل المباشر.'
  },
+ '/contact':{
+  title:'تواصل مع مس صوفيا للعلوم | الدعم والاستفسارات',
+  description:'تواصل مع مس صوفيا للعلوم للاستفسار عن الكورسات والمواعيد والاشتراكات، ومتابعة الحجز والدفع والاسترداد عبر قنوات التواصل الرسمية.'
+ },
  '/privacy':{
   title:'سياسة الخصوصية وحماية الطلاب | مس صوفيا للعلوم',
   description:'تعرف على سياسة الخصوصية وحماية بيانات الطلاب وأولياء الأمور وكيفية التعامل مع الحسابات والحصص المباشرة في منصة مس صوفيا للعلوم.'
@@ -31,5 +35,11 @@ export const PUBLIC_SEO=Object.freeze({
 export function publicSeoMeta(pathname){
  if(typeof pathname!=='string')return null;
  const path=pathname.replace(/\/+$/,'')||'/';
- return Object.hasOwn(PUBLIC_SEO,path)?{...PUBLIC_SEO[path],pathname:path,canonical:SEO_ORIGIN+path}:null;
+ if(Object.hasOwn(PUBLIC_SEO,path))return {...PUBLIC_SEO[path],pathname:path,canonical:SEO_ORIGIN+path};
+ if(/^\/courses\/[A-Za-z0-9_-]{1,100}$/.test(path))return {
+  title:'تفاصيل كورس العلوم | مس صوفيا للعلوم',
+  description:'تفاصيل الكورس ومواعيد الحصص المنشورة مع مس صوفيا للعلوم. الاشتراك المدفوع المعتمد يتيح كل الكورسات المنشورة لمدة 30 يومًا.',
+  pathname:path,canonical:SEO_ORIGIN+path
+ };
+ return null;
 }
