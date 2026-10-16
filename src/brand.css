@@ -534,3 +534,36 @@ body{color:var(--sf-ink)}
 .sofia-classroom-notice{display:flex;align-items:flex-start;gap:9px;background:#eef8f3;color:#225d52;border:1px solid #c5e6d6;border-radius:12px;padding:12px 13px;font:700 12px Cairo,Tahoma,Arial,sans-serif;line-height:2;margin:0}
 .sofia-classroom-notice svg{flex-shrink:0;margin-top:3px}
 @media(max-width:520px){.sofia-lesson-time-fields .portal-form-grid{gap:8px}}
+
+
+/* Production accessibility and support polish */
+.sofia-skip-link{
+ position:fixed;
+ inset-inline-start:18px;
+ top:-72px;
+ z-index:9999;
+ padding:10px 16px;
+ border-radius:12px;
+ background:#092f35;
+ color:#fff;
+ font-weight:800;
+ text-decoration:none;
+ box-shadow:0 8px 24px rgba(0,0,0,.18);
+ transition:top .16s ease;
+}
+.sofia-skip-link:focus{top:12px;outline:3px solid #f2b36d;outline-offset:3px}
+#main-content:focus{outline:none}
+.sofia-two-col{
+ display:grid;
+ grid-template-columns:repeat(2,minmax(0,1fr));
+ gap:20px;
+ align-items:stretch;
+}
+.sofia-two-col .portal-panel{height:100%}
+@media(max-width:760px){
+ .sofia-two-col{grid-template-columns:1fr}
+ .sofia-skip-link{inset-inline-start:10px}
+}
+@media(prefers-reduced-motion:reduce){
+ .sofia-skip-link{transition:none}
+}
