@@ -70,7 +70,29 @@ export function allAccessView(records,current=Date.now()){
  };
 }
 
+export async function countActiveAllAccessMembers(all,current=Date.now()){
+ const rows=await all(
+  `SELECT b.student_id,b.course_id,b.status AS booking_status,c.price AS course_price,
+  p.status AS payment_status,p.reviewed_at AS payment_reviewed_at,p.confirmed_on_phone,
+  ${renewalEndSelect('b')}
+  FROM bookings b JOIN courses c ON c.id=b.course_id
+  LEFT JOIN payment_submissions p ON p.booking_id=b.id
+  WHERE b.status='approved'`
+ );
+ const grouped=new Map();
+ for(const row of rows){
+  if(!grouped.has(row.student_id))grouped.set(row.student_id,[]);
+  grouped.get(row.student_id).push(row);
+ }
+ let active=0;
+ for(const records of grouped.values())if(evaluateAllAccess(records,current).active)active++;
+ return active;
+}
+
 export async function countCurrentMembers(all,courseId,current=Date.now()){
+ const course=(await all('SELECT price FROM courses WHERE id=?',courseId))[0];
+ if(!course)return 0;
+ if(Number(course.price)>0)return countActiveAllAccessMembers(all,current);
  const members=await all(
   `SELECT b.status AS booking_status,c.price AS course_price,p.status AS payment_status,
   p.reviewed_at AS payment_reviewed_at,p.confirmed_on_phone,${renewalEndSelect('b')}
