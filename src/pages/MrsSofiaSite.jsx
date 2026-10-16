@@ -52,7 +52,7 @@ export function MrsHome({api}){
      ['إزاي أشترك في كورس؟','أنشئ حساب طالب، اختار الدورة المناسبة، واضغط طلب الحجز. طلبك هيظهر في حسابك لحد ما المدرّسة توافق عليه.'],
      ['أقدر أشوف مواعيد حصصي فين؟','من لوحة الطالب، افتح جدول الحصص. المواعيد بتظهر بعد الموافقة على حجزك في الدورة.'],
      ['هل فيه حصص أونلاين مباشرة؟','المنصة فيها فصل مباشر تفاعلي بالصوت والفيديو ومشاركة الشاشة، ويحتاج تفعيل خدمة البث قبل الاستخدام الفعلي.'],
-     ['عرض الشهر الأول بكام؟','عرض شرح العلوم للطالب الجديد: 100 جنيه في الشهر الأول بدل 170 جنيه، وبعده 170 جنيه شهريًا. تأكيد الاشتراك بعد مراجعة الإدارة للتحويل.'],
+     ['عرض الشهر الأول بكام؟','100 جنيه في الشهر الأول بدل 170 جنيه. بعد اعتماد الدفع يفتح اشتراك الطالب كل الكورسات المنشورة لمدة 30 يوم، وبعدها 170 جنيه عند التجديد.'],
      ['إزاي أدفع الاشتراك؟','تسجيل الطالب يتم بحساب Google الخاص بولي الأمر. لا تحوّل أي مبلغ إلا بعد ظهور المحفظة الرسمية داخل حساب الطالب. تراجع الإدارة التحويل بنفسها قبل اعتماد الحجز.'],
      ['إزاي أتواصل مع الإدارة؟','هتلاقي رقم التواصل وواتساب الرسمي أسفل الموقع علشان تستفسر عن الكورسات أو الاشتراك.']
    ].map(([q,a],i)=><details className="sofia-faq-item" key={q} open={i===0}><summary><span>{q}</span><span className="sofia-faq-plus">+</span></summary><p>{a}</p></details>)}</div></div></section>
@@ -106,7 +106,7 @@ export function MrsCourses({api}){
 }
 
 export function MrsCourseDetails({api,user,show}){
- const {id}=useParams(),[data,setData]=useState(null),[loading,setLoading]=useState(true),[error,setError]=useState(''),[busy,setBusy]=useState(false),[bookingStatus,setBookingStatus]=useState(''),[monthlyExpired,setMonthlyExpired]=useState(false);
+ const {id}=useParams(),[data,setData]=useState(null),[loading,setLoading]=useState(true),[error,setError]=useState(''),[busy,setBusy]=useState(false),[bookingStatus,setBookingStatus]=useState(''),[monthlyExpired,setMonthlyExpired]=useState(false),[allAccess,setAllAccess]=useState(false);
  useEffect(()=>{
   let alive=true,timer,attempt=0;
   setLoading(true);setData(null);setError('');
@@ -140,11 +140,11 @@ export function MrsCourseDetails({api,user,show}){
   void refresh();
   return()=>{alive=false;clearTimeout(timer)};
  },[id,api]);
- useEffect(()=>{let alive=true;if(user?.role==='student')api('/my/overview').then(d=>{if(alive){const booking=d.bookings.find(b=>b.course_id===id);setBookingStatus(booking?.status||'');setMonthlyExpired(booking?.live_access_status==='expired')}}).catch(()=>{});return()=>{alive=false}},[id,user,api]);
+ useEffect(()=>{let alive=true;if(user?.role==='student')api('/my/overview').then(d=>{if(alive){const booking=d.bookings.find(b=>b.course_id===id);setBookingStatus(booking?.status||'');setMonthlyExpired(booking?.live_access_status==='expired');setAllAccess(d.all_access?.active===true)}}).catch(()=>{});return()=>{alive=false}},[id,user,api]);
  const book=async()=>{if(!user)return;setBusy(true);try{const d=await api('/courses/'+id+'/book',{method:'POST'});setBookingStatus('pending');show(d.message)}catch(e){show(e.message)}finally{setBusy(false)}};
  if(loading)return <div className="sofia-page-loading">بنجهّز تفاصيل الكورس...</div>;
  if(!data)return <main className="sofia-site sofia-container sofia-no-results"><h2>{error==='الدورة غير موجودة'?'الدورة غير موجودة':'جارٍ تجهيز تفاصيل الدورة'}</h2><p>{error||'يتم استعادة الاتصال تلقائيًا.'}</p><Link to="/courses">العودة للكورسات</Link></main>;
- const c=data.course,isStudent=user?.role==='student',canBook=isStudent&&!bookingStatus&&!data.partial;
+ const c=data.course,isStudent=user?.role==='student',canBook=isStudent&&!bookingStatus&&!allAccess&&!data.partial;
  return <main className="sofia-site sofia-page-bg"><div className="sofia-container sofia-detail-wrap"><nav className="sofia-breadcrumb"><Link to="/">الرئيسية</Link><ChevronLeft size={15}/><Link to="/courses">الكورسات</Link><ChevronLeft size={15}/><span>{c.subject}</span></nav>
   <div className="sofia-detail-layout"><div className="sofia-detail-content"><div className="sofia-detail-art"><div className="sofia-detail-art-grid"/><span><FlaskConical size={108} strokeWidth={1}/></span><div className="sofia-detail-art-caption"><Sparkles size={18}/> عالم العلوم مع Miss Sofia</div></div>
     <div className="sofia-detail-section"><span className="sofia-kicker"><i/> عن الكورس</span><h2>إيه اللي هتتعلمه؟</h2><p>{publicCourseDescription(c)}</p><p>محتوى الحصص ومواعيدها المعتمدة يظهران في الجدول أدناه عند نشرهما من الإدارة.</p></div>
@@ -152,9 +152,9 @@ export function MrsCourseDetails({api,user,show}){
   </div>
   <aside className="sofia-detail-sidebar"><span className="sofia-detail-label"><Sparkles size={16}/> كورس علوم تفاعلي</span><h1>{c.title}</h1><div className="sofia-detail-chips"><span>{c.subject}</span><span>{c.level}</span></div><div className="sofia-detail-instructor"><span><GraduationCap size={23}/></span><div><small>مع المدرّس</small><strong>{publicTeacherName(c.teacher_name)}</strong></div></div><div className="sofia-detail-facts"><div><span><Clock3 size={18}/> مدة الحصة</span><strong>{c.duration_minutes} دقيقة</strong></div><div><span><Users size={18}/> المقاعد المتاحة</span><strong>{data.partial?'جارٍ التحقق':Math.max(0,c.capacity-c.enrolled)+' من '+c.capacity}</strong></div><div><span><BookOpen size={18}/> عدد الحصص</span><strong>{data.partial?'جارٍ التحقق':data.lessons.length+' حصص'}</strong></div></div>
    {data.partial&&<p role="status" className="sofia-auth-notice">تُعرض معلومات الدورة العامة من نسخة مؤقتة. لا تعتمد السعر أو المقاعد أو المواعيد حتى عودة اتصال الخادم.</p>}
-   <div className="sofia-detail-price">{introductoryOfferApplies(c)?<><small>عرض اشتراك شرح العلوم — الشهر الأول</small><strong>100 جنيه <del style={{fontSize:'.52em',opacity:.62}}>170 جنيه</del></strong><small>من الشهر الثاني 170 جنيه شهريًا — 30 يوم بث مباشر داخل الموقع بعد تأكيد الدفع</small></>:<><small>سعر الكورس</small><strong>{currency(c.price)}</strong></>}</div>
-   {data.partial?<button type="button" className="sofia-cta sofia-detail-book" disabled>الحجز متاح عند عودة الاتصال</button>:!user?<Link to="/login" className="sofia-cta sofia-detail-book">سجّل دخولك للحجز <ArrowLeft size={17}/></Link>:<button type="button" className="sofia-cta sofia-detail-book" disabled={!canBook||busy} onClick={book}>{busy?'جارٍ إرسال الطلب...':bookingStatus==='approved'?(monthlyExpired?'الاشتراك الشهري منتهٍ — تواصل مع الإدارة':'الاشتراك نشط ومشاهدة البث متاحة'):bookingStatus==='pending'?'طلبك قيد المراجعة':bookingStatus==='rejected'?'تم رفض طلب الحجز':!isStudent?'الحجز متاح للطلاب فقط':'اطلب الحجز الآن'} <ArrowLeft size={17}/></button>}
-   {bookingStatus==='approved'&&!monthlyExpired&&<Link className="sofia-dashboard-link" to="/student">تابع الحصص المباشرة من داخل موقع المُدرِّسة <ArrowLeft size={16}/></Link>}
+   <div className="sofia-detail-price">{introductoryOfferApplies(c)?<><small>اشتراك شامل كل كورسات العلوم — الشهر الأول</small><strong>100 جنيه <del style={{fontSize:'.52em',opacity:.62}}>170 جنيه</del></strong><small>30 يوم وصول لكل الكورسات المنشورة بعد تأكيد الدفع — والتجديد يمدد الاشتراك الشامل</small></>:<><small>سعر الكورس</small><strong>{currency(c.price)}</strong></>}</div>
+   {data.partial?<button type="button" className="sofia-cta sofia-detail-book" disabled>الحجز متاح عند عودة الاتصال</button>:!user?<Link to="/login" className="sofia-cta sofia-detail-book">سجّل دخولك للحجز <ArrowLeft size={17}/></Link>:<button type="button" className="sofia-cta sofia-detail-book" disabled={!canBook||busy} onClick={book}>{busy?'جارٍ إرسال الطلب...':allAccess?'مفعّل ضمن اشتراكك الشامل':bookingStatus==='approved'?(monthlyExpired?'الاشتراك الشهري منتهٍ — تواصل مع الإدارة':'الاشتراك نشط ومشاهدة البث متاحة'):bookingStatus==='pending'?'طلبك قيد المراجعة':bookingStatus==='rejected'?'تم رفض طلب الحجز':!isStudent?'الحجز متاح للطلاب فقط':'اطلب الحجز الآن'} <ArrowLeft size={17}/></button>}
+   {(allAccess||bookingStatus==='approved'&&!monthlyExpired)&&<Link className="sofia-dashboard-link" to="/student">تابع كل الكورسات والحصص من لوحة الطالب <ArrowLeft size={16}/></Link>}
    <p className="sofia-detail-fine"><ShieldCheck size={17}/> سيتم مراجعة الطلب قبل السماح بدخول الحصص.</p>
    {c.price>0&&<p className="sofia-detail-fine">الدفع غير متاح حاليًا؛ لا ترسل تحويلًا قبل ظهور رقم المحفظة الرسمي داخل حساب الطالب.</p>}
   </aside></div></div></main>;
