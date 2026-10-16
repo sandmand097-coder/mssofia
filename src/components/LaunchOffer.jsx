@@ -1,10 +1,9 @@
 import React from 'react';
 import {Link} from 'react-router-dom';
 import {ArrowLeft,CalendarCheck2,Gift,ShieldCheck,Sparkles} from 'lucide-react';
+import {FIRST_MONTH_EGP,REGULAR_MONTH_EGP} from '../../shared/subscription-plan.js';
 
 // Introductory monthly teaching offer, not a payment receipt or automatic subscription.
-export const FIRST_MONTH_EGP=100;
-export const REGULAR_MONTH_EGP=170;
 export function LaunchOffer({compact=false}){
  return <section id="offer" className={'sofia-launch-offer'+(compact?' is-compact':'')} aria-label="عرض الشهر الأول للاشتراك الشامل في العلوم">
   <div className="sofia-container sofia-launch-offer-inner">
@@ -16,8 +15,8 @@ export function LaunchOffer({compact=false}){
    </div>
    <div className="sofia-offer-price-panel">
     <div className="sofia-offer-price-top"><span><Sparkles size={16}/> للشهر الأول</span><span className="sofia-offer-savings">وفّر 70 جنيه</span></div>
-    <div className="sofia-offer-price-values"><strong>100 <small>جنيه</small></strong><del aria-label="السعر المعتاد 170 جنيه">170 جنيه</del></div>
-    <p>عند التجديد: <b>170 جنيه لكل 30 يومًا</b></p>
+    <div className="sofia-offer-price-values"><strong>{FIRST_MONTH_EGP} <small>جنيه</small></strong><del aria-label={'السعر المعتاد '+REGULAR_MONTH_EGP+' جنيه'}>{REGULAR_MONTH_EGP} جنيه</del></div>
+    <p>عند التجديد: <b>{REGULAR_MONTH_EGP} جنيه لكل 30 يومًا</b></p>
     <Link to="/courses" className="sofia-offer-cta">استكشف الكورسات <ArrowLeft size={18}/></Link>
     <small className="sofia-offer-disclaimer">لا يوجد خصم إلكتروني تلقائي. نسّق مع الإدارة على وسيلة التحويل الرسمية، وبعد وصول التحويل تعتمد الإدارة الاشتراك يدويًا.</small>
    </div>
