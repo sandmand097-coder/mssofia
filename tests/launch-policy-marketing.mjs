@@ -31,7 +31,7 @@ assert.match(payment,/refundPolicyReady\(\)/,'financial activation must be fail-
 assert.match(renewal,/SCHOOL_REFUND_POLICY_APPROVED/,'manual renewals must not bypass refund policy sign-off');
 assert.match(readiness,/refundPolicyApproved/,'admin setup status reports approval gate');
 assert.match(env,/^SCHOOL_REFUND_POLICY_APPROVED=false$/m,'refund policy is off by default');
-assert.match(offer,/لا تحوّل أي مبلغ/,'visitor still sees clear payment safety notice');
+assert.match(offer,/لا يوجد خصم إلكتروني تلقائي/,'visitor sees clear manual-payment safety notice');
 assert.ok(cards.slice(cards.indexOf('sofia-footer-bottom')).includes('<Link to="/terms"'),'full legal terms remain linked unobtrusively at the bottom');
 assert.ok(!catalogue.includes('<h3>حقوق واضحة</h3>'),'course marketing does not prominently advertise refund policy');
 assert.match(catalogue,/تجربة رقمية متطورة/,'course marketing emphasizes digital learning improvement');
@@ -39,8 +39,8 @@ assert.match(catalogue,/بنطوّر تجربة تعليم العلوم/,'homepa
 assert.ok(!/ليلة الامتحان|نزول الأطفال بالليل|كلهم عارفين بعض/.test(catalogue),'private educational motivation is not displayed to visitors');
 assert.match(catalogue,/معلومات قبل الحجز/,'catalogue explains purchase journey');
 assert.match(catalogue,/لم يُعلن موعد حصة قادمة/,'missing lesson dates are not fabricated');
-assert.match(catalogue,/introductoryOfferApplies\(c\)/,'course pricing never applies promotional figures to unrelated courses');
-assert.match(cards,/introductoryOfferApplies\(course\)/,'cards show only the currently verified offer');
+assert.match(catalogue,/introductoryOfferApplies\(c\)/,'course pricing uses the shared science subscription rule');
+assert.match(cards,/introductoryOfferApplies\(course\)/,'cards use the verified all-access introductory offer rule');
 assert.match(cards,/publicCourseDescription\(course\)/,'short production course descriptions receive clear human-facing explanation');
 assert.match(cards,/publicTeacherName\(course.teacher_name\)/,'internal school admin account label is not promoted as teacher name');
 assert.ok(sitemap.includes('<loc>'+SEO_ORIGIN+'/courses/443b2d26-faba-464a-984b-8a823fddd146</loc>'));
