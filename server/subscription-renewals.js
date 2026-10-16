@@ -7,8 +7,7 @@ import {PAID_ACCESS_MS,renewalsEnabled,countCurrentMembers} from './monthly-acce
 
 const json=(res,status,payload)=>res.status(status).json(payload);
 const isPhone=phone=>/^01[0125]\d{8}$/.test(phone||'');
-const isScience=value=>/(علوم|فيزياء|أحياء|كيمياء|science|physics|biology|chemistry)/i.test(value||'');
-const amountForRenewal=c=>Number(c.price)>0?(isScience(c.subject)?170:Number(c.price)):0;
+const amountForRenewal=renewalAmount;
 
 export function attachSubscriptionRenewalRoutes(app,{
  auth,role,get,all,uid,now,withTransaction,isCloudDatabase,
