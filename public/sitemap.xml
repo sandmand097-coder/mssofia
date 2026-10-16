@@ -3,7 +3,10 @@
   <url><loc>https://mssofia.pages.dev/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>
   <url><loc>https://mssofia.pages.dev/courses</loc><changefreq>weekly</changefreq><priority>0.9</priority></url>
   <url><loc>https://mssofia.pages.dev/guide</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://mssofia.pages.dev/contact</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
   <url><loc>https://mssofia.pages.dev/privacy</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
   <url><loc>https://mssofia.pages.dev/terms</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
   <url><loc>https://mssofia.pages.dev/courses/443b2d26-faba-464a-984b-8a823fddd146</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://mssofia.pages.dev/courses/d2955d15-1e4a-427f-820e-9f7f8de9d515</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://mssofia.pages.dev/courses/2de5fa24-3a69-47ae-af43-156f32e284b0</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
 </urlset>
