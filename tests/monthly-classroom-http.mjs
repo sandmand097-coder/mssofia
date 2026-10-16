@@ -28,7 +28,7 @@ const newCourse=(price)=>{
  lesson,id,'حصة علوم',new Date(Date.now()+8*60000).toISOString(),60,'scheduled',uid(),now());
  return{id,lesson};
 };
-const paidCourse=newCourse(170),freeCourse=newCourse(0);
+const paidCourse=newCourse(170),secondPaidCourse=newCourse(170),freeCourse=newCourse(0);
 const makeBooking=(student,course,daysAgo)=>{
  const b=uid();run('INSERT INTO bookings(id,course_id,student_id,status,created_at,reviewed_at) VALUES(?,?,?,?,?,?)',
  b,course.id,student.id,'approved',now(),now());
@@ -71,12 +71,16 @@ try{
  const cookies={director:await login(director),active:await login(active),expired:await login(expired),unpaid:await login(unpaid),free:await login(free)};
  expect((await api('/lessons/'+paidCourse.lesson,{cookie:cookies.active})).status,200,'paid active member sees lesson');
  expect((await api('/lessons/'+paidCourse.lesson+'/token',{method:'POST',cookie:cookies.active})).status,200,'paid active member receives signed LiveKit token');
+ expect((await api('/lessons/'+secondPaidCourse.lesson,{cookie:cookies.active})).status,200,'one paid activation unlocks another published course');
+ expect((await api('/lessons/'+secondPaidCourse.lesson+'/token',{method:'POST',cookie:cookies.active})).status,200,'all-access member receives token for another course without another booking');
  expect((await api('/lessons/'+paidCourse.lesson,{cookie:cookies.expired})).status,403,'expired paid member cannot even read private live lesson');
  expect((await api('/lessons/'+paidCourse.lesson+'/token',{method:'POST',cookie:cookies.expired})).status,403,'expired paid member gets no LiveKit token');
+ expect((await api('/lessons/'+secondPaidCourse.lesson+'/token',{method:'POST',cookie:cookies.expired})).status,403,'expired subscription does not retain all-course access');
  expect((await api('/lessons/'+paidCourse.lesson+'/classroom',{cookie:cookies.expired})).status,403,'expired member cannot see class state');
  expect((await api('/lessons/'+paidCourse.lesson+'/hand',{method:'POST',cookie:cookies.expired,body:{raised:true}})).status,403,'expired member cannot raise a hand');
  expect((await api('/lessons/'+paidCourse.lesson+'/token',{method:'POST',cookie:cookies.unpaid})).status,403,'unpaid booking cannot enter paid stream');
  expect((await api('/lessons/'+freeCourse.lesson+'/token',{method:'POST',cookie:cookies.free})).status,200,'approved free course remains accessible');
+ expect((await api('/lessons/'+secondPaidCourse.lesson+'/token',{method:'POST',cookie:cookies.free})).status,403,'free course approval does not unlock paid all-access');
  expect((await api('/lessons/'+paidCourse.lesson+'/token',{method:'POST',cookie:cookies.director})).status,200,'director still broadcasts to the course');
  const overview=(await api('/my/overview',{cookie:cookies.expired})).data;
  expect(overview.lessons.length,0,'expired membership removes lesson listing');
@@ -89,10 +93,17 @@ try{
  expect(publicCatalog.enrolled,1,'public course capacity counts only active approved memberships');
  const paidOverview=(await api('/my/overview',{cookie:cookies.active})).data;
  expect(paidOverview.bookings[0].live_access_status,'monthly','paid member has valid current monthly period');
- expect(paidOverview.lessons.length,1,'active member sees live lesson');
+ expect(paidOverview.lessons.length,3,'active paid member sees lessons from every published course');
+ expect(paidOverview.courses.length,3,'active paid member sees every published course');
+ expect(paidOverview.all_access.active,true,'overview exposes active all-course entitlement');
+ expect((await api('/courses/'+secondPaidCourse.id+'/book',{method:'POST',cookie:cookies.active})).status,409,'all-access student cannot create redundant course bookings');
+ const activeDashboard=(await api('/student/dashboard',{cookie:cookies.active})).data;
+ expect(activeDashboard.learning.length,3,'student dashboard lists every published course during all-access period');
+ expect(activeDashboard.all_access.active,true,'student dashboard reports all-access state');
  const expiredDashboard=(await api('/student/dashboard',{cookie:cookies.expired})).data;
  expect(expiredDashboard.learning.length,0,'expired membership not displayed as active learning');
- console.log('PASS '+checks+' real isolated HTTP monthly LiveKit access, expiry, free course and director tests');
+ expect(expiredDashboard.all_access.active,false,'expired membership disables all-access');
+ console.log('PASS '+checks+' real isolated HTTP all-course monthly access, expiry, free course and director tests');
 }finally{
  server.kill();
  await Promise.race([new Promise(resolve=>server.once('exit',resolve)),new Promise(resolve=>setTimeout(resolve,1400))]);
