@@ -35,9 +35,9 @@ export function WhatsAppContact({pathname}){
    aria-label="راسل مس صوفيا مباشرة على واتساب لأسئلة الكورسات — يفتح في نافذة جديدة">
    <span className="sofia-wa-contact-icon"><WhatsAppMark size={28}/></span>
    <span className="sofia-wa-contact-copy">
-    <span className="sofia-wa-contact-kicker">WHATSAPP SUPPORT</span>
-    <strong>عندك استفسار؟</strong>
-    <span className="sofia-wa-contact-description">راسل مس صوفيا مباشرة</span>
+    <span className="sofia-wa-contact-kicker">التواصل الرسمي</span>
+    <strong>تحتاج مساعدة؟</strong>
+    <span className="sofia-wa-contact-description">راسل مس صوفيا عبر واتساب</span>
    </span>
    <span className="sofia-wa-contact-arrow"><ArrowUpLeft size={18}/></span>
   </a>
