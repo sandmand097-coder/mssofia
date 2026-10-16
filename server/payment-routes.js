@@ -10,9 +10,8 @@ import {verifyPrivateStorage} from './deployment-diagnostics.js';
 import {createPaymentStorageGate} from './payment-storage-gate.js';
 import {countCurrentMembers} from './monthly-access.js';
 import {attachSubscriptionRenewalRoutes} from './subscription-renewals.js';
+import {FIRST_MONTH_EGP,REGULAR_MONTH_EGP,firstPaymentAmount} from '../shared/subscription-plan.js';
 
-export const FIRST_MONTH_EGP=100;
-export const REGULAR_MONTH_EGP=170;
 const BUCKET='mrsofia-payment-proofs';
 const imageMax=2*1024*1024;
 const uploadMax=8*1024*1024;
@@ -20,8 +19,8 @@ const receiptUpload=multer({storage:multer.memoryStorage(),limits:{fileSize:uplo
  cb(null,['image/jpeg','image/png','image/webp'].includes(file.mimetype));
 }});
 const json=(res,status,data)=>res.status(status).json(data);
-const isScience=s=>/(علوم|فيزياء|أحياء|كيمياء|science|physics|biology|chemistry)/i.test(s||'');
-const requiredAmount=c=>Number(c.price)<=0?0:isScience(c.subject)?FIRST_MONTH_EGP:Number(c.price);
+export {FIRST_MONTH_EGP,REGULAR_MONTH_EGP};
+const requiredAmount=firstPaymentAmount;
 const storageKey=()=>process.env.SUPABASE_SECRET_KEY||process.env.SUPABASE_SERVICE_ROLE_KEY;
 const storageAuthHeaders=()=>{
  const key=storageKey();
