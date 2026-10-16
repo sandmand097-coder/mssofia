@@ -19,7 +19,7 @@ import {createLiveAdmission} from './live-admission.js';
 import {configureReverseProxy} from './reverse-proxy.js';
 import {createEarlyLiveInspector} from './live-presence.js';
 import {attachClassroomQuestions,classroomQuestionsEnabled} from './classroom-questions.js';
-import {evaluateMonthlyAccess,accessView,evaluateAllAccess,allAccessView,countCurrentMembers,renewalEndSelect} from './monthly-access.js';
+import {evaluateMonthlyAccess,accessView,evaluateAllAccess,allAccessView,countCurrentMembers,countActiveAllAccessMembers,renewalEndSelect} from './monthly-access.js';
 import { get, all, run, uid, now, publicUser, checkConnection, withTransaction, isCloudDatabase } from './db-adapter.js';
 const app = express(),
   PORT = Number(process.env.PORT || 4010);
@@ -548,6 +548,12 @@ app.post('/api/courses', auth, role('teacher', 'admin'), async (req, res) => {
   if (!(await get("SELECT id FROM users WHERE id=? AND role IN ('teacher','admin') AND status='active'", teacherId))) return send(res, 400, {
     error: 'حدد مدرسًا نشطًا أو المُدرِّسة'
   });
+  if(values.price>0){
+    const activeSubscribers=await countActiveAllAccessMembers(all);
+    if(values.capacity<activeSubscribers)return send(res,409,{
+      error:'سعة الكورس أقل من عدد الطلاب أصحاب الاشتراك الشامل الساري ('+activeSubscribers+'). زوّد السعة قبل نشر الكورس.'
+    });
+  }
   await run('INSERT INTO courses(id,title,description,subject,level,price,duration_minutes,capacity,teacher_id,status,created_at) VALUES(?,?,?,?,?,?,?,?,?,?,?)', id, values.title, values.description, values.subject, values.level, values.price, values.duration_minutes, values.capacity, teacherId, 'published', now());
   res.status(201).json({
     id
