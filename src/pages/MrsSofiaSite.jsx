@@ -4,6 +4,7 @@ import {ArrowLeft,ArrowUpLeft,Atom,BookOpen,CalendarDays,CheckCircle2,ChevronLef
 import {ScienceScene,ScienceCourseCard,scienceSubject,scienceSubjects,currency,formatDateTime,dashboardPath,introductoryOfferApplies,publicCourseDescription,publicTeacherName} from '../components/MrsSofiaBrand.jsx';
 import {LaunchOffer} from '../components/LaunchOffer.jsx';
 import {ScienceDiscoveryLab} from '../components/ScienceDiscoveryLab.jsx';
+import {FIRST_MONTH_EGP,REGULAR_MONTH_EGP} from '../../shared/subscription-plan.js';
 
 const categories=[
  {name:'علوم',icon:FlaskConical,eng:'SCIENCE',desc:'اكتشف العلوم في حياتنا اليومية',tone:'mint'},
@@ -52,7 +53,7 @@ export function MrsHome({api}){
      ['إزاي أشترك؟','أنشئ حساب الطالب بإشراف ولي الأمر، واختر أي دورة لبدء طلب الاشتراك. بعد اعتماد أول دفعة، يتفعّل للطالب كل الكورسات المنشورة لمدة 30 يومًا.'],
      ['أقدر أشوف مواعيد حصصي فين؟','من لوحة الطالب افتح جدول الحصص. بعد تفعيل الاشتراك الشامل تظهر مواعيد الكورسات المنشورة المتاحة لك.'],
      ['هل فيه حصص أونلاين مباشرة؟','نعم. الفصل المباشر يعمل داخل المنصة بالصوت والفيديو ومشاركة الشاشة، ودخول الطالب مرتبط بموعد الحصة واشتراكه الساري.'],
-     ['عرض الشهر الأول بكام؟','100 جنيه في الشهر الأول بدل 170 جنيه. بعد اعتماد الدفع يفتح اشتراك الطالب كل الكورسات المنشورة لمدة 30 يوم، وبعدها 170 جنيه عند التجديد.'],
+     ['عرض الشهر الأول بكام؟',FIRST_MONTH_EGP+' جنيه في الشهر الأول بدل '+REGULAR_MONTH_EGP+' جنيه. بعد اعتماد الدفع يفتح اشتراك الطالب كل الكورسات المنشورة لمدة 30 يوم، وبعدها '+REGULAR_MONTH_EGP+' جنيه عند التجديد.'],
      ['إزاي أدفع الاشتراك؟','بعد طلب الحجز نسّق مع الإدارة عبر القنوات الرسمية على وسيلة التحويل. لا يوجد خصم تلقائي، وتراجع الإدارة التحويل بنفسها قبل تفعيل الاشتراك.'],
      ['إزاي أتواصل مع الإدارة؟','استخدم صفحة «تواصل معنا» أو رقم الهاتف وواتساب الرسمي الموجودين أسفل الموقع للاستفسار عن الكورسات والاشتراكات.']
    ].map(([q,a],i)=><details className="sofia-faq-item" key={q} open={i===0}><summary><span>{q}</span><span className="sofia-faq-plus">+</span></summary><p>{a}</p></details>)}</div></div></section>
@@ -152,7 +153,7 @@ export function MrsCourseDetails({api,user,show}){
   </div>
   <aside className="sofia-detail-sidebar"><span className="sofia-detail-label"><Sparkles size={16}/> كورس علوم تفاعلي</span><h1>{c.title}</h1><div className="sofia-detail-chips"><span>{c.subject}</span><span>{c.level}</span></div><div className="sofia-detail-instructor"><span><GraduationCap size={23}/></span><div><small>مع المدرّس</small><strong>{publicTeacherName(c.teacher_name)}</strong></div></div><div className="sofia-detail-facts"><div><span><Clock3 size={18}/> مدة الحصة</span><strong>{c.duration_minutes} دقيقة</strong></div><div><span><Users size={18}/> المقاعد المتاحة</span><strong>{data.partial?'جارٍ التحقق':Math.max(0,c.capacity-c.enrolled)+' من '+c.capacity}</strong></div><div><span><BookOpen size={18}/> عدد الحصص</span><strong>{data.partial?'جارٍ التحقق':data.lessons.length+' حصص'}</strong></div></div>
    {data.partial&&<p role="status" className="sofia-auth-notice">تُعرض معلومات الدورة العامة من نسخة مؤقتة. لا تعتمد السعر أو المقاعد أو المواعيد حتى عودة اتصال الخادم.</p>}
-   <div className="sofia-detail-price">{introductoryOfferApplies(c)?<><small>اشتراك شامل كل كورسات العلوم — الشهر الأول</small><strong>100 جنيه <del style={{fontSize:'.52em',opacity:.62}}>170 جنيه</del></strong><small>30 يوم وصول لكل الكورسات المنشورة بعد تأكيد الدفع — والتجديد يمدد الاشتراك الشامل</small></>:<><small>سعر الكورس</small><strong>{currency(c.price)}</strong></>}</div>
+   <div className="sofia-detail-price">{introductoryOfferApplies(c)?<><small>اشتراك شامل كل كورسات العلوم — الشهر الأول</small><strong>{FIRST_MONTH_EGP} جنيه <del style={{fontSize:'.52em',opacity:.62}}>{REGULAR_MONTH_EGP} جنيه</del></strong><small>30 يوم وصول لكل الكورسات المنشورة بعد تأكيد الدفع — والتجديد يمدد الاشتراك الشامل</small></>:<><small>سعر الكورس</small><strong>{currency(c.price)}</strong></>}</div>
    {data.partial?<button type="button" className="sofia-cta sofia-detail-book" disabled>الحجز متاح عند عودة الاتصال</button>:!user?<Link to="/login" className="sofia-cta sofia-detail-book">سجّل دخولك للحجز <ArrowLeft size={17}/></Link>:<button type="button" className="sofia-cta sofia-detail-book" disabled={!canBook||busy} onClick={book}>{busy?'جارٍ إرسال الطلب...':allAccess?'مفعّل ضمن اشتراكك الشامل':bookingStatus==='approved'?(monthlyExpired?'الاشتراك الشهري منتهٍ — تواصل مع الإدارة':'الاشتراك نشط ومشاهدة البث متاحة'):bookingStatus==='pending'?'طلبك قيد المراجعة':bookingStatus==='rejected'?'تم رفض طلب الحجز':!isStudent?'الحجز متاح للطلاب فقط':'اطلب الحجز الآن'} <ArrowLeft size={17}/></button>}
    {(allAccess||bookingStatus==='approved'&&!monthlyExpired)&&<Link className="sofia-dashboard-link" to="/student">تابع كل الكورسات والحصص من لوحة الطالب <ArrowLeft size={16}/></Link>}
    <p className="sofia-detail-fine"><ShieldCheck size={17}/> أول دفعة مدفوعة تعتمدها الإدارة تفتح للطالب كل الكورسات المنشورة لمدة 30 يومًا.</p>
