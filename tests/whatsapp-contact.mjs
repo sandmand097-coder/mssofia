@@ -13,7 +13,7 @@ assert.equal(url.hostname,'wa.me');
 assert.equal(url.pathname,'/201027661546');
 assert.equal(url.searchParams.get('text'),WHATSAPP_CONTACT_MESSAGE);
 assert.ok(!/\/lesson\/|token|password|vodafone|رقم الطالب|بيانات الطالب/i.test(url.searchParams.get('text')));
-for(const path of ['/', '/courses','/courses/','/courses/123','/guide','/privacy','/terms','/login','/register','/forgot-password','/reset-password','/verify-email'])
+for(const path of ['/', '/courses','/courses/','/courses/123','/guide','/contact','/privacy','/terms','/login','/register','/forgot-password','/reset-password','/verify-email'])
  assert.equal(showWhatsAppContact(path),true,'public routes provide direct guardian contact: '+path);
 for(const path of ['/student','/teacher','/admin','/dashboard','/lesson/123','/lesson','/courses/1/hidden','/api/auth/me','/unknown',null,undefined])
  assert.equal(showWhatsAppContact(path),false,'never obscure a protected/live page: '+path);
