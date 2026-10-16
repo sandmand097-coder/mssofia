@@ -948,7 +948,7 @@ app.post('/api/lessons/:id/moderate', auth, role('teacher', 'admin'), asyncRoute
   }
 }));
 app.get('/api/lessons/:id', auth, async (req, res) => {
-  const l = await get('SELECT l.id,l.title,l.course_id,l.starts_at,l.duration_minutes,l.status,l.meet_url,l.room_key,c.title AS course_title,c.teacher_id FROM lessons l JOIN courses c ON c.id=l.course_id WHERE l.id=?', req.params.id);
+  const l = await get('SELECT l.id,l.title,l.course_id,l.starts_at,l.duration_minutes,l.status,l.meet_url,l.room_key,c.title AS course_title,c.teacher_id,c.status AS course_status FROM lessons l JOIN courses c ON c.id=l.course_id WHERE l.id=?', req.params.id);
   if (!l) return send(res, 404, {
     error: 'الحصة غير موجودة'
   });
