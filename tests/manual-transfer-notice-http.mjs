@@ -58,15 +58,15 @@ try{
  assert.equal(row?.status,'pending');
  assert.equal(row?.proof_key,'manual:notice','no image needed and no storage API is touched');
  assert.ok(row?.transfer_reference.startsWith('NOTICE-'));
- const missingRef=await request('/api/admin/payments/'+row.id+'/review',{method:'POST',cookie:director,body:{decision:'approved',confirmedOnPhone:true}});
- assert.equal(missingRef.status,400,'admin cannot approve a phone notice without actual transfer reference');
  const studentDashboard=(await request('/api/my/overview',{cookie:pupil}));
  assert.equal(studentDashboard.status,200);
- assert.ok(!studentDashboard.data.bookings?.some(b=>b.id===booking&&b.status==='approved'),'no auto-unlock');
- const reject=await request('/api/admin/payments/'+row.id+'/review',{method:'POST',cookie:director,body:{decision:'rejected',reason:'لم يصل التحويل للمحفظة'}});
- assert.equal(reject.status,200,'director can reject');
- assert.equal((await request('/api/admin/payments/'+row.id+'/review',{method:'POST',cookie:director,body:{decision:'approved',confirmedOnPhone:true,transfer_reference:'TXN123456'}})).status,409,'reviewed payment cannot be approved later');
- console.log('PASS adult-only manual notice, phone validation, duplicate protection, no auto access, unique approval reference, director rejection');
+ assert.ok(!studentDashboard.data.bookings?.some(b=>b.id===booking&&b.status==='approved'),'phone notice does not auto-unlock');
+ const approved=await request('/api/admin/payments/'+row.id+'/review',{method:'POST',cookie:director,body:{decision:'approved'}});
+ assert.equal(approved.status,200,'director approves after checking the listed phone number only');
+ const after=(await request('/api/my/overview',{cookie:pupil}));
+ assert.ok(after.data.bookings?.some(b=>b.id===booking&&b.status==='approved'),'approved phone check unlocks the booking');
+ assert.equal((await request('/api/admin/payments/'+row.id+'/review',{method:'POST',cookie:director,body:{decision:'approved'}})).status,409,'reviewed payment cannot be approved twice');
+ console.log('PASS adult-only manual notice, phone validation, duplicate notice protection, no auto access, phone-only director approval');
 }finally{
  srv.kill();
  await Promise.race([new Promise(resolve=>srv.once('exit',resolve)),wait(4000)]);
