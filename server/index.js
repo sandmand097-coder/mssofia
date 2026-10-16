@@ -158,6 +158,15 @@ const parseLesson = input => {
   };
 };
 const courseQuery = `SELECT c.*,u.name AS teacher_name,u.specialty AS teacher_specialty,(SELECT COUNT(*) FROM bookings b WHERE b.course_id=c.id AND b.status='approved') AS enrolled,(SELECT MIN(starts_at) FROM lessons l WHERE l.course_id=c.id AND datetime(l.starts_at)>=datetime('now')) AS next_date FROM courses c JOIN users u ON u.id=c.teacher_id`;
+const withEnrollmentCounts=async courses=>{
+ const list=Array.isArray(courses)?courses:[];
+ if(!list.length)return [];
+ const allAccessCount=await countActiveAllAccessMembers(all);
+ return Promise.all(list.map(async course=>({
+  ...course,
+  enrolled:Number(course.price)>0?allAccessCount:await countCurrentMembers(all,course.id)
+ })));
+};
 const studentAccessRows=studentId=>all(`SELECT b.course_id,b.status AS booking_status,c.price AS course_price,p.status AS payment_status,p.reviewed_at AS payment_reviewed_at,p.confirmed_on_phone AS confirmed_on_phone,${renewalEndSelect('b')} FROM bookings b JOIN courses c ON c.id=b.course_id LEFT JOIN payment_submissions p ON p.booking_id=b.id WHERE b.student_id=?`,studentId);
 const studentAccessState=async studentId=>{
  const rows=await studentAccessRows(studentId);
@@ -420,7 +429,7 @@ app.get('/api/courses', async (req, res) => {
     p.push(subject);
   }
   const listing=await all(sql + ' ORDER BY c.created_at DESC', ...p);
-  res.json({courses:await Promise.all(listing.map(async c=>({...c,enrolled:await countCurrentMembers(all,c.id)})))});
+  res.json({courses:await withEnrollmentCounts(listing)});
 });
 app.get('/api/courses/:id', async (req, res) => {
   const c = await get(courseQuery + ' WHERE c.id=?', req.params.id);
@@ -428,7 +437,7 @@ app.get('/api/courses/:id', async (req, res) => {
     error: 'الدورة غير موجودة'
   });
   res.json({
-    course:{...c,enrolled:await countCurrentMembers(all,c.id)},
+    course:(await withEnrollmentCounts([c]))[0],
     lessons: await all('SELECT id,course_id,title,starts_at,duration_minutes,status FROM lessons WHERE course_id=? ORDER BY starts_at', c.id)
   });
 });
@@ -493,7 +502,7 @@ app.get('/api/my/overview', auth, async (req, res) => {
     courses=await all(courseQuery);
     bookings=await all(`SELECT b.*,c.title AS course_title,c.price AS course_price,(SELECT p.status FROM payment_submissions p WHERE p.booking_id=b.id) AS payment_status,(SELECT p.confirmed_on_phone FROM payment_submissions p WHERE p.booking_id=b.id) AS confirmed_on_phone,u.name AS student_name FROM bookings b JOIN courses c ON c.id=b.course_id JOIN users u ON u.id=b.student_id ORDER BY b.created_at DESC`);
   }
-  courses=await Promise.all(courses.map(async c=>({...c,enrolled:await countCurrentMembers(all,c.id)})));
+  courses=await withEnrollmentCounts(courses);
   let lessons;
   if(u.role==='student'){
     if(studentAllAccess.active){
