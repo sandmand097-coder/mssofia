@@ -44,6 +44,32 @@ export function accessView(row,current=Date.now()){
  };
 }
 
+export function evaluateAllAccess(records,current=Date.now()){
+ const active=(Array.isArray(records)?records:[])
+  .map(record=>({record,entitlement:evaluateMonthlyAccess(record,current)}))
+  .filter(({record,entitlement})=>Number(record?.course_price??record?.price??0)>0&&entitlement.active&&entitlement.kind==='monthly');
+ if(!active.length)return {active:false,kind:'none',expiresAt:null,daysRemaining:0,sourceCourseId:null};
+ const best=active.reduce((a,b)=>Date.parse(b.entitlement.expiresAt)>Date.parse(a.entitlement.expiresAt)?b:a);
+ return {
+  active:true,
+  kind:'all_access',
+  expiresAt:best.entitlement.expiresAt,
+  daysRemaining:best.entitlement.daysRemaining,
+  sourceCourseId:best.record?.course_id??null
+ };
+}
+
+export function allAccessView(records,current=Date.now()){
+ const entitlement=evaluateAllAccess(records,current);
+ return {
+  active:entitlement.active,
+  status:entitlement.kind,
+  expires_at:entitlement.expiresAt,
+  days_remaining:entitlement.daysRemaining,
+  source_course_id:entitlement.sourceCourseId
+ };
+}
+
 export async function countCurrentMembers(all,courseId,current=Date.now()){
  const members=await all(
   `SELECT b.status AS booking_status,c.price AS course_price,p.status AS payment_status,
