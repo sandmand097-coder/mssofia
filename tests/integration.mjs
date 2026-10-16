@@ -193,8 +193,13 @@ try {
  check((await request('/admin/dashboard')).status===401,'anonymous visitor cannot access admin statistics');
  console.log('RESULT '+passed+' integration checks passed.');
 } finally {
- server.kill();
- await new Promise(resolve=>server.once('exit',resolve)).catch(()=>{});
+ if(server.exitCode===null&&server.signalCode===null){
+  server.kill();
+  await Promise.race([
+   new Promise(resolve=>server.once('exit',resolve)),
+   new Promise(resolve=>setTimeout(resolve,1500))
+  ]);
+ }
  await new Promise(r=>setTimeout(r,150));
  fs.rmSync(tmp,{recursive:true,force:true,maxRetries:5,retryDelay:100});
 }
