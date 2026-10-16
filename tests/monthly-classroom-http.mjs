@@ -92,8 +92,11 @@ try{
  expect(expiredBooking.live_access_status,'expired','account accurately describes expired 30-day period');
  const catalog=(await api('/courses/'+paidCourse.id)).data;
  expect(catalog.course.enrolled,1,'expired and unpaid bookings do not occupy active monthly seats');
- const publicCatalog=(await api('/courses')).data.courses.find(c=>c.id===paidCourse.id);
- expect(publicCatalog.enrolled,1,'public course capacity counts only active approved memberships');
+ const publicCourses=(await api('/courses')).data.courses;
+ const publicCatalog=publicCourses.find(c=>c.id===paidCourse.id);
+ const secondPublicCatalog=publicCourses.find(c=>c.id===secondPaidCourse.id);
+ expect(publicCatalog.enrolled,1,'paid source course counts the active all-access member');
+ expect(secondPublicCatalog.enrolled,1,'another paid course also counts the same all-access member for capacity');
  const paidOverview=(await api('/my/overview',{cookie:cookies.active})).data;
  expect(paidOverview.bookings[0].live_access_status,'monthly','paid member has valid current monthly period');
  expect(paidOverview.lessons.length,3,'active paid member sees lessons from every published course');
