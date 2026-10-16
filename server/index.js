@@ -982,7 +982,7 @@ const classroomJoinLimiter=rateLimit({
  message:{code:'JOIN_RATE_LIMITED',error:'طلبات دخول كثيرة لهذا الحساب. انتظر قليلًا قبل إعادة المحاولة.'}
 });
 app.post('/api/lessons/:id/token',auth,classroomJoinLimiter,admission.middleware,asyncRoute(async(req,res)=>{
-  const l = await get('SELECT l.*,c.teacher_id FROM lessons l JOIN courses c ON c.id=l.course_id WHERE l.id=?', req.params.id);
+  const l = await get('SELECT l.*,c.teacher_id,c.status AS course_status FROM lessons l JOIN courses c ON c.id=l.course_id WHERE l.id=?', req.params.id);
   if (!l) return send(res, 404, {
     error: 'الحصة غير موجودة'
   });
