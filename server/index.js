@@ -610,7 +610,7 @@ app.post('/api/courses/:id/lessons', auth, role('teacher', 'admin'), async (req,
   });
 });
 app.patch('/api/lessons/:id', auth, role('teacher', 'admin'), async (req, res) => {
-  const lesson = await get('SELECT l.*,c.teacher_id FROM lessons l JOIN courses c ON c.id=l.course_id WHERE l.id=?', req.params.id);
+  const lesson = await get('SELECT l.*,c.teacher_id,c.status AS course_status FROM lessons l JOIN courses c ON c.id=l.course_id WHERE l.id=?', req.params.id);
   if (!lesson) return send(res, 404, {
     error: 'الحصة غير موجودة'
   });
