@@ -20,6 +20,7 @@ const ForgotPasswordPage=lazy(()=>import('./pages/MrsSofiaAuth.jsx').then(m=>({d
 const ResetPasswordPage=lazy(()=>import('./pages/MrsSofiaAuth.jsx').then(m=>({default:m.ResetPasswordPage})));
 const PrivacyPolicy=lazy(()=>import('./pages/SchoolPolicies.jsx').then(m=>({default:m.PrivacyPolicy})));
 const SchoolTerms=lazy(()=>import('./pages/SchoolPolicies.jsx').then(m=>({default:m.SchoolTerms})));
+const ContactPage=lazy(()=>import('./pages/ContactPage.jsx'));
 const GettingStartedGuide=lazy(()=>import('./pages/GettingStartedGuide.jsx'));
 const StudentPortal=lazy(()=>import('./pages/StudentPortal.jsx'));
 const TeacherPortal=lazy(()=>import('./pages/TeacherPortal.jsx'));
@@ -289,7 +290,9 @@ export default function App(){
  return <Context.Provider value={{user,setUser,show,logout,launchMode,retryBootstrap,reconnecting}}>
   <PageTitle/>
   <RouteScrollManager/>
+  <a className="sofia-skip-link" href="#main-content">تخطي إلى المحتوى الرئيسي</a>
   <BrandHeader user={user} logout={logout} previewMode={previewNavigation} adminOnly={adminOnly}/>
+  <div id="main-content" tabIndex="-1">
   {/*
     No global launch banner. A transient 503 must not claim that enrollment or
     video is permanently closed. Protected routes still fail closed and show
@@ -303,6 +306,7 @@ export default function App(){
      <Route path="/privacy" element={<PrivacyPolicy/>}/>
      <Route path="/terms" element={<SchoolTerms/>}/>
      <Route path="/guide" element={<GettingStartedGuide/>}/>
+     <Route path="/contact" element={<ContactPage/>}/>
      <Route path="/courses/:id" element={launchMode==='preview'||adminOnly?<PublicUnavailable/>:<MrsCourseDetails api={api} user={launchMode==='full'?user:null} show={show}/>}/>
      <Route path="/login" element={publicOnly?<PublicUnavailable/>:<SignInPage api={api} user={user} setUser={setUser} show={show} adminOnly={adminOnly}/>}/>
      <Route path="/register" element={publicOnly||adminOnly?<PublicUnavailable/>:<RegisterPage api={api} user={user} setUser={setUser}/>}/>
@@ -317,6 +321,7 @@ export default function App(){
      <Route path="*" element={<NotFound/>}/>
     </Routes>
    </Suspense>}
+  </div>
   <BrandFooter previewMode={publicOnly||adminOnly} showWhatsApp={showWhatsAppContact(pathname)}/>
    <WhatsAppContact pathname={pathname}/>
   {toast&&<div className="toast" role="status" aria-live="polite"><ShieldCheck size={18}/>{toast}</div>}
