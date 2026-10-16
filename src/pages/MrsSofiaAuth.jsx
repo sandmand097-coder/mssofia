@@ -24,14 +24,18 @@ export function SignInPage({api,user,setUser,adminOnly=false}){
  const submit=async e=>{e.preventDefault();setBusy(true);setError('');try{const r=await api('/auth/login',{method:'POST',body:JSON.stringify({email,password})});setUser(r.user);navigate(dashboardPath(r.user),{replace:true})}catch(err){setError(err.message)}finally{setBusy(false)}};
  return <AuthLayout tag={adminOnly?'إدارة المنصة':'تسجيل الدخول'} title={adminOnly?'دخول مس صوفيا':'مرحبًا بك في مس صوفيا للعلوم'} description={adminOnly?'استخدمي حساب Google الإداري المعتمد للدخول إلى لوحة الإدارة.':'حساب الطالب يُدار بواسطة ولي الأمر. استخدم نفس حساب Google الذي تم التسجيل به، أو بيانات البريد للحسابات التي تدعم تسجيل الدخول بكلمة مرور.'}>
   <ErrorMessage message={error}/>
-  {!adminOnly&&<form className="sofia-auth-form" onSubmit={submit}>
-   <label>البريد الإلكتروني<input type="email" autoComplete="email" required value={email} onChange={e=>setEmail(e.target.value)} placeholder="parent@gmail.com"/></label>
-   <PasswordInput label="كلمة المرور" value={password} onChange={setPassword} autoComplete="current-password"/>
-   {recoveryAvailable?<Link className="sofia-auth-forgot" to="/forgot-password">نسيت كلمة المرور؟</Link>:<p className="sofia-auth-hint">إذا أنشأت الحساب باستخدام Google، سجّل الدخول بنفس حساب Google؛ استعادة كلمة المرور بالبريد غير مفعّلة لهذا النوع من الحسابات.</p>}
-   <button type="submit" className="sofia-cta sofia-auth-submit" disabled={busy}>{busy?'جارٍ الدخول...':'تسجيل الدخول'}<ArrowLeft size={18}/></button>
-  </form>}
+  {!adminOnly&&<p className="sofia-auth-hint"><strong>الدخول الموصى به:</strong> استخدم نفس حساب Google الخاص بولي الأمر الذي تم إنشاء حساب الطالب به.</p>}
   <GoogleAdminButton api={api} setUser={setUser} purpose={adminOnly?'admin':'school'}/>
-  {!adminOnly&&<div className="sofia-auth-switch">طالب جديد؟ <Link to="/register">أنشئ حساب الطالب بإشراف ولي الأمر</Link></div>}
+  {!adminOnly&&<>
+   <div className="sofia-auth-switch">أو للحسابات التي تستخدم بريدًا وكلمة مرور</div>
+   <form className="sofia-auth-form" onSubmit={submit}>
+    <label>البريد الإلكتروني<input type="email" autoComplete="email" required value={email} onChange={e=>setEmail(e.target.value)} placeholder="parent@gmail.com"/></label>
+    <PasswordInput label="كلمة المرور" value={password} onChange={setPassword} autoComplete="current-password"/>
+    {recoveryAvailable?<Link className="sofia-auth-forgot" to="/forgot-password">نسيت كلمة المرور؟</Link>:<p className="sofia-auth-hint">استعادة كلمة المرور بالبريد غير مفعّلة حاليًا. حسابات Google لا تحتاج كلمة مرور منفصلة داخل المنصة.</p>}
+    <button type="submit" className="sofia-cta sofia-auth-submit" disabled={busy}>{busy?'جارٍ الدخول...':'تسجيل الدخول بالبريد'}<ArrowLeft size={18}/></button>
+   </form>
+   <div className="sofia-auth-switch">طالب جديد؟ <Link to="/register">أنشئ حساب الطالب بإشراف ولي الأمر</Link></div>
+  </>}
  </AuthLayout>;
 }
 export function RegisterPage({api,user,setUser}){
