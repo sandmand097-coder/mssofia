@@ -1,9 +1,12 @@
 import React,{useState} from 'react';
 import {Smartphone,ShieldCheck,CheckCircle2,RefreshCw,MessageCircle} from 'lucide-react';
 import {WHATSAPP_CONTACT_URL} from './whatsapp-contact.js';
+import {introductoryOfferApplies} from './MrsSofiaBrand.jsx';
+import {FIRST_MONTH_EGP,REGULAR_MONTH_EGP} from './LaunchOffer.jsx';
 
 const money=n=>Number(n).toLocaleString('ar-EG')+' جنيه';
 const validPhone=s=>/^01[0125]\d{8}$/.test(s);
+const firstDue=booking=>introductoryOfferApplies(booking)?FIRST_MONTH_EGP:Number(booking.price||0);
 export default function StudentPayments({bookings=[],refresh}){
  const [phones,setPhones]=useState({}),[busy,setBusy]=useState(''),[error,setError]=useState(''),[success,setSuccess]=useState('');
  const paid=bookings.filter(b=>Number(b.price)>0);
@@ -33,7 +36,7 @@ export default function StudentPayments({bookings=[],refresh}){
   {!paid.length?<p>اختار دورة مدفوعة وأرسل طلب حجز؛ ستتمكن بعدها من ترك رقم التواصل هنا.</p>:
    paid.map(booking=><article className="sofia-payment-card" key={booking.id}>
     <h3>{booking.course_title||booking.title||'الاشتراك بالدورة'}</h3>
-    <p>قيمة الاشتراك المعلنة: <strong>{money(booking.price)}</strong>. تأكد من تفاصيل الحصص والمبلغ النهائي مع الإدارة قبل أي تحويل.</p>
+    <p>قيمة أول اشتراك: <strong>{money(firstDue(booking))}</strong>{introductoryOfferApplies(booking)?<>، والتجديد بعد ذلك <strong>{money(REGULAR_MONTH_EGP)}</strong> لكل 30 يومًا.</>:null} بعد الاعتماد يصبح الوصول شاملًا لكل الكورسات المنشورة خلال مدة الاشتراك.</p>
     {booking.status==='approved'?<p role="status" className="sofia-payment-success"><CheckCircle2 size={16}/> تم تفعيل حجزك بعد مراجعة الإدارة.</p>:
      booking.payment_status==='pending'?<div className="portal-alert" role="status">تم استلام بلاغك، والقرار قيد مراجعة الإدارة. لا تعِد إرسال الأموال أو البلاغ.</div>:
      booking.status==='rejected'?<div className="portal-alert" role="status">الحجز مرفوض؛ تواصل مع الإدارة قبل أي إجراء جديد.</div>:
@@ -46,6 +49,6 @@ export default function StudentPayments({bookings=[],refresh}){
      </div>
     }
    </article>)}
-  <p className="sofia-payment-footer-note"><ShieldCheck size={15}/> لا يوجد خصم تلقائي، ولا تجديد تلقائي، ولا موافقة إلكترونية تلقائية. يبدأ الوصول بعد قرار الإدارة الصريح فقط.</p>
+  <p className="sofia-payment-footer-note"><ShieldCheck size={15}/> لا يوجد خصم أو تجديد تلقائي. يبدأ الوصول الشامل بعد قرار الإدارة الصريح، ويظل ساريًا لمدة الاشتراك المعتمدة.</p>
  </section>;
 }
